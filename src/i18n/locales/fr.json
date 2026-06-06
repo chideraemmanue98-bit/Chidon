@@ -1,0 +1,181 @@
+{
+  "common": {
+    "dashboard": "Vue d'ensemble",
+    "overview": "Vue d'ensemble",
+    "commandMatrix": "Matrice de commande",
+    "centralCommand": "Commande centrale",
+    "specializedProtocols": "Accès direct à tous les protocoles cognitifs spécialisés.",
+    "neuralHub": "Centre neural",
+    "tools": "Outils cognitifs",
+    "tutorials": "Base de connaissances",
+    "decodingSystem": "Décodage des anomalies du système",
+    "filterTools": "Filtrer les outils cognitifs...",
+    "noToolsFound": "Aucun outil cognitif trouvé",
+    "tryModifyingQuery": "Essayez de modifier votre requête.",
+    "vault": "Coffre CHIDON",
+    "settings": "Paramètres",
+    "logout": "Se déconnecter",
+    "login": "Se connecter",
+    "neuralNodeActive": "Nœud neural : ACTIF",
+    "themeLight": "Interface claire",
+    "themeDark": "Noyau sombre",
+    "copied": "Copié",
+    "copy": "Copier",
+    "feedback": "Retour",
+    "notepad": "Envoyer vers Bloc-notes",
+    "share": "Partager",
+    "lastUsed": "Dernière utilisation il y a",
+    "ago": "il y a",
+    "minutes": "minutes",
+    "minute": "minute",
+    "neverUsed": "Jamais utilisé",
+    "back": "Retour",
+    "launchHub": "Lancer le Hub",
+    "systemLanguage": "Langue"
+  },
+  "categories": {
+    "Core": "Protocoles de base",
+    "Video SEO": "Hub SEO Vidéo",
+    "Trends": "Tendances et Perspectives",
+    "Growth": "Growth Hacking",
+    "Pro": "Suite Pro"
+  },
+  "dashboard": {
+    "systemLive": "Système en ligne : OPTIMAL",
+    "title1": "L'intelligence pour la",
+    "title2": "Domination du Contenu.",
+    "subtitle": "Le terminal SaaS ultime de performance sociale. Utilisez la synchronisation neuronale pour développer votre chaîne.",
+    "commandCenter": "Centre de Commandement",
+    "seoAndTrends": "SEO et Tendances Mondiales",
+    "launchHub": "Lancer le Hub",
+    "marketDna": "ADN du Marché",
+    "marketDnaDesc": "Perspectives de recherche de l'audience",
+    "neuralResearcher": "Chercheur Neuronal",
+    "engagement": "Engagement",
+    "engagementDesc": "Propulsez la portée de l'algorithme",
+    "trendingDetector": "Détecteur de Tendances",
+    "creativeBlock": "Blocage Créatif",
+    "creativeBlockDesc": "Plus jamais d'écran blanc",
+    "videoIdeas": "Idées de Vidéo",
+    "brandVoice": "Voix de Marque",
+    "brandVoiceDesc": "Identité organique uniforme",
+    "identityStrategist": "Stratège d'Identité"
+  },
+  "features": {
+    "content-ideas": {
+      "label": "Idées de Vidéo",
+      "desc": "Formats vidéo viraux, accroches et chartes de script."
+    },
+    "hashtags": {
+      "label": "Générateur d'Hashtags",
+      "desc": "Recherche d'hashtags classés par niveaux d'impact."
+    },
+    "scripts": {
+      "label": "Rédacteur de Scripts",
+      "desc": "Scripts dédiés aux plateformes avec réglage de longueur."
+    },
+    "bio": {
+      "label": "Optimiseur de Bio",
+      "desc": "Trois versions de biographies stratégiques et percutantes."
+    },
+    "thumbnails": {
+      "label": "Designer de Miniatures",
+      "desc": "Briefs conceptuels visuels et psychologie d'impact."
+    },
+    "competitor-analysis": {
+      "label": "Analyse Concurrentielle",
+      "desc": "Intelligence stratégique et diagrammes comparatifs."
+    },
+    "posting-schedule": {
+      "label": "Calendrier de Publication",
+      "desc": "Grille de calendrier hebdomadaire hautement optimisée."
+    },
+    "engagement-calc": {
+      "label": "Conseiller d'Engagement",
+      "desc": "Calculateur de statistiques de trafic et programmes de croissance."
+    },
+    "trending": {
+      "label": "Détecteur de Tendance",
+      "desc": "Sujets et concepts à forte popularité immédiate."
+    },
+    "personas": {
+      "label": "Portrait d'Audience",
+      "desc": "Profils fictifs de prospects et triggers émotionnels."
+    },
+    "headlines": {
+      "label": "Modèles d'Accroche",
+      "desc": "Dix formules clés avec évaluation prédictive du CTR."
+    },
+    "repurposing": {
+      "label": "Adaptateur Contenu",
+      "desc": "Conversion agile de contenu pour plusieurs plateformes."
+    },
+    "post-scheduler": {
+      "label": "Calendrier d'Opérations",
+      "desc": "Gestion tactique de programmation et files d'attente."
+    },
+    "notepad": {
+      "label": "Bloc-notes",
+      "desc": "Éditeur central et raffinerie de textes."
+    },
+    "drafts": {
+      "label": "Coffre CHIDON",
+      "desc": "Index de scripts sauvegardés, biographies et documents."
+    },
+    "post-optimizer": {
+      "label": "Optimiseur de Temps",
+      "desc": "Créneaux optimaux d'audience selon les données locales."
+    },
+    "youtube-seo": {
+      "label": "SEO YouTube",
+      "desc": "Métadonnées virales optimisées et plans tactiques."
+    },
+    "seo-scorecard": {
+      "label": "Fiche de Notation",
+      "desc": "Vérification en temps réel de la conformité algorithmique."
+    },
+    "keyword-research": {
+      "label": "Analyste Mots Clés",
+      "desc": "Analyses précises de volume de recherche et concurrence."
+    },
+    "vseo-title-desc": {
+      "label": "Titre et Description",
+      "desc": "Tours de force d'accroche pour stimuler l'audimat."
+    },
+    "vseo-tags": {
+      "label": "Régisseur de Mots",
+      "desc": "Extraction de balises à haut niveau de pertinence."
+    },
+    "vseo-scorecard": {
+      "label": "Auditeur de Vidéos",
+      "desc": "Score de 1 à 100 basé sur les requêtes clés."
+    },
+    "vseo-keywords": {
+      "label": "Mots Clés Vidéo",
+      "desc": "Statistiques précises de volume et termes connexes."
+    },
+    "vseo-best-time": {
+      "label": "Créneau Optimal",
+      "desc": "Meilleurs moments déterminés par analyse d'audience."
+    },
+    "trending-topics": {
+      "label": "Sujets Tendances",
+      "desc": "Suivi du momentum quotidien par industrie."
+    },
+    "daily-ideas": {
+      "label": "Sujets du Jour",
+      "desc": "Suggestions en accord avec l'activité immédiate du Web."
+    },
+    "trend-alerts": {
+      "label": "Alertes Tendances",
+      "desc": "Notifications de soudaines hausses de popularité."
+    },
+    "ai-script-outline": {
+      "label": "Tracé de Scénario",
+      "desc": "Architecture globale du récit guidée par mots-clés."
+    }
+  },
+  "buttons": {
+    "back": "Retour au Centre de Commande"
+  }
+}

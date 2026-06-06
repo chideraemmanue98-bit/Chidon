@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2000/atom">
+<channel>
+  <title>Chidon IQ AI Blog</title>
+  <link>https://chidoniq.com/blog</link>
+  <description>Master AI content writing, growth strategies, and automated workflows with expert guides from Chidon IQ.</description>
+  <language>en-us</language>
+  <lastBuildDate>Fri, 05 Jun 2026 00:00:00 GMT</lastBuildDate>
+  <atom:link href="https://chidoniq.com/rss.xml" rel="self" type="application/rss+xml" />
+  
+  <item>
+    <title>What is AI and How Does It Work in 2026?</title>
+    <link>https://chidoniq.com/blog/what-is-ai-how-it-works-2026</link>
+    <guid>https://chidoniq.com/blog/what-is-ai-how-it-works-2026</guid>
+    <pubDate>Sun, 05 Apr 2026 00:00:00 GMT</pubDate>
+    <description>Learn what AI is and how it works in 2026. Simple explanation for beginners with real-world examples.</description>
+  </item>
+  
+  <item>
+    <title>AI vs Human Writing: Who Wins?</title>
+    <link>https://chidoniq.com/blog/ai-vs-human-writing-2026</link>
+    <guid>https://chidoniq.com/blog/ai-vs-human-writing-2026</guid>
+    <pubDate>Sat, 04 Apr 2026 00:00:00 GMT</pubDate>
+    <description>The ultimate battle of content production. We test generative AI vs professional authors across speed, volume, and SEO.</description>
+  </item>
+</channel>
+</rss>

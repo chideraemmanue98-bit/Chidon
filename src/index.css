@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand: #3B82F6;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+
+  --color-cyan-primary: #06b6d4;
+  --color-purple-vibrant: #a855f7;
+  --color-emerald-vibrant: #10b981;
+  --color-pink-vibrant: #ec4899;
+  --color-amber-vibrant: #f59e0b;
+}
+
+@layer base {
+  :root {
+    --bg-app: #FAFAFA;
+    --bg-card: #FFFFFF;
+    --text-primary: #111111;
+    --text-secondary: #6B7280;
+    --border-base: #E5E7EB;
+    --accent-glow: rgba(59, 130, 246, 0.1);
+  }
+
+  .dark {
+    --bg-app: #0A0A0A;
+    --bg-card: #171717;
+    --text-primary: #F5F5F5;
+    --text-secondary: #A3A3A3;
+    --border-base: #262626;
+    --accent-glow: rgba(59, 130, 246, 0.05);
+  }
+
+  body {
+    @apply bg-[var(--bg-app)] text-[var(--text-primary)] font-sans selection:bg-brand/30 transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .card-base {
+    @apply bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl shadow-sm transition-all duration-200;
+  }
+
+  .input-base {
+    @apply bg-[var(--bg-card)] border border-[var(--border-base)] rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm;
+  }
+
+  .btn-primary {
+    @apply bg-brand text-white px-4 py-2 rounded-lg font-medium hover:bg-brand/90 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply bg-[var(--bg-card)] border border-[var(--border-base)] text-[var(--text-primary)] px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+.markdown-body h1, .markdown-body h2 {
+  @apply font-bold text-[var(--text-primary)] mt-8 mb-4 first:mt-0 tracking-tight;
+}
+
+.markdown-body h1 { @apply text-2xl; }
+.markdown-body h2 { @apply text-xl; }
+
+.markdown-body p {
+  @apply mb-4 text-[var(--text-secondary)] leading-relaxed text-sm;
+}
+
+.markdown-body ul, .markdown-body ol {
+  @apply space-y-2 mb-4 list-disc pl-5;
+}
+
+.markdown-body li {
+  @apply text-[var(--text-secondary)] text-sm;
+}
+
+.markdown-body table {
+  @apply w-full border-collapse my-6 bg-[var(--bg-card)] rounded-lg overflow-hidden border border-[var(--border-base)];
+}
+
+.markdown-body th {
+  @apply bg-gray-50 dark:bg-gray-800/50 text-[var(--text-primary)] font-semibold text-xs text-left px-4 py-3 border-b border-[var(--border-base)];
+}
+
+.markdown-body td {
+  @apply px-4 py-3 border-b border-[var(--border-base)] text-sm text-[var(--text-secondary)];
+}
+
+.tiptap {
+  @apply min-h-[500px] outline-none p-4;
+}
+
+@keyframes activePulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.15), inset 0 0 1px rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.45), inset 0 0 3px rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+}
+
+.active-pulse-glow {
+  animation: activePulseGlow 2.2s infinite ease-in-out;
+}
+
+

@@ -1,0 +1,181 @@
+{
+  "common": {
+    "dashboard": "Visión general",
+    "overview": "Visión general",
+    "commandMatrix": "Matriz de comando",
+    "centralCommand": "Comando central",
+    "specializedProtocols": "Acceso directo a todos los protocolos cognitivos especializados.",
+    "neuralHub": "Centro neural",
+    "tools": "Herramientas cognitivas",
+    "tutorials": "Base de conocimientos",
+    "decodingSystem": "Decodificación de irregularidades del sistema",
+    "filterTools": "Filtrar herramientas...",
+    "noToolsFound": "No se encontraron herramientas",
+    "tryModifyingQuery": "Intenta modificar tu consulta.",
+    "vault": "Bóveda CHIDON",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "login": "Iniciar sesión",
+    "neuralNodeActive": "Nodo neural: ACTIVO",
+    "themeLight": "Interfaz clara",
+    "themeDark": "Núcleo oscuro",
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "feedback": "Comentarios",
+    "notepad": "Enviar a Bloc de notas",
+    "share": "Compartir",
+    "lastUsed": "Último uso hace",
+    "ago": "hace",
+    "minutes": "minutos",
+    "minute": "minuto",
+    "neverUsed": "Nunca usado",
+    "back": "Volver",
+    "launchHub": "Iniciar Central",
+    "systemLanguage": "Idioma"
+  },
+  "categories": {
+    "Core": "Protocolos principales",
+    "Video SEO": "Centro de SEO de video",
+    "Trends": "Tendencias y análisis",
+    "Growth": "Hacking de crecimiento",
+    "Pro": "Suite Pro"
+  },
+  "dashboard": {
+    "systemLive": "Sistema activo: ÓPTIMO",
+    "title1": "Inteligencia para",
+    "title2": "Dominación de Contenido.",
+    "subtitle": "La terminal SaaS definitiva para el rendimiento social. Utilice la sincronización neuronal para escalar su canal.",
+    "commandCenter": "Centro de Comando",
+    "seoAndTrends": "SEO y Tendencias Globales",
+    "launchHub": "Iniciar Hub",
+    "marketDna": "Market DNA",
+    "marketDnaDesc": "Perspectivas de búsqueda de la audiencia",
+    "neuralResearcher": "Investigador Neural",
+    "engagement": "Engagement",
+    "engagementDesc": "Mejorar el alcance del algoritmo",
+    "trendingDetector": "Detector de Tendencias",
+    "creativeBlock": "Bloqueo Creativo",
+    "creativeBlockDesc": "No más pantallas en blanco",
+    "videoIdeas": "Ideas de Video",
+    "brandVoice": "Voz de Marca",
+    "brandVoiceDesc": "Identidad orgánica consistente",
+    "identityStrategist": "Estratega de Identidad"
+  },
+  "features": {
+    "content-ideas": {
+      "label": "Ideas de Video",
+      "desc": "Formatos virales de video, ganchos y protocolos de guión."
+    },
+    "hashtags": {
+      "label": "Generador de Hashtags",
+      "desc": "Búsqueda clasificada de hashtags por niveles de alcance."
+    },
+    "scripts": {
+      "label": "Redactor de Guiones",
+      "desc": "Guiones específicos para plataformas con controles de longitud."
+    },
+    "bio": {
+      "label": "Optimización de Bio",
+      "desc": "Tres versiones optimizadas de biografía con estrategia."
+    },
+    "thumbnails": {
+      "label": "Diseño de Miniaturas",
+      "desc": "Bocetos de conceptos visuales y psicología."
+    },
+    "competitor-analysis": {
+      "label": "Análisis de Competidores",
+      "desc": "Inteligencia estratégica y gráficos comparativos."
+    },
+    "posting-schedule": {
+      "label": "Calendario Óptimo",
+      "desc": "Cuadrícula semanal de calendario optimizado."
+    },
+    "engagement-calc": {
+      "label": "Asesor de Engagement",
+      "desc": "Cálculo de tasas de interacción y planes a 30 días."
+    },
+    "trending": {
+      "label": "Detector de Tendencias",
+      "desc": "Canales y temas de tendencia de rápido crecimiento."
+    },
+    "personas": {
+      "label": "Creador de Públicos",
+      "desc": "Perfiles de audiencia con disparadores psicológicos."
+    },
+    "headlines": {
+      "label": "Ganchos de Título",
+      "desc": "Diez fórmulas de gancho con altas tasas predictivas de CTR."
+    },
+    "repurposing": {
+      "label": "Reutilizar Contenido",
+      "desc": "Conversión táctica para múltiples plataformas."
+    },
+    "post-scheduler": {
+      "label": "Calendario de Comando",
+      "desc": "Gestión táctica de contenido programado y colas."
+    },
+    "notepad": {
+      "label": "Bloc de notas",
+      "desc": "Editor central de inteligencia refinada."
+    },
+    "drafts": {
+      "label": "Bóveda CHIDON",
+      "desc": "Índice de guiones, biografías e informes de inteligencia."
+    },
+    "post-optimizer": {
+      "label": "Optimización de Tiempo",
+      "desc": "Ventanas globales optimizadas con datos locales."
+    },
+    "youtube-seo": {
+      "label": "YouTube SEO",
+      "desc": "Optimización de metadatos virales y estrategia de ranking."
+    },
+    "seo-scorecard": {
+      "label": "Cuadro de SEO",
+      "desc": "Evaluación neural del contenido en tiempo real."
+    },
+    "keyword-research": {
+      "label": "Analista de Palabras",
+      "desc": "Búsqueda profunda de volumen de palabras clave y competencia."
+    },
+    "vseo-title-desc": {
+      "label": "Título y Descripción",
+      "desc": "Títulos y descripciones optimizados de alto impacto."
+    },
+    "vseo-tags": {
+      "label": "Arquitecto de Etiquetas",
+      "desc": "Alineación de palabras clave con el motor de búsqueda."
+    },
+    "vseo-scorecard": {
+      "label": "Auditor de Video",
+      "desc": "Puntuación basada en meta-etiquetas y títulos."
+    },
+    "vseo-keywords": {
+      "label": "Palabras Clave de Video",
+      "desc": "Volumen de búsqueda y niveles de competencia."
+    },
+    "vseo-best-time": {
+      "label": "Mejor Hora de Publicación",
+      "desc": "Tiempos óptimos impulsados por datos de tráfico."
+    },
+    "trending-topics": {
+      "label": "Temas de Tendencia",
+      "desc": "Momentum diario por nicho en tiempo real."
+    },
+    "daily-ideas": {
+      "label": "Ideas Diarias",
+      "desc": "Sugerencias basadas en el calor actual de la red."
+    },
+    "trend-alerts": {
+      "label": "Alertas de Tendencias",
+      "desc": "Notificaciones de picos repentinos de popularidad."
+    },
+    "ai-script-outline": {
+      "label": "Plano de Guión",
+      "desc": "Estructura narrativa completa a partir de palabras semilla."
+    }
+  },
+  "buttons": {
+    "back": "Volver al Centro de Comando"
+  }
+}

@@ -1,0 +1,273 @@
+{
+  "common": {
+    "dashboard": "Overview",
+    "overview": "Overview",
+    "commandMatrix": "Command Matrix",
+    "centralCommand": "Central Command",
+    "specializedProtocols": "Direct access to all specialized cognitive protocols.",
+    "neuralHub": "Neural Hub",
+    "tools": "Cognitive Tools",
+    "tutorials": "Knowledge Base",
+    "decodingSystem": "Decoding system irregularities",
+    "filterTools": "Filter cognitive tools...",
+    "noToolsFound": "No cognitive tools found",
+    "tryModifyingQuery": "Try modifying your query.",
+    "vault": "CHIDON Vault",
+    "settings": "Settings",
+    "logout": "Sign Out",
+    "login": "Sign In",
+    "systemLanguage": "Language",
+    "neuralNodeActive": "Neural Node: ACTIVE",
+    "themeLight": "Light Interface",
+    "themeDark": "Dark Core",
+    "copied": "Copied",
+    "copy": "Copy",
+    "feedback": "Feedback",
+    "share": "Share",
+    "lastUsed": "Last used",
+    "ago": "ago",
+    "minutes": "minutes",
+    "minute": "minute",
+    "neverUsed": "Never used",
+    "back": "Back",
+    "launchHub": "Launch Hub"
+  },
+  "categories": {
+    "Core": "Core Protocols",
+    "Video SEO": "Video SEO Hub",
+    "Trends": "Trends & Insights",
+    "Growth": "Growth Hacking",
+    "Pro": "Pro Suite"
+  },
+  "dashboard": {
+    "systemLive": "System Live: ACTIVE",
+    "title1": "Intelligence for",
+    "title2": "Content Domination.",
+    "subtitle": "The ultimate SaaS terminal for social performance. Use neural synchronization to scale your channel.",
+    "commandCenter": "Command Center",
+    "seoAndTrends": "SEO & Global Trends",
+    "launchHub": "Launch Hub",
+    "marketDna": "Market DNA",
+    "marketDnaDesc": "Target audience search insights",
+    "neuralResearcher": "Neural Researcher",
+    "engagement": "Engagement",
+    "engagementDesc": "Pick up the algorithm reach",
+    "trendingDetector": "Trending Detector",
+    "creativeBlock": "Creative Block",
+    "creativeBlockDesc": "No more blank screen",
+    "videoIdeas": "Video Ideas",
+    "brandVoice": "Brand Voice",
+    "brandVoiceDesc": "Consistent organic identity",
+    "identityStrategist": "Identity Strategist"
+  },
+  "features": {
+    "content-ideas": {
+      "label": "Video Ideas",
+      "desc": "Viral video formats, hooks, and script protocols."
+    },
+    "hashtags": {
+      "label": "Hashtag Engine",
+      "desc": "Ranked hashtag research with reach tiers."
+    },
+    "scripts": {
+      "label": "Script Writer",
+      "desc": "Platform-specific scripts with length controls."
+    },
+    "bio": {
+      "label": "Bio Optimizer",
+      "desc": "Three optimized bio versions with strategy."
+    },
+    "thumbnails": {
+      "label": "Thumbnail Designer",
+      "desc": "Visual concept briefs and psychology."
+    },
+    "competitor-analysis": {
+      "label": "Competitor Lab",
+      "desc": "Strategic intelligence and pillar charts."
+    },
+    "posting-schedule": {
+      "label": "Schedule Lab",
+      "desc": "Styled weekly optimized calendar grid."
+    },
+    "engagement-calc": {
+      "label": "Engagement Advisor",
+      "desc": "Computing rates and 30-day growth plans."
+    },
+    "trending": {
+      "label": "Trend Detector",
+      "desc": "20 momentum-scored trending topics."
+    },
+    "personas": {
+      "label": "Audience Builder",
+      "desc": "Fictional audience profiles and psychological triggers."
+    },
+    "headlines": {
+      "label": "Headline Hook",
+      "desc": "10 hook formulas with predicted CTR markers."
+    },
+    "repurposing": {
+      "label": "Repurpose AI",
+      "desc": "Tactical content conversion for multi-platform ops."
+    },
+    "post-scheduler": {
+      "label": "Command Calendar",
+      "desc": "Tactical content scheduling and queue management."
+    },
+    "drafts": {
+      "label": "CHIDON Vault",
+      "desc": "Specialized index of saved scripts, social bios, and intelligence reports."
+    },
+    "post-optimizer": {
+      "label": "Time Optimizer",
+      "desc": "Global posting windows optimized by local data."
+    },
+    "youtube-seo": {
+      "label": "YouTube SEO",
+      "desc": "Viral metadata optimization and ranking strategy."
+    },
+    "seo-scorecard": {
+      "label": "SEO Scorecard",
+      "desc": "Real-time neural content audit and score."
+    },
+    "keyword-research": {
+      "label": "Keyword Intel",
+      "desc": "Deep volume, competition, and difficulty scan."
+    },
+    "vseo-title-desc": {
+      "label": "Title + Description",
+      "desc": "High-CTR titles and descriptions optimized for growth."
+    },
+    "vseo-tags": {
+      "label": "Tag Architect",
+      "desc": "Neural tag extraction for high-volume ranking."
+    },
+    "vseo-scorecard": {
+      "label": "Video Auditor",
+      "desc": "1-100 score based on title, tags, and keywords."
+    },
+    "vseo-keywords": {
+      "label": "Keyword Research",
+      "desc": "Data-driven search volume, competition tiers, and related video terms."
+    },
+    "vseo-best-time": {
+      "label": "Post Optimizer",
+      "desc": "Data-driven timing for maximum reach."
+    },
+    "trending-topics": {
+      "label": "Trending Topics",
+      "desc": "Real-time niche trending topics updated daily with momentum scores."
+    },
+    "daily-ideas": {
+      "label": "Daily Video Ideas",
+      "desc": "Neural content suggestions based on current niche heatmaps."
+    },
+    "trend-alerts": {
+      "label": "Trend Alerts",
+      "desc": "Neural notification protocols for sudden keyword spikes."
+    },
+    "ai-script-outline": {
+      "label": "Script Blueprint",
+      "desc": "Full narrative architecture from seed keywords."
+    }
+  },
+  "buttons": {
+    "back": "Back to Command Center"
+  },
+  "pricing": {
+    "upgrade_success_msg": "🎉 Simulation Upgrade Succeeded! Your user profile has been successfully mutated to Pro Creator.",
+    "upgrade_error_msg": "Failed to update cloud database settings. Please verify security rules.",
+    "badge": "SaaS Plan Configurator",
+    "header_prefix": "Select Your",
+    "header_accent": "Cognitive Level",
+    "subtitle": "Unlock standard social growth engines or scale exponentially with priority live neural clusters. Customize and pay in local currency.",
+    "current_plan": "CURRENT PLAN",
+    "free": {
+      "access_type": "Standard Access",
+      "title": "FREE FOREVER",
+      "description": "Perfect for independent creators looking to understand social platform analytics.",
+      "frequency": "USD / Month",
+      "active_btn": "ACTIVE STANDARD",
+      "demoted_btn": "DEMOTED OPTION"
+    },
+    "pro": {
+      "active_badge": "ACTIVE PRO CREATOR",
+      "access_type": "Velocity Pro",
+      "title": "PRO CREATOR",
+      "description": "Complete priority suit of video SEO optimization, viral ideas and automatic alert signals.",
+      "frequency": "USD / Month",
+      "secured_msg": "✓ ALL CAPABILITIES SECURED",
+      "billing_label": "Billing Email Address",
+      "bypass_title": "Simulate successful payment verified securely in 1 click",
+      "bypass_btn": "Instant Demo Upgrade Bypass"
+    },
+    "agreement_title": "Billing Operations Escrow Agreement",
+    "agreement_text": "The Chidon IQ platform operates standard secure connections. When upgrading to the Pro Creator Tier, transactions are generated via Paystack. After payment is verified, credentials propagate across live neural channels instantly, mutating your authentication profile records in Firestore securely. Your payment secures full unhindered access in perpetuity.",
+    "features": {
+      "bio_optimizer": "SaaS Bio Optimizer",
+      "hashtag_brain": "Hashtag Brain Engine",
+      "competitor_lab": "Competitor Strategic Laboratory",
+      "schedule_optimizer": "Platform Post Optimizer & Scheduler",
+      "standard_latency": "Standard Neural Latency Speed",
+      "limit_creations": "Limit of 5 Creations per Day",
+      "unlimited_creations": "Unlimited Creations (No Daily Limits)",
+      "viral_planner": "Advanced Viral Video Planner",
+      "viral_planner_premium": "Advanced Viral Video Planner (Premium)",
+      "cross_repurpose": "Premium Cross-Platform Repurpose",
+      "ctr_prompts": "High-CTR Graphic Thumbnail Prompts",
+      "trend_alerts": "Immediate Trend Detection & Alerts",
+      "ai_clusters": "Priority High-Speed AI Clusters",
+      "commercial_license": "Commercial Usage Licenses"
+    }
+  },
+  "earn": {
+    "back_btn": "back_to_command",
+    "title": "CHIDON EARN",
+    "subtitle": "Secure Cognitive Gigs & Services Synced to Live Ledger",
+    "active_sync": "Active Sync account",
+    "offline_state": "Offline state (limited read).",
+    "authenticate_btn": "Authenticate Now",
+    "tabs": {
+      "creator_prefix": "CREATOR",
+      "dashboard": "DASHBOARD",
+      "buyer_portal": "BUYER PORTAL",
+      "seller_portal": "SELLER PORTAL"
+    }
+  },
+  "downbase": {
+    "header": {
+      "close_btn": "Close",
+      "about": {
+        "sub": "Project Codex",
+        "title": "About CHIDON IQ"
+      },
+      "solutions": {
+        "sub": "Sectoral Resolution Lab",
+        "title": "Platform & Application Solutions"
+      },
+      "resources": {
+        "sub": "Operational Downloads",
+        "title": "Advanced Knowledge Bases"
+      },
+      "careers": {
+        "sub": "Cognitive Recruitment Gate",
+        "title": "Join the Frontier"
+      },
+      "contact": {
+        "sub": "Uplink Center",
+        "title": "Contact Support Channels"
+      },
+      "terms": {
+        "sub": "Compliance Frame",
+        "title": "Terms of Use Agreement"
+      },
+      "privacy": {
+        "sub": "Secure Integrity Standards",
+        "title": "Privacy Blueprint & Standards"
+      },
+      "refund": {
+        "sub": "Billing Guarantee Resolution",
+        "title": "Refund Policy & Guarantee"
+      }
+    }
+  }
+}

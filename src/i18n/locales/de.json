@@ -1,0 +1,181 @@
+{
+  "common": {
+    "dashboard": "Übersicht",
+    "overview": "Übersicht",
+    "commandMatrix": "Befehlsmatrix",
+    "centralCommand": "Zentralbefehl",
+    "specializedProtocols": "Direkter Zugriff auf alle spezialisierten kognitiven Protokolle.",
+    "neuralHub": "Nervenzentrum",
+    "tools": "Kognitive Werkzeuge",
+    "tutorials": "Wissensdatenbank",
+    "decodingSystem": "Dekodierung von Systemanomalien",
+    "filterTools": "Kognitive Werkzeuge filtern...",
+    "noToolsFound": "Keine kognitiven Werkzeuge gefunden",
+    "tryModifyingQuery": "Versuchen Sie, Ihre Suche anzupassen.",
+    "vault": "CHIDON-Tresor",
+    "settings": "Einstellungen",
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "neuralNodeActive": "Neuronaler Knoten: AKTIV",
+    "themeLight": "Helle Oberfläche",
+    "themeDark": "Dunkler Kern",
+    "copied": "Kopiert",
+    "copy": "Kopieren",
+    "feedback": "Feedback",
+    "notepad": "An Notizblock senden",
+    "share": "Teilen",
+    "lastUsed": "Zuletzt vor",
+    "ago": "verwendet",
+    "minutes": "Minuten",
+    "minute": "Minute",
+    "neverUsed": "Nie verwendet",
+    "back": "Zurück",
+    "launchHub": "Hub Starten",
+    "systemLanguage": "Language"
+  },
+  "categories": {
+    "Core": "Kernprotokolle",
+    "Video SEO": "Video-SEO-Zentrum",
+    "Trends": "Trends & Analysen",
+    "Growth": "Wachstumstaktiken",
+    "Pro": "Pro-Suite"
+  },
+  "dashboard": {
+    "systemLive": "Systemstatus: OPTIMAL",
+    "title1": "Intelligenz für",
+    "title2": "Content-Dominanz.",
+    "subtitle": "Das ultimative SaaS-Terminal für soziale Performance. Nutzen Sie neuronale Synchronisierung, um Ihren Kanal zu vergrößern.",
+    "commandCenter": "Befehlszentrum",
+    "seoAndTrends": "SEO & globale Trends",
+    "launchHub": "Hub starten",
+    "marketDna": "Markt-DNA",
+    "marketDnaDesc": "Such-Insights der Zielgruppe",
+    "neuralResearcher": "Neuromarker-Forscher",
+    "engagement": "Interaktion",
+    "engagementDesc": "Steigern Sie die Algorithmus-Reichweite",
+    "trendingDetector": "Trend-Detektor",
+    "creativeBlock": "Kreativblockade",
+    "creativeBlockDesc": "Nie wieder ein leerer Bildschirm",
+    "videoIdeas": "Videoideen",
+    "brandVoice": "Markenstimme",
+    "brandVoiceDesc": "Konsistente organische Identität",
+    "identityStrategist": "Identitäts-Stratege"
+  },
+  "features": {
+    "content-ideas": {
+      "label": "Videoideen",
+      "desc": "Virale Videoformate, Hooks und Skript-Vorgaben."
+    },
+    "hashtags": {
+      "label": "Hashtag-Engine",
+      "desc": "Hashtag-Forschung sortiert nach Reichweitenstufen."
+    },
+    "scripts": {
+      "label": "Skripterstellung",
+      "desc": "Plattformspezifische Skripte mit vordefinierten Wortzahlen."
+    },
+    "bio": {
+      "label": "Bio-Optimierer",
+      "desc": "Drei strategisch optimierte Versionen von Profilbeschreibungen."
+    },
+    "thumbnails": {
+      "label": "Thumbnail-Designer",
+      "desc": "Visuelle Designkonzepte und psychologische Trigger."
+    },
+    "competitor-analysis": {
+      "label": "Mitbewerber-Analyse",
+      "desc": "Strategische Konkurrenzdaten und Vergleichsdiagramme."
+    },
+    "posting-schedule": {
+      "label": "Kalenderauswertung",
+      "desc": "Wöchentlicher optimierter Zeitplankalender."
+    },
+    "engagement-calc": {
+      "label": "Interaktionsberater",
+      "desc": "Statistikrechner und Wachstumspläne für 30 Tage."
+    },
+    "trending": {
+      "label": "Trend-Detektor",
+      "desc": "Aufstrebende Trendthemen und Suchbegriffe im Trend."
+    },
+    "personas": {
+      "label": "Zielgruppenersteller",
+      "desc": "Nutzerprofile mit psychologischen Auslösern."
+    },
+    "headlines": {
+      "label": "Titel-Hooks",
+      "desc": "Zehn Formeln für packende Titel mit geschätztem CTR."
+    },
+    "repurposing": {
+      "label": "Content-Zweitverwertung",
+      "desc": "Flexible Umwandlung von Videomaterial für verschiedene Kanäle."
+    },
+    "post-scheduler": {
+      "label": "Planungskalender",
+      "desc": "Präzise Inhaltsplanung und Warteschlangenpflege."
+    },
+    "notepad": {
+      "label": "Notizblock",
+      "desc": "Hervorragender Texteditor für Entwürfe und Verfeinerungen."
+    },
+    "drafts": {
+      "label": "CHIDON-Tresor",
+      "desc": "Gespeicherte Entwürfe, Profile und Auswertungsberichte."
+    },
+    "post-optimizer": {
+      "label": "Zeitplan-Optimierung",
+      "desc": "Empfohlene Postingzeiten basierend auf lokal erhobenen Daten."
+    },
+    "youtube-seo": {
+      "label": "YouTube SEO",
+      "desc": "Optimierung viraler Metadaten und Ranking-Strategien."
+    },
+    "seo-scorecard": {
+      "label": "SEO-Zensurbuch",
+      "desc": "Inhaltsqualitätsaudits in Echtzeit basierend auf Algorithmen."
+    },
+    "keyword-research": {
+      "label": "Keyword-Forschung",
+      "desc": "Detaillierte Suchvolumen-, Wettbewerbs- und Schwierigkeitsanalyse."
+    },
+    "vseo-title-desc": {
+      "label": "Titel + Beschreibung",
+      "desc": "Klickstarke Titel und Beschreibungen für maximales Wachstum."
+    },
+    "vseo-tags": {
+      "label": "Tag-Architekt",
+      "desc": "Präzise Keyword-Zuweisung für optimale Sichtbarkeit."
+    },
+    "vseo-scorecard": {
+      "label": "Videoauditor",
+      "desc": "Score-Entwickler auf Grundlage von Titeln und Metadaten."
+    },
+    "vseo-keywords": {
+      "label": "Video-Keyword-Suche",
+      "desc": "Analytische Auswertung verwandter Video-Suchbegriffe."
+    },
+    "vseo-best-time": {
+      "label": "Beste Veröffentlichungszeit",
+      "desc": "Verkehrsdatenbasierte Vorschläge zur Reichweitenmaximierung."
+    },
+    "trending-topics": {
+      "label": "Branchen-Trends",
+      "desc": "Momentaner Nischen-Trenddatenstrom, täglich aktualisiert."
+    },
+    "daily-ideas": {
+      "label": "Tägliche Inspirationen",
+      "desc": "Aktive, auf Nutzerinteressen gestützte Alltagsideen."
+    },
+    "trend-alerts": {
+      "label": "Trendwarnungen",
+      "desc": "Sofortige Hinweise bei plötzlichem Beliebtheitsanstieg eines Keywords."
+    },
+    "ai-script-outline": {
+      "label": "Skript-Blaupause",
+      "desc": "Vollständige logische Erzählstruktur basierend auf Kernbegriffen."
+    }
+  },
+  "buttons": {
+    "back": "Zurück zur Kommandozentrale"
+  }
+}

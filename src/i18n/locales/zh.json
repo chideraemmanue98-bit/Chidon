@@ -1,0 +1,181 @@
+{
+  "common": {
+    "dashboard": "总览",
+    "overview": "总览",
+    "commandMatrix": "控制矩阵",
+    "centralCommand": "中央指挥部",
+    "specializedProtocols": "直接访问所有专业认知协议。",
+    "neuralHub": "神经枢纽",
+    "tools": "认知工具",
+    "tutorials": "知识库",
+    "decodingSystem": "解码系统异常",
+    "filterTools": "筛选认知工具...",
+    "noToolsFound": "未找到认知工具",
+    "tryModifyingQuery": "请尝试修改查询词。",
+    "vault": "CHIDON保险库",
+    "settings": "设置",
+    "logout": "退出登录",
+    "login": "登录",
+    "neuralNodeActive": "神经节点：激活",
+    "themeLight": "浅色界面",
+    "themeDark": "深色内核",
+    "copied": "已复制",
+    "copy": "复制",
+    "feedback": "反馈",
+    "notepad": "发送至记事本",
+    "share": "分享",
+    "lastUsed": "上次使用于",
+    "ago": "前",
+    "minutes": "分钟",
+    "minute": "分钟",
+    "neverUsed": "未使用过",
+    "back": "返回",
+    "launchHub": "启动中心",
+    "systemLanguage": "语言"
+  },
+  "categories": {
+    "Core": "核心协议",
+    "Video SEO": "视频SEO中心",
+    "Trends": "趋势与洞察",
+    "Growth": "增长黑客",
+    "Pro": "专业套件"
+  },
+  "dashboard": {
+    "systemLive": "系统状态：最佳",
+    "title1": "专为",
+    "title2": "内容主宰而生的智能。",
+    "subtitle": "用于社交媒体表现的终极SaaS终端。使用神经同步来扩展您的频道。",
+    "commandCenter": "控制中心",
+    "seoAndTrends": "SEO与全球趋势",
+    "launchHub": "启动中心",
+    "marketDna": "受众DNA",
+    "marketDnaDesc": "目标受众搜索洞察",
+    "neuralResearcher": "神经研究员",
+    "engagement": "互动率",
+    "engagementDesc": "提升算法触达率",
+    "trendingDetector": "趋势检测器",
+    "creativeBlock": "创作瓶颈",
+    "creativeBlockDesc": "彻底告别空白屏幕",
+    "videoIdeas": "视频创意",
+    "brandVoice": "品牌声量",
+    "brandVoiceDesc": "保持一致的品牌调性",
+    "identityStrategist": "品牌身份规划师"
+  },
+  "features": {
+    "content-ideas": {
+      "label": "视频创意",
+      "desc": "爆款视频格式、钩子及脚本协议。"
+    },
+    "hashtags": {
+      "label": "标签引擎",
+      "desc": "划分等级的爆款标签分析。"
+    },
+    "scripts": {
+      "label": "脚本编写器",
+      "desc": "定制字数的平台专属脚本生成器。"
+    },
+    "bio": {
+      "label": "个人简介优化",
+      "desc": "三个经过优化的个性战略简介。"
+    },
+    "thumbnails": {
+      "label": "缩略图设计师",
+      "desc": "视觉概念大纲和受众心理学分析。"
+    },
+    "competitor-analysis": {
+      "label": "竞争对手分析",
+      "desc": "战略智能研判与柱状对比图。"
+    },
+    "posting-schedule": {
+      "label": "发布时间表",
+      "desc": "优雅的每周优化日程网格。"
+    },
+    "engagement-calc": {
+      "label": "互动咨询顾问",
+      "desc": "数据率测算与30天增长策略。"
+    },
+    "trending": {
+      "label": "爆款风向标",
+      "desc": "实时监测处于上升期的热点话题。"
+    },
+    "personas": {
+      "label": "受众描绘器",
+      "desc": "虚拟受众角色及心理触发点分析。"
+    },
+    "headlines": {
+      "label": "爆款标题钩子",
+      "desc": "十个附带预估点击率（CTR）的标题公式。"
+    },
+    "repurposing": {
+      "label": "内容重构",
+      "desc": "多渠道转化的战术内容重组。"
+    },
+    "post-scheduler": {
+      "label": "发布日程表",
+      "desc": "战术内容排期及队列精细化管理。"
+    },
+    "notepad": {
+      "label": "智能记事本",
+      "desc": "顶级智慧文本编辑器与提炼坊。"
+    },
+    "drafts": {
+      "label": "CHIDON保险库",
+      "desc": "保存脚本、博文、档案以及简报的枢纽中心。"
+    },
+    "post-optimizer": {
+      "label": "时间优化器",
+      "desc": "基于区域数据的全球最佳发布窗口。"
+    },
+    "youtube-seo": {
+      "label": "YouTube SEO",
+      "desc": "爆款元数据优化与排名策略。"
+    },
+    "seo-scorecard": {
+      "label": "SEO积分卡",
+      "desc": "实时智能内容质量与优化算法核算。"
+    },
+    "keyword-research": {
+      "label": "关键词挖掘",
+      "desc": "搜索量、竞争度与难易指数深度洞察。"
+    },
+    "vseo-title-desc": {
+      "label": "标题与描述生成",
+      "desc": "定制开发的高CTR热门标题与简析。"
+    },
+    "vseo-tags": {
+      "label": "标签规划师",
+      "desc": "针对高流量视频的高效元标签提取。"
+    },
+    "vseo-scorecard": {
+      "label": "视频审计员",
+      "desc": "根据标题、标签与关键词评估综合得分。"
+    },
+    "vseo-keywords": {
+      "label": "关键字深度调研",
+      "desc": "数据驱动的搜索频次与关联热力视频推荐。"
+    },
+    "vseo-best-time": {
+      "label": "发布黄金时段",
+      "desc": "面向最大化流量触达的数据化建议。"
+    },
+    "trending-topics": {
+      "label": "风口趋势话题",
+      "desc": "各细分垂直矩阵日更新增幅雷达。"
+    },
+    "daily-ideas": {
+      "label": "每日灵感推荐",
+      "desc": "基于当前热门受众兴趣推荐的每日选题。"
+    },
+    "trend-alerts": {
+      "label": "趋势情报预警",
+      "desc": "在特定细分赛道突发热度爆发的第一时间提醒。"
+    },
+    "ai-script-outline": {
+      "label": "黄金叙事蓝图",
+      "desc": "由基础主干关键词延伸的完整脚本大纲编制。"
+    }
+  },
+  "buttons": {
+    "back": "返回控制中心"
+  }
+}

@@ -1,0 +1,244 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Feedback Validation
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['featureId', 'rating', 'timestamp', 'generatedContent']) &&
+             data.keys().size() <= 7 &&
+             data.featureId is string && data.featureId.size() <= 50 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.timestamp == request.time &&
+             data.generatedContent is string && data.generatedContent.size() <= 20000 &&
+             (!('comment' in data) || (data.comment is string && data.comment.size() <= 1000)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // ScheduledPost Validation
+    function isValidScheduledPost(data) {
+      return data.keys().hasAll(['caption', 'scheduledAt', 'platform', 'status', 'createdAt']) &&
+             data.keys().size() <= 8 &&
+             data.caption is string && data.caption.size() <= 5000 &&
+             data.scheduledAt is timestamp &&
+             data.platform is string && data.platform.size() <= 50 &&
+             data.status in ['scheduled', 'published', 'failed'] &&
+             data.createdAt == request.time &&
+             (!('mediaUrl' in data) || (data.mediaUrl is string && data.mediaUrl.size() <= 2000)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Draft Validation
+    function isValidDraft(data) {
+      return data.keys().hasAll(['featureId', 'content', 'createdAt']) &&
+             data.keys().size() <= 6 &&
+             data.featureId is string && data.featureId.size() <= 50 &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.createdAt == request.time &&
+             (!('title' in data) || (data.title is string && data.title.size() <= 200)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Note Validation
+    function isValidNote(data) {
+      return data.keys().hasAll(['title', 'content', 'createdAt', 'updatedAt']) &&
+             data.keys().size() <= 7 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 50000 &&
+             data.updatedAt == request.time &&
+             (data.createdAt == request.time || data.createdAt is timestamp) &&
+             (!('tags' in data) || (data.tags is list)) &&
+             (!('folderId' in data) || (data.folderId is string)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Folder Validation
+    function isValidFolder(data) {
+      return data.keys().hasAll(['name', 'createdAt']) &&
+             data.keys().size() <= 3 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.createdAt == request.time &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // Presence Validation
+    function isValidPresence(data) {
+      return data.keys().hasAll(['userName', 'userColor', 'cursorIndex', 'lastActive']) &&
+             data.keys().size() <= 4 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.userColor is string && data.userColor.size() <= 50 &&
+             data.cursorIndex is number &&
+             data.lastActive == request.time;
+    }
+
+    // ChimePost Validation
+    function isValidChimePost(data) {
+      return data.keys().hasAll(['content', 'authorId', 'authorName', 'createdAt']) &&
+             data.keys().size() <= 5 &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.authorId is string && data.authorId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() <= 100 &&
+             data.createdAt == request.time &&
+             (!('authorAvatar' in data) || (data.authorAvatar is string && data.authorAvatar.size() <= 2000));
+    }
+
+    // GlobalPresence Validation
+    function isValidGlobalPresence(data) {
+      return data.keys().hasAll(['userName', 'lastActive', 'userColor', 'cursorIndex']) &&
+             data.keys().size() <= 5 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.lastActive == request.time &&
+             data.userColor is string && data.userColor.size() <= 50 &&
+             data.cursorIndex is number &&
+             (!('userAvatar' in data) || (data.userAvatar is string && data.userAvatar.size() <= 2000));
+    }
+
+    // User Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'createdAt']) &&
+             data.keys().size() <= 9 &&
+             data.email is string && data.email.size() <= 150 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('creatorRole' in data) || (data.creatorRole is string && data.creatorRole.size() <= 100)) &&
+             (!('experienceLevel' in data) || (data.experienceLevel is string && data.experienceLevel.size() <= 50)) &&
+             (!('systemLanguage' in data) || (data.systemLanguage is string && data.systemLanguage.size() <= 50)) &&
+             (!('generationTone' in data) || (data.generationTone is string && data.generationTone.size() <= 50)) &&
+             (!('apiKeys' in data) || (data.apiKeys is map)) &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    // Job Validation
+    function isValidJob(data) {
+      return data.keys().hasAll(['title', 'department', 'location', 'type', 'salary', 'description', 'createdAt']) &&
+             data.keys().size() <= 8 &&
+             data.title is string && data.title.size() <= 100 &&
+             data.department is string && data.department.size() <= 100 &&
+             data.location is string && data.location.size() <= 100 &&
+             data.type is string && data.type.size() <= 50 &&
+             data.salary is string && data.salary.size() <= 100 &&
+             data.description is string && data.description.size() <= 5000 &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    // JobApplication Validation
+    function isValidJobApplication(data) {
+      return data.keys().hasAll(['jobId', 'jobTitle', 'candidateName', 'email', 'resumeUrl', 'motivation', 'createdAt']) &&
+             data.keys().size() <= 8 &&
+             data.jobId is string && data.jobId.size() <= 128 &&
+             data.jobTitle is string && data.jobTitle.size() <= 100 &&
+             data.candidateName is string && data.candidateName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.resumeUrl is string && data.resumeUrl.size() <= 2000 &&
+             data.motivation is string && data.motivation.size() <= 5000 &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow create, update: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming());
+      allow delete: if false;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if isValidId(feedbackId) && isValidFeedback(incoming());
+      allow read, list: if false; 
+    }
+
+    match /scheduled_posts/{postId} {
+      allow create: if isValidId(postId) && isValidScheduledPost(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
+      allow update: if isValidId(postId) && isValidScheduledPost(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
+      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    match /drafts/{draftId} {
+      allow create: if isValidId(draftId) && isValidDraft(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
+      allow update: if isValidId(draftId) && isValidDraft(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
+      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    match /notes/{noteId} {
+      allow create: if isValidId(noteId) && isValidNote(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
+      allow update: if isValidId(noteId) && isValidNote(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
+      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    match /folders/{folderId} {
+      allow create: if isValidId(folderId) && isValidFolder(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
+      allow update: if isValidId(folderId) && isValidFolder(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
+      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    match /presence/{noteId}/users/{userId} {
+      allow create, update: if isValidId(userId) && isValidPresence(incoming());
+      allow read, list, delete: if true;
+    }
+
+    match /chime_posts/{postId} {
+      allow create: if isSignedIn() && isValidId(postId) && isValidChimePost(incoming()) && incoming().authorId == request.auth.uid;
+      allow read, list: if isSignedIn();
+      allow update: if isSignedIn() && isValidId(postId) && isValidChimePost(incoming()) && existing().authorId == request.auth.uid && incoming().authorId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+    }
+
+    match /jobs/{jobId} {
+      allow read, list: if true;
+      allow create: if isValidId(jobId) && isValidJob(incoming());
+      allow update: if isValidId(jobId) && isValidJob(incoming());
+      allow delete: if true;
+    }
+
+    match /job_applications/{appId} {
+      allow read, list, create, update, delete: if true;
+    }
+
+    match /earn_jobs/{jobId} {
+      allow read, list, create, update, delete: if true;
+    }
+
+    match /earn_services/{svcId} {
+      allow read, list, create, update, delete: if true;
+    }
+
+    match /earn_results/{resId} {
+      allow read, list, create, update, delete: if true;
+    }
+
+    match /earn_profiles/{profileId} {
+      allow read, list, create, update, delete: if true;
+    }
+
+    match /earn_messages/{messageId} {
+      allow read, list, create, update, delete: if true;
+    }
+
+    match /global_presence/{userId} {
+      allow read, list: if isSignedIn();
+      allow create, update: if isSignedIn() && userId == request.auth.uid && isValidGlobalPresence(incoming());
+      allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+  }
+}

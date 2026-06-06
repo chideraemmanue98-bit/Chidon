@@ -1,0 +1,181 @@
+{
+  "common": {
+    "dashboard": "概要",
+    "overview": "概要",
+    "commandMatrix": "コマンドマトリクス",
+    "centralCommand": "中央司令部",
+    "specializedProtocols": "すべての専門的な認知プロトコルへの直接アクセス。",
+    "neuralHub": "ニューラルハブ",
+    "tools": "認知ツール",
+    "tutorials": "ナレッジベース",
+    "decodingSystem": "システム異常のデコード",
+    "filterTools": "認知ツールをフィルター...",
+    "noToolsFound": "認知ツールが見つかりません",
+    "tryModifyingQuery": "検索条件を変更してください。",
+    "vault": "CHIDON保管庫",
+    "settings": "設定",
+    "logout": "ログアウト",
+    "login": "ログイン",
+    "neuralNodeActive": "ニューラルノード：アクティブ",
+    "themeLight": "ライトインターフェース",
+    "themeDark": "ダークコア",
+    "copied": "コピー済み",
+    "copy": "コピー",
+    "feedback": "フィードバック",
+    "notepad": "メモ帳に送信",
+    "share": "共有",
+    "lastUsed": "最終使用：",
+    "ago": "前",
+    "minutes": "分",
+    "minute": "分",
+    "neverUsed": "未使用",
+    "back": "戻る",
+    "launchHub": "起動ハブ",
+    "systemLanguage": "Language"
+  },
+  "categories": {
+    "Core": "コアプロトコル",
+    "Video SEO": "動画SEOハブ",
+    "Trends": "トレンド＆分析",
+    "Growth": "グロースハック",
+    "Pro": "プロスイート"
+  },
+  "dashboard": {
+    "systemLive": "システム稼働：最適",
+    "title1": "ソーシャル覇権のための",
+    "title2": "インテリジェンス。",
+    "subtitle": "ソーシャルパフォーマンス向上のための究極のSaaS端末。ニューラル同期でチャンネル規模を劇的に拡大します。",
+    "commandCenter": "司令センター",
+    "seoAndTrends": "SEO ＆ グローバルトレンド",
+    "launchHub": "ハブを起動する",
+    "marketDna": "受众DNA",
+    "marketDnaDesc": "ターゲット閲覧者の検索傾向分析",
+    "neuralResearcher": "ニューラル研究員",
+    "engagement": "エンゲージメント",
+    "engagementDesc": "アルゴリズムによるインプレッションを最大化",
+    "trendingDetector": "トレンド予測器",
+    "creativeBlock": "創作ブロック",
+    "creativeBlockDesc": "白紙の画面での悩みは過去のもの",
+    "videoIdeas": "動画アイデア",
+    "brandVoice": "ブランドボイス",
+    "brandVoiceDesc": "一貫した有機的アイデンティティ",
+    "identityStrategist": "アイデンティティ立案者"
+  },
+  "features": {
+    "content-ideas": {
+      "label": "動画アイデア",
+      "desc": "バズり動画フォーマット、フック、台本構成の提案。"
+    },
+    "hashtags": {
+      "label": "ハッシュタグ生成",
+      "desc": "インプレッションに最適化されたハッシュタグ調査。"
+    },
+    "scripts": {
+      "label": "台本作成ツール",
+      "desc": "プラットフォームに特化した文字数制限可能の台本作成。"
+    },
+    "bio": {
+      "label": "アカウントプロフィール最適化",
+      "desc": "心理戦略に基づいた3種のアカウント説明文。"
+    },
+    "thumbnails": {
+      "label": "サムネイルデザイン",
+      "desc": "心理分析に基づいた視覚アプローチと構想設計。"
+    },
+    "competitor-analysis": {
+      "label": "競合分析ラボ",
+      "desc": "戦略インテリジェンス設計と比較用チャートボード。"
+    },
+    "posting-schedule": {
+      "label": "投稿カレンダー",
+      "desc": "投稿計画を最適化した洗練された週間時間網。"
+    },
+    "engagement-calc": {
+      "label": "エンゲージメントアドバイザー",
+      "desc": "現状数値計測と30日後までの成長計画戦略。"
+    },
+    "trending": {
+      "label": "トレンド検出器",
+      "desc": "急上昇中の特定トピックのリアルタイム走査。"
+    },
+    "personas": {
+      "label": "ターゲット層設計",
+      "desc": "購買活動と心理に基づいたペルソナ像設定。"
+    },
+    "headlines": {
+      "label": "タイトルフック",
+      "desc": "クリック率（CTR）を予測する10種類のフック公式。"
+    },
+    "repurposing": {
+      "label": "コンテンツ再構築",
+      "desc": "複数プラットフォームで動画を二次利用する最適戦略。"
+    },
+    "post-scheduler": {
+      "label": "司令カレンダー",
+      "desc": "コンテンツスケジュール管理と配信の最適化。"
+    },
+    "notepad": {
+      "label": "メモ帳",
+      "desc": "洗練されたインテリジェンス・エディタ。"
+    },
+    "drafts": {
+      "label": "CHIDON保管庫",
+      "desc": "保存された台本やプロフィールのインデックス。"
+    },
+    "post-optimizer": {
+      "label": "時間最適化",
+      "desc": "地域トラフィックデータに基づくグローバル最適配信窓。"
+    },
+    "youtube-seo": {
+      "label": "YouTube SEO",
+      "desc": "爆発的な再生回数を目指すメタデータ最適化。"
+    },
+    "seo-scorecard": {
+      "label": "SEOスコア判定",
+      "desc": "アルゴリズムに基づいたコンテンツ品質評価。"
+    },
+    "keyword-research": {
+      "label": "キーワードインサイト",
+      "desc": "検索ボリュームや競合度合いの深掘り調査。"
+    },
+    "vseo-title-desc": {
+      "label": "動画タイトル＋説明文",
+      "desc": "クリック率を爆発的に高めるタイトルと概要生成。"
+    },
+    "vseo-tags": {
+      "label": "タグ管理",
+      "desc": "高トラフィック流入を狙う最適タグの抽出器。"
+    },
+    "vseo-scorecard": {
+      "label": "動画監査ツール",
+      "desc": "キーワード設定に基づく100点満点の最適度判定。"
+    },
+    "vseo-keywords": {
+      "label": "動画キーワード調査",
+      "desc": "関連用語のデータ駆動による網羅的検索。"
+    },
+    "vseo-best-time": {
+      "label": "最適化投稿時間",
+      "desc": "トラフィック最大層に照準を合わせた時間の判定。"
+    },
+    "trending-topics": {
+      "label": "トレンドテーマ",
+      "desc": "毎日の急上昇変動データに基づいたインサイト。"
+    },
+    "daily-ideas": {
+      "label": "デイリーアイデア",
+      "desc": "閲覧ホットマップに基づく毎日の新しいインスピレーション。"
+    },
+    "trend-alerts": {
+      "label": "トレンド急上昇警告",
+      "desc": "特定キーワードの急激な上昇を知らせる即時警告。"
+    },
+    "ai-script-outline": {
+      "label": "台本アウトライン",
+      "desc": "シード語彙から全体の論理ストーリーボードを作るプロトコル。"
+    }
+  },
+  "buttons": {
+    "back": "コマンドセンターに戻る"
+  }
+}

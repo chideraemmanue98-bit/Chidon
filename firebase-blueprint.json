@@ -1,0 +1,227 @@
+{
+  "entities": {
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback for generated features",
+      "type": "object",
+      "properties": {
+        "featureId": {
+          "type": "string",
+          "description": "The ID of the feature (e.g., content-ideas, hashtags)"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Rating from 1 to 5"
+        },
+        "comment": {
+          "type": "string",
+          "description": "User's text feedback"
+        },
+        "generatedContent": {
+          "type": "string",
+          "description": "The actual content that was generated"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the feedback was submitted"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID of the user who submitted feedback (optional if anonymous)"
+        }
+      },
+      "required": ["featureId", "rating", "timestamp"]
+    },
+    "ScheduledPost": {
+      "title": "Scheduled Post",
+      "description": "A scheduled social media post",
+      "type": "object",
+      "properties": {
+        "caption": { "type": "string" },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "mediaUrl": { "type": "string" },
+        "platform": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "published", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["caption", "scheduledAt", "platform", "status", "createdAt"]
+    },
+    "Draft": {
+      "title": "Draft",
+      "description": "Saved generated content",
+      "type": "object",
+      "properties": {
+        "featureId": { "type": "string" },
+        "content": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["featureId", "content", "createdAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "User created or edited notes",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "folderId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "content", "createdAt", "updatedAt"]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "Organizational container for notes",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "Presence": {
+      "title": "Presence",
+      "description": "Real-time user presence and cursor data",
+      "type": "object",
+      "properties": {
+        "userName": { "type": "string" },
+        "userColor": { "type": "string" },
+        "cursorIndex": { "type": "number" },
+        "lastActive": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userName", "userColor", "cursorIndex", "lastActive"]
+    },
+    "ChimePost": {
+      "title": "Chime Post",
+      "description": "Feed posts in the community chime hub",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["content", "authorId", "authorName", "createdAt"]
+    },
+    "GlobalPresence": {
+      "title": "Global Presence",
+      "description": "Global user presence and status tracking",
+      "type": "object",
+      "properties": {
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "userColor": { "type": "string" },
+        "cursorIndex": { "type": "number" }
+      },
+      "required": ["userName", "lastActive", "userColor", "cursorIndex"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile with synchronized settings and secure credentials",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "creatorRole": { "type": "string" },
+        "experienceLevel": { "type": "string" },
+        "systemLanguage": { "type": "string" },
+        "generationTone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "apiKeys": {
+          "type": "object",
+          "properties": {
+            "geminiApiKey": { "type": "string" },
+            "hfApiKey": { "type": "string" }
+          }
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "EarnProfile": {
+      "title": "Earn Profile",
+      "description": "User profile with specialty rate, bio, and social handles in Chidon Earn",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "bio": { "type": "string" },
+        "specialty": { "type": "string" },
+        "hourlyRate": { "type": "string" },
+        "portfolioUrl": { "type": "string" },
+        "youtubeUrl": { "type": "string" },
+        "instagramUrl": { "type": "string" },
+        "tiktokUrl": { "type": "string" },
+        "twitterUrl": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["displayName", "specialty", "email", "createdAt"]
+    },
+    "EarnMessage": {
+      "title": "Earn Message",
+      "description": "Direct message between buyer and seller in Chidon Earn",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "senderId", "senderName", "recipientId", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/earn_profiles/{profileId}": {
+      "schema": "EarnProfile",
+      "description": "Collection of Chidon Earn creator profile specifications"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Collection of user feedback entries"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Secure, private user settings and credentials synced across sessions"
+    },
+    "/scheduled_posts/{postId}": {
+      "schema": "ScheduledPost",
+      "description": "Collection of social media posts scheduled by users"
+    },
+    "/drafts/{draftId}": {
+      "schema": "Draft",
+      "description": "Collection of saved content drafts"
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Collection of personal notes"
+    },
+    "/folders/{folderId}": {
+      "schema": "Folder",
+      "description": "Collection of organizational folders"
+    },
+    "/presence/{noteId}/users/{userId}": {
+      "schema": "Presence",
+      "description": "Collection for tracking active users in a specific note"
+    },
+    "/chime_posts/{postId}": {
+      "schema": "ChimePost",
+      "description": "Collection of community chime hub posts"
+    },
+    "/global_presence/{userId}": {
+      "schema": "GlobalPresence",
+      "description": "Collection of global active users"
+    },
+    "/earn_messages/{messageId}": {
+      "schema": "EarnMessage",
+      "description": "Collection of direct messages between buyers and sellers in Chidon Earn"
+    }
+  }
+}
