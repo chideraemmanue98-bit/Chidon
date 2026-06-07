@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, 
   Search, 
@@ -18,7 +18,19 @@ import {
   Award,
   Clock,
   LayoutGrid,
-  FileDown
+  FileDown,
+  MessageSquare,
+  Send,
+  Share2,
+  Globe,
+  Users,
+  CheckCircle2,
+  Unlock,
+  MessageCircle,
+  Plus,
+  HelpCircle,
+  Clock3,
+  Edit2
 } from 'lucide-react';
 import { 
   collection, 
@@ -29,6 +41,9 @@ import {
   deleteDoc, 
   doc,
   addDoc,
+  setDoc,
+  updateDoc,
+  getDoc,
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -77,9 +92,308 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
     onConfirm: () => void;
   } | null>(null);
 
+  // --- REAL-TIME COLLABORATION STATES ---
+  const [collabCode, setCollabCode] = useState('');
+  const [isCollabSharingOpen, setIsCollabSharingOpen] = useState(false);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [activeCollaborators, setActiveCollaborators] = useState<any[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState('');
+  
+  // Real-time editor local input states (prevents text cursor jumps)
+  const [localContent, setLocalContent] = useState('');
+  const [localTitle, setLocalTitle] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimerRef = useRef<any>(null);
+
+  // User presence parameters
+  const [sessionUserId] = useState(() => {
+    const savedId = localStorage.getItem('collab_session_uid');
+    if (savedId) return savedId;
+    const newId = 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('collab_session_uid', newId);
+    return newId;
+  });
+
+  const [collabNickname, setCollabNickname] = useState(() => {
+    const saved = localStorage.getItem('collab_nickname');
+    if (saved) return saved;
+    const activeUserObj = auth.currentUser || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!) : null);
+    if (activeUserObj) {
+      return activeUserObj.displayName || activeUserObj.email?.split('@')[0] || 'Teammate';
+    }
+    const funNames = ['Alpha Creator', 'Hexa Copywriter', 'Vortex Editor', 'Scalar Designer', 'Sync Maverick', 'Binary Author'];
+    const chosen = funNames[Math.floor(Math.random() * funNames.length)];
+    localStorage.setItem('collab_nickname', chosen);
+    return chosen;
+  });
+
+  const [collabUserColor] = useState(() => {
+    const colors = ['#00FF87', '#60EFFF', '#FF007F', '#FFB800', '#E040FB', '#00E5FF', '#FF5252', '#9D4EDD', '#FFBE0B', '#3A86C8'];
+    const chosen = colors[Math.floor(Math.random() * colors.length)];
+    return colors.includes(chosen) ? chosen : '#00E5FF';
+  });
+
   const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
     setConfirmConfig({ title, message, onConfirm });
     setIsConfirmOpen(true);
+  };
+
+  // Deep-linking URL capture + custom code joiner
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const collabId = params.get('collab');
+    if (collabId) {
+      const getCollabDraft = async () => {
+        try {
+          const docRef = doc(db, 'drafts', collabId);
+          const docSnap = await getDoc(docRef).catch(() => null);
+          if (docSnap && docSnap.exists()) {
+            const data = docSnap.data();
+            const draftObj = { id: docSnap.id, ...data } as SavedDraft;
+            setSelectedDraft(draftObj);
+            
+            // Clean up query param so clicking around doesn't stay stuck on deep link
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+          }
+        } catch (error) {
+          console.error("Collab fetch failed:", error);
+        }
+      };
+      getCollabDraft();
+    }
+  }, []);
+
+  // Synchronize local input state with selectedDraft values on load
+  useEffect(() => {
+    if (selectedDraft) {
+      setLocalContent(selectedDraft.content || '');
+      setLocalTitle(selectedDraft.title || '');
+    } else {
+      setLocalContent('');
+      setLocalTitle('');
+    }
+  }, [selectedDraft?.id]);
+
+  // Synchronize incoming remote edits immediately, but ONLY if we are not actively typing
+  useEffect(() => {
+    if (selectedDraft && !isTyping) {
+      setLocalContent(selectedDraft.content || '');
+      setLocalTitle(selectedDraft.title || '');
+    }
+  }, [selectedDraft?.content, selectedDraft?.title]);
+
+  // Handle Real-Time Comments and Presence Listeners for Selected Draft
+  useEffect(() => {
+    if (!selectedDraft) {
+      setActiveCollaborators([]);
+      setComments([]);
+      return;
+    }
+
+    const draftId = selectedDraft.id;
+
+    // A. COMMENTS STREAM
+    const commentsQuery = query(
+      collection(db, 'drafts', draftId, 'comments'),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribeComments = onSnapshot(commentsQuery, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      setComments(list);
+    }, (error) => {
+      console.warn("Real-time comments feed offline. Cached views active:", error);
+    });
+
+    // B. PRESENCE REGISTRATION & HEARTBEAT
+    const presenceDocRef = doc(db, 'drafts', draftId, 'presence', sessionUserId);
+    
+    const writePresence = async () => {
+      try {
+        await updateDoc(presenceDocRef, {
+          userName: collabNickname,
+          userColor: collabUserColor,
+          lastActive: Date.now() // Use simple milliseconds for sub-second offline compatibility
+        }).catch(async (err) => {
+          // If document doesn't exist yet, we write with setDoc
+          await setDoc(presenceDocRef, {
+            userName: collabNickname,
+            userColor: collabUserColor,
+            lastActive: Date.now(),
+            userId: sessionUserId
+          });
+        });
+      } catch (e) {
+        // Silently catch exceptions
+      }
+    };
+
+    // Trigger immediately
+    writePresence();
+
+    // Setup periodic heart-beat
+    const heartbeat = setInterval(() => {
+      writePresence();
+    }, 15000);
+
+    // C. PRESENCE INCOMING BROADCAST LISTENERS
+    const presenceQuery = collection(db, 'drafts', draftId, 'presence');
+    const unsubscribePresence = onSnapshot(presenceQuery, (snapshot) => {
+      const list: any[] = [];
+      const cutoff = Date.now() - 45000; // 45 seconds stale cutoff
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (doc.id !== sessionUserId && data.lastActive && data.lastActive > cutoff) {
+          list.push({ id: doc.id, ...data });
+        }
+      });
+      setActiveCollaborators(list);
+    }, (error) => {
+      console.warn("Presence registration offline:", error);
+    });
+
+    // CLEANUP ON UNMOUNT OR TRANSITION
+    return () => {
+      unsubscribeComments();
+      unsubscribePresence();
+      clearInterval(heartbeat);
+      try {
+        deleteDoc(presenceDocRef);
+      } catch (e) {
+        // Silently skip
+      }
+    };
+  }, [selectedDraft?.id, collabNickname]);
+
+  // Submit local changes live to Firestore
+  const saveDraftLiveContent = async (updatedContent: string, updatedTitle: string) => {
+    if (!selectedDraft) return;
+    setIsCloudSyncing(true);
+    try {
+      const draftRef = doc(db, 'drafts', selectedDraft.id);
+      await updateDoc(draftRef, {
+        content: updatedContent,
+        title: updatedTitle
+      });
+    } catch (error) {
+      console.warn("Failed to sync co-authoring changes:", error);
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  const handleContentInput = (val: string) => {
+    setLocalContent(val);
+    setIsTyping(true);
+    
+    // Clear existing debounce timer
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    
+    typingTimerRef.current = setTimeout(() => {
+      setIsTyping(false);
+      saveDraftLiveContent(val, localTitle);
+    }, 450); // Fast 450ms debounce for high-quality instant sync
+  };
+
+  const handleTitleInput = (val: string) => {
+    setLocalTitle(val);
+    setIsTyping(true);
+    
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    
+    typingTimerRef.current = setTimeout(() => {
+      setIsTyping(false);
+      saveDraftLiveContent(localContent, val);
+    }, 450);
+  };
+
+  // Convert draft from Private to Collaborative
+  const handleEnableCollaboration = async () => {
+    if (!selectedDraft) return;
+    setIsCloudSyncing(true);
+    try {
+      const draftRef = doc(db, 'drafts', selectedDraft.id);
+      // Remove private userId block to enable open collaboration
+      await updateDoc(draftRef, {
+        userId: null,
+        title: selectedDraft.title.startsWith("Collaborative:") ? selectedDraft.title : `Collaborative: ${selectedDraft.title}`
+      });
+      
+      // Re-hydrate the local selectedDraft state
+      setSelectedDraft(prev => prev ? { 
+        ...prev, 
+        userId: undefined, 
+        title: prev.title.startsWith("Collaborative:") ? prev.title : `Collaborative: ${prev.title}` 
+      } : null);
+      
+      setIsCollabSharingOpen(true);
+    } catch (error) {
+      console.warn("Collaboration scaling failed:", error);
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  // Direct join code handler
+  const handleJoinByCode = async (codeValue: string) => {
+    if (!codeValue.trim()) return;
+    
+    setLoading(true);
+    try {
+      let targetId = codeValue.trim();
+      if (targetId.includes('collab=')) {
+        const urlParams = new URLSearchParams(targetId.split('?')[1]);
+        targetId = urlParams.get('collab') || targetId;
+      }
+      
+      const docRef = doc(db, 'drafts', targetId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const draftObj = { id: docSnap.id, ...data } as SavedDraft;
+        
+        // Add to drafts array locally if not already present
+        if (!drafts.some(d => d.id === draftObj.id)) {
+          setDrafts(prev => [draftObj, ...prev]);
+        }
+        
+        setSelectedDraft(draftObj);
+        setCollabCode('');
+      } else {
+        alert("We couldn't locate any collaborative workspace matching this code / link. Please verify and try again.");
+      }
+    } catch (err) {
+      console.error("Join co-authoring session failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Send a collaborative comment/feedback node
+  const handleSendComment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!commentText.trim() || !selectedDraft) return;
+
+    try {
+      const tempText = commentText;
+      setCommentText('');
+      
+      // Add a doc to collection drafts/{id}/comments
+      await addDoc(collection(db, 'drafts', selectedDraft.id, 'comments'), {
+        text: tempText,
+        userName: collabNickname,
+        userColor: collabUserColor,
+        userId: sessionUserId,
+        createdAt: new Date().toISOString() // String for simple sorted parsing
+      });
+    } catch (err) {
+      console.error("Failed to post comment:", err);
+    }
   };
 
   // Dynamically compile unique feature IDs available from saved drafts
@@ -114,70 +428,43 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
   };
 
   useEffect(() => {
-    // We bind to real-time snapshot
+    // Fail-safe real-time subscriber for both user-owned and collaborative drafts
     let unsubscribe = () => {};
     const activeUser = auth.currentUser || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!) : null);
 
-    if (activeUser) {
-      const q = query(
-        collection(db, 'drafts'),
-        where('userId', '==', activeUser.uid),
-        orderBy('createdAt', 'desc')
-      );
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const list: SavedDraft[] = [];
-        snapshot.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() } as SavedDraft);
-        });
-        
-        // Deduplicate list by id
-        const uniqueList: SavedDraft[] = [];
-        const seenIds = new Set<string>();
-        for (const item of list) {
-          if (!seenIds.has(item.id)) {
-            seenIds.add(item.id);
-            uniqueList.push(item);
-          }
-        }
-        
-        setDrafts(uniqueList);
-        setLoading(false);
-      }, (error) => {
-        console.error("Firestore loading error:", error);
-        setLoading(false);
-      });
-    } else {
-      // Unauthenticated: load public drafts or local ones
-      const q = query(
-        collection(db, 'drafts'),
-        orderBy('createdAt', 'desc')
-      );
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const list: SavedDraft[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          if (!data.userId) {
-            list.push({ id: doc.id, ...data } as SavedDraft);
-          }
-        });
+    const q = query(
+      collection(db, 'drafts'),
+      orderBy('createdAt', 'desc')
+    );
 
-        // Deduplicate guest list by id
-        const uniqueList: SavedDraft[] = [];
-        const seenIds = new Set<string>();
-        for (const item of list) {
-          if (!seenIds.has(item.id)) {
-            seenIds.add(item.id);
-            uniqueList.push(item);
-          }
+    unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: SavedDraft[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const matchesUser = activeUser && data.userId === activeUser.uid;
+        const matchesCollab = !data.userId; // No userId indicates a shared public workspace draft
+        
+        if (matchesUser || matchesCollab) {
+          list.push({ id: doc.id, ...data } as SavedDraft);
         }
-
-        setDrafts(uniqueList);
-        setLoading(false);
-      }, (error) => {
-        console.error("Firestore loading error:", error);
-        setLoading(false);
       });
-    }
+      
+      // Deduplicate consolidated list
+      const uniqueList: SavedDraft[] = [];
+      const seenIds = new Set<string>();
+      for (const item of list) {
+        if (!seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          uniqueList.push(item);
+        }
+      }
+      
+      setDrafts(uniqueList);
+      setLoading(false);
+    }, (error) => {
+      console.warn("Unified real-time drafts subscriber paused, falling back to local storage cache:", error);
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [auth.currentUser]);
@@ -367,6 +654,29 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
             </button>
           )
         })}
+      </div>
+
+      {/* Join Workspace input row */}
+      <div className="flex flex-col md:flex-row items-center gap-4 bg-brand/[0.03] border border-brand/20 p-4 rounded-2xl">
+        <div className="flex items-center gap-2 text-brand text-left shrink-0">
+          <Users size={16} />
+          <span className="text-xs font-black uppercase tracking-wider font-mono">Join Live Workspace:</span>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); handleJoinByCode(collabCode); }} className="flex-1 flex gap-2 w-full">
+          <input 
+            type="text"
+            placeholder="Paste Workspace Room Code ID or Collaboration link... (e.g. ?collab=XYZ)"
+            className="flex-1 bg-[var(--card-bg)]/50 border border-[var(--border-base)] rounded-xl px-3 py-2 text-xs outline-none focus:border-brand transition-all text-[var(--text-primary)]"
+            value={collabCode}
+            onChange={(e) => setCollabCode(e.target.value)}
+          />
+          <button 
+            type="submit"
+            className="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold hover:bg-brand-active transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <Plus size={13} /> Join Space
+          </button>
+        </form>
       </div>
 
       {/* Control Tools Panel */}
@@ -651,51 +961,325 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
               exit={{ opacity: 0, x: 20 }}
               className="col-span-1 lg:col-span-7 rounded-3xl border border-[var(--border-base)] bg-[var(--card-bg)] flex flex-col overflow-hidden shadow-xl"
             >
+              {/* Nickname Customization Sub-Header for Collaborative Drafts */}
+              {!selectedDraft.userId && (
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-zinc-900/10 border-b border-[var(--border-base)]/40 px-6 py-2 gap-2">
+                  <div className="flex items-center gap-2 text-[10px] text-[var(--text-secondary)] font-mono">
+                    <Users size={12} className="text-brand animate-pulse" />
+                    <span>CO-AUTHOR NICKNAME:</span>
+                    <span className="font-black text-brand uppercase">{collabNickname}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <input 
+                      type="text"
+                      placeholder="My co-author nickname..."
+                      value={collabNickname}
+                      onChange={(e) => {
+                        setCollabNickname(e.target.value);
+                        localStorage.setItem('collab_nickname', e.target.value);
+                      }}
+                      className="bg-[var(--card-bg)]/80 border border-[var(--border-base)] rounded-lg px-2 py-1 text-[9px] font-bold text-[var(--text-primary)] outline-none focus:border-brand w-full sm:w-36 transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Card Title Bar */}
-              <div className="p-6 border-b border-[var(--border-base)] flex items-center justify-between bg-gray-50/20 dark:bg-white/5">
-                <div className="space-y-1.5 min-w-0 pr-4">
-                  <span className="inline-block px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-brand/10 text-brand">
-                    {getFeatureLabel(selectedDraft.featureId)}
-                  </span>
-                  <h2 className="text-base font-black text-[var(--text-primary)] truncate">
-                    {selectedDraft.title || 'Untitled Saved Item'}
-                  </h2>
+              <div className="p-6 border-b border-[var(--border-base)] flex flex-col gap-4 bg-gray-50/20 dark:bg-white/5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1.5 min-w-0 pr-4">
+                    <span className="inline-block px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-brand/10 text-brand">
+                      {getFeatureLabel(selectedDraft.featureId)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {selectedDraft.userId ? (
+                        <span className="inline-flex items-center text-[9px] font-bold font-mono text-amber-500 gap-1 uppercase tracking-widest bg-amber-500/10 px-1.5 py-0.5 rounded">
+                          <Lock size={9} /> Private
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-[9px] font-bold font-mono text-emerald-500 gap-1 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded animate-pulse">
+                          <Globe size={9} /> Shared Live
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleCopy(localContent || selectedDraft.content, 'selected')}
+                      className="p-2 border border-[var(--border-base)] rounded-xl text-[var(--text-secondary)] hover:text-brand hover:border-brand/40 bg-[var(--card-bg)] transition-all flex items-center gap-1.5 text-xs font-bold"
+                    >
+                      {copiedId === 'selected' ? <Check size={14} className="text-brand" /> : <Copy size={14} />}
+                      {copiedId === 'selected' ? 'Copied' : 'Copy'}
+                    </button>
+
+                    {/* Dynamic Collaboration toggle and invites */}
+                    {selectedDraft.userId ? (
+                      <button
+                        onClick={handleEnableCollaboration}
+                        className="p-2 bg-brand/15 text-brand hover:bg-brand hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-brand/30 shadow-sm"
+                        title="Turn this Private Draft into a Collaborative Shared link"
+                      >
+                        <Share2 size={13} />
+                        Go Collaborative
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setIsCollabSharingOpen(prev => !prev)}
+                        className={cn(
+                          "p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm",
+                          isCollabSharingOpen 
+                            ? "bg-brand text-white border-brand" 
+                            : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/25 border-emerald-500/20"
+                        )}
+                        title="Configure Share / Invite Teammates link"
+                      >
+                        <Share2 size={13} />
+                        Share Workspace
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleDownload(selectedDraft)}
+                      className="p-2 hover:bg-[var(--border-base)] rounded-xl text-[var(--text-secondary)] hover:text-brand transition-all"
+                      title="Export TXT"
+                    >
+                      <Download size={16} />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(selectedDraft.id)}
+                      className="p-2 hover:bg-danger/10 text-[var(--text-secondary)] hover:text-danger rounded-xl transition-all"
+                      title="Discard Item"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => handleCopy(selectedDraft.content, 'selected')}
-                    className="p-2 border border-[var(--border-base)] rounded-xl text-[var(--text-secondary)] hover:text-brand hover:border-brand/40 bg-[var(--card-bg)] transition-all flex items-center gap-1.5 text-xs font-bold"
-                  >
-                    {copiedId === 'selected' ? <Check size={14} className="text-brand" /> : <Copy size={14} />}
-                    {copiedId === 'selected' ? 'Copied' : 'Copy'}
-                  </button>
-
-                  {/* Edit button removed */}
-
-                  <button
-                    onClick={() => handleDownload(selectedDraft)}
-                    className="p-2 hover:bg-[var(--border-base)] rounded-xl text-[var(--text-secondary)] hover:text-brand transition-all"
-                    title="Export TXT"
-                  >
-                    <Download size={16} />
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(selectedDraft.id)}
-                    className="p-2 hover:bg-danger/10 text-[var(--text-secondary)] hover:text-danger rounded-xl transition-all"
-                    title="Discard Item"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+                {/* Live Real-time Collaborators Bubble List */}
+                {!selectedDraft.userId && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-brand/[0.02] border border-brand/10 p-3 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {/* Current User */}
+                        <div 
+                          style={{ backgroundColor: collabUserColor }}
+                          className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[9px] font-black text-slate-950 border border-[var(--card-bg)] shadow-sm select-none"
+                          title={`${collabNickname} (You)`}
+                        >
+                          {collabNickname.slice(0, 2).toUpperCase()}
+                        </div>
+                        {/* Remote collaborators */}
+                        {activeCollaborators.map((co) => (
+                          <div 
+                            key={co.id}
+                            style={{ backgroundColor: co.userColor }}
+                            className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[9px] font-black text-slate-950 border border-[var(--card-bg)] shadow-sm select-none relative animate-fade-in"
+                            title={co.userName || 'Anonymous'}
+                          >
+                            {(co.userName || 'Teammate').slice(0, 2).toUpperCase()}
+                            <span className="absolute bottom-0 right-0 h-1 rounded-full bg-emerald-400 ring-1 ring-white" />
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[9px] text-[var(--text-secondary)] font-mono font-black uppercase">
+                        {activeCollaborators.length > 0
+                          ? `ACTIVE PEERS: +${activeCollaborators.length}`
+                          : 'CO-AUTHOR SECURE TUNNEL ONLINE'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold font-mono text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+                      {isCloudSyncing ? (
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />
+                          Saving...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 size={10} className="inline" />
+                          Cloud Synced
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Detailed Content Display */}
-              <div className="flex-1 p-6 md:p-8 overflow-y-auto max-h-[550px] custom-scrollbar selection:bg-brand/20">
-                <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed text-[var(--text-primary)] space-y-4 font-mono select-text whitespace-pre-wrap">
-                  {selectedDraft.content}
+              {/* Shared invite co-authoring block */}
+              {isCollabSharingOpen && !selectedDraft.userId && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-4 bg-brand/[0.04] border-b border-[var(--border-base)] space-y-3 px-6 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-black text-brand uppercase tracking-wider flex items-center gap-1.5">
+                      <Globe size={11} />
+                      Co-Authoring Room Access Nodes
+                    </h3>
+                    <button 
+                      onClick={() => setIsCollabSharingOpen(false)}
+                      className="text-[11px] font-bold text-zinc-400 hover:text-white"
+                    >
+                      × Dismiss
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
+                    Teammates can copy and update this workspace live! Send them this Collaboration Workspace Link or Room ID:
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-[var(--card-bg)] border border-[var(--border-base)] rounded-xl p-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1 pl-1">
+                        <span className="block text-[8px] font-mono text-zinc-500 uppercase font-black">Co-Author URL</span>
+                        <span className="block text-[10px] font-mono text-[var(--text-primary)] select-all truncate">
+                          {`${window.location.origin}${window.location.pathname}?collab=${selectedDraft.id}`}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const url = `${window.location.origin}${window.location.pathname}?collab=${selectedDraft.id}`;
+                          navigator.clipboard.writeText(url);
+                          alert("Collaboration Link copied to clipboard!");
+                        }}
+                        className="px-2.5 py-1 bg-brand text-white rounded-lg text-[10px] font-bold hover:bg-brand-active shrink-0 cursor-pointer"
+                      >
+                        Copy
+                      </button>
+                    </div>
+
+                    <div className="bg-[var(--card-bg)] border border-[var(--border-base)] rounded-xl p-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1 pl-1">
+                        <span className="block text-[8px] font-mono text-zinc-500 uppercase font-black">Room Code ID</span>
+                        <span className="block text-[10px] font-mono text-[var(--text-primary)] select-all truncate">
+                          {selectedDraft.id}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedDraft.id);
+                          alert("Workspace Room ID copied to clipboard!");
+                        }}
+                        className="px-2.5 py-1 bg-brand text-white rounded-lg text-[10px] font-bold hover:bg-brand-active shrink-0 cursor-pointer"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Unified live content editor split with live comment node discussion feeds */}
+              <div className="flex-1 flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[var(--border-base)] overflow-hidden min-h-[440px]">
+                
+                {/* Text co-authoring space */}
+                <div className="flex-1 p-6 flex flex-col gap-4 overflow-y-auto max-h-[550px] custom-scrollbar selection:bg-brand/20 text-left">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-[var(--text-secondary)] tracking-widest font-mono uppercase">Blueprint Label / Name</label>
+                    <input 
+                      type="text"
+                      value={localTitle}
+                      onChange={(e) => handleTitleInput(e.target.value)}
+                      placeholder="Blueprint title..."
+                      className="w-full bg-transparent border-b border-[var(--border-base)] focus:border-brand text-sm font-black text-[var(--text-primary)] outline-none pb-1 transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-1.5 min-h-[220px]">
+                    <label className="text-[9px] font-bold text-[var(--text-secondary)] tracking-widest font-mono uppercase">Intelligence Content Payload</label>
+                    <textarea 
+                      value={localContent}
+                      onChange={(e) => handleContentInput(e.target.value)}
+                      placeholder="Intelligence payload content... edits are saved live across collaborators in real-time."
+                      className="flex-1 w-full bg-[var(--card-bg)] border border-[var(--border-base)] focus:border-brand rounded-2xl p-4 text-xs font-mono text-[var(--text-primary)] outline-none resize-none leading-relaxed transition-all min-h-[180px] custom-scrollbar"
+                    />
+                  </div>
                 </div>
+
+                {/* Teammate Comments & Feedback Roster */}
+                {!selectedDraft.userId && (
+                  <div className="w-full lg:w-72 flex flex-col bg-zinc-900/5 dark:bg-white/[0.01] h-[340px] lg:h-auto border-t lg:border-t-0 divide-y divide-[var(--border-base)] text-left">
+                    <div className="p-4 flex items-center justify-between bg-zinc-900/20">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-[var(--text-primary)] font-mono">
+                        <MessageSquare size={13} className="text-brand text-indigo-400" />
+                        <span>Team Chat Feed</span>
+                        {comments.length > 0 && (
+                          <span className="bg-brand/10 text-brand rounded-full text-[9px] font-black px-1.5 py-0.5 border border-brand/20">
+                            {comments.length}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[8px] font-black text-emerald-400 tracking-widest uppercase">Live Link</span>
+                    </div>
+
+                    {/* Chat messaging logs */}
+                    <div className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar flex flex-col pt-2 bg-slate-900/5">
+                      {comments.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-4 space-y-2 opacity-50 m-auto">
+                          <MessageCircle size={24} className="text-zinc-600 stroke-1" />
+                          <div className="space-y-0.5">
+                            <p className="text-[10px] font-black text-[var(--text-primary)] uppercase tracking-wider">No Comments</p>
+                            <p className="text-[9px] text-[var(--text-secondary)] leading-normal">Post suggestions, notes, or teammate feedback below.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        comments.map((msg: any) => {
+                          const matchesMe = msg.userId === sessionUserId;
+                          return (
+                            <div 
+                              key={msg.id}
+                              className={cn(
+                                "flex flex-col gap-1 max-w-[85%] text-left",
+                                matchesMe ? "self-end items-end" : "self-start items-start"
+                              )}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span 
+                                  style={{ color: msg.userColor }}
+                                  className="text-[9px] font-black uppercase"
+                                >
+                                  {msg.userName || 'Teammate'}
+                                </span>
+                                <span className="text-[7.5px] font-mono text-zinc-500">
+                                  {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Instant'}
+                                </span>
+                              </div>
+                              <div 
+                                className={cn(
+                                  "rounded-xl px-2.5 py-1.5 text-xs font-sans font-medium break-words max-w-full",
+                                  matchesMe 
+                                    ? "bg-brand text-white rounded-tr-none shadow-sm" 
+                                    : "bg-white/5 border border-zinc-700/20 text-[var(--text-primary)] rounded-tl-none animate-fade-in"
+                                )}
+                              >
+                                {msg.text}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Comments submit input form */}
+                    <form onSubmit={handleSendComment} className="p-2 bg-zinc-950/25 flex gap-1.5 items-center shrink-0">
+                      <input 
+                        type="text"
+                        placeholder="Add co-author feedback..."
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        className="flex-1 bg-[var(--card-bg)] border border-[var(--border-base)] rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand text-[var(--text-primary)]"
+                      />
+                      <button 
+                        type="submit"
+                        className="p-2 bg-brand hover:bg-brand-active text-white rounded-xl transition-colors cursor-pointer shrink-0"
+                      >
+                        <Send size={11} />
+                      </button>
+                    </form>
+                  </div>
+                )}
               </div>
 
               {/* Footer bar for information metadata */}

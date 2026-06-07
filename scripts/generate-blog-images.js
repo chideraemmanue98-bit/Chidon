@@ -268,24 +268,24 @@ function main() {
   const imgMap = [
     { name: 'blog-01-what-is-ai.png', style: 1 },
     { name: 'blog-02-ai-vs-human.png', style: 2 },
-    { name: 'blog-03-top-tools.png', style: 3 },
-    { name: 'blog-04-student-study.png', style: 4 },
+    { name: 'blog-03-top-10-tools.png', style: 3 },
+    { name: 'blog-04-students-study.png', style: 4 },
     { name: 'blog-05-small-business.png', style: 5 },
-    { name: 'blog-06-ai-myths.png', style: 6 },
-    { name: 'blog-07-llm-comparison.png', style: 7 },
-    { name: 'blog-08-prompt-guide.png', style: 8 },
+    { name: 'blog-06-ai-dangerous.png', style: 6 },
+    { name: 'blog-07-chatgpt-vs-claude.png', style: 7 },
+    { name: 'blog-08-ai-prompts.png', style: 8 },
     { name: 'blog-09-image-generation.png', style: 9 },
-    { name: 'blog-10-future-jobs.png', style: 10 },
-    { name: 'blog-11-creators-guide.png', style: 11 },
-    { name: 'blog-12-make-money.png', style: 12 },
+    { name: 'blog-10-future-jobs-world.png', style: 10 },
+    { name: 'blog-11-content-creators.png', style: 11 },
+    { name: 'blog-12-make-money-online.png', style: 12 },
     { name: 'blog-13-coding-tools.png', style: 13 },
     { name: 'blog-14-ai-education.png', style: 14 },
     { name: 'blog-15-viral-prompts.png', style: 15 },
     { name: 'blog-16-ai-ethics.png', style: 16 },
-    { name: 'blog-17-detect-ai.png', style: 17 },
-    { name: 'blog-18-digital-marketing.png', style: 18 },
+    { name: 'blog-17-detect-ai-content.png', style: 17 },
+    { name: 'blog-18-ai-marketing.png', style: 18 },
     { name: 'blog-19-machine-learning.png', style: 19 },
-    { name: 'blog-20-everyone-ai.png', style: 20 }
+    { name: 'blog-20-nigeria-ai.png', style: 20 }
   ];
 
   for (const { name, style } of imgMap) {

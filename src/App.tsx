@@ -3000,7 +3000,15 @@ export default function App() {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'pricing' | 'blog'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'pricing' | 'blog'>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path === '/blog' || path.startsWith('/blog/')) {
+        return 'blog';
+      }
+    }
+    return 'dashboard';
+  });
   const [membershipTier, setMembershipTier] = useState<'free' | 'pro'>('free');
   const [paymentSuccessModal, setPaymentSuccessModal] = useState<{
     reference: string;
@@ -3410,6 +3418,21 @@ export default function App() {
     }
   }, [user]);
 
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/blog' || path.startsWith('/blog/')) {
+        setView('blog');
+      } else if (path === '/' || path === '') {
+        setView('dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const handleSendToBook = (content: string, title?: string) => {
     setPreFilledContent(prev => ({
       ...prev,
@@ -3546,6 +3569,13 @@ export default function App() {
     // Don't push if it's the exact same state
     if (view === newView && activeFeature === targetFeature) return;
 
+    if (typeof window !== 'undefined') {
+      const targetPath = newView === 'blog' ? '/blog' : '/';
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, document.title, targetPath + window.location.search);
+      }
+    }
+
     setNavigationHistory(prev => {
       const next = [...prev, { view, feature: activeFeature } as any];
       if (next.length > 20) return next.slice(1);
@@ -3565,9 +3595,20 @@ export default function App() {
     if (navigationHistory.length > 0) {
       const prev = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(prevHistory => prevHistory.slice(0, -1));
+      
+      if (typeof window !== 'undefined') {
+        const targetPath = prev.view === 'blog' ? '/blog' : '/';
+        if (window.location.pathname !== targetPath) {
+          window.history.pushState({}, document.title, targetPath + window.location.search);
+        }
+      }
+
       setView(prev.view);
       setActiveFeature(prev.feature);
     } else {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.history.pushState({}, document.title, '/' + window.location.search);
+      }
       setView('dashboard');
     }
   };

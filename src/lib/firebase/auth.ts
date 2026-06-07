@@ -15,31 +15,37 @@ import {
 import { auth } from '../../firebase';
 
 // Custom ActionCodeSettings to show "Chidon IQ" app name instead of Firebase / Project ID.
-const getVerifyEmailActionSettings = (): ActionCodeSettings => ({
-  url: 'https://chidoniq.com/verify-email',
-  handleCodeInApp: true,
-  iOS: {
-    bundleId: 'com.chidoniq.ios',
-  },
-  android: {
-    packageName: 'com.chidoniq.android',
-    installApp: true,
-    minimumVersion: '12',
-  },
-});
+const getVerifyEmailActionSettings = (): ActionCodeSettings => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://chidoniq.com';
+  return {
+    url: `${origin}/verify-email`,
+    handleCodeInApp: true,
+    iOS: {
+      bundleId: 'com.chidoniq.ios',
+    },
+    android: {
+      packageName: 'com.chidoniq.android',
+      installApp: true,
+      minimumVersion: '12',
+    },
+  };
+};
 
-const getResetPasswordActionSettings = (): ActionCodeSettings => ({
-  url: 'https://chidoniq.com/reset-password',
-  handleCodeInApp: true,
-  iOS: {
-    bundleId: 'com.chidoniq.ios',
-  },
-  android: {
-    packageName: 'com.chidoniq.android',
-    installApp: true,
-    minimumVersion: '12',
-  },
-});
+const getResetPasswordActionSettings = (): ActionCodeSettings => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://chidoniq.com';
+  return {
+    url: `${origin}/reset-password`,
+    handleCodeInApp: true,
+    iOS: {
+      bundleId: 'com.chidoniq.ios',
+    },
+    android: {
+      packageName: 'com.chidoniq.android',
+      installApp: true,
+      minimumVersion: '12',
+    },
+  };
+};
 
 /**
  * a) Create user, send confirmation email, set displayName to custom or default.

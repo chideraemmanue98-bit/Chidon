@@ -50,8 +50,8 @@ const sanitizeError = (msg: string): string => {
   if (msg.includes('auth/weak-password')) {
     return "Password must be at least 6 characters long.";
   }
-  if (msg.includes('auth/operation-not-allowed')) {
-    return "Email/Password node connections are temporarily disabled.";
+  if (msg.includes('auth/operation-not-allowed') || msg.includes('operation_not_allowed')) {
+    return "The Email & Password Auth Provider is not enabled in your Firebase Console. Please go to your Firebase Console -> Authentication -> Sign-in method tab, click 'Add new provider', and enable 'Email/Password'. In the meantime, use 'Simulate Sandbox Account' below to test immediately!";
   }
   if (msg.includes('Please verify your email first')) {
     return "Verification node signature is incomplete. Please confirm your email before connecting.";
@@ -243,7 +243,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full overflow-hidden text-left"
+          className="relative bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto custom-scrollbar text-left"
         >
           {/* Decorative futuristic glow */}
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-brand/10 blur-2xl pointer-events-none" />
@@ -452,12 +452,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <div className="mt-4 space-y-2.5 border-t border-neutral-150 dark:border-zinc-800 pt-4">
             <button
               type="button"
+              onClick={handleSimulatedBypass}
+              disabled={loading}
+              className="w-full py-2 bg-brand/5 border border-dashed border-brand/35 hover:bg-brand/10 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-brand hover:text-brand-active cursor-pointer"
+            >
+              <Sparkles size={13} className="animate-pulse text-brand" />
+              <span>Simulate Sandbox Account (Creator Bypass)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleAnonymousLogin}
               disabled={loading}
               className="w-full py-2 bg-neutral-50 border border-dashed border-neutral-200 dark:bg-zinc-950 dark:border-zinc-850 dark:border-dashed hover:bg-neutral-100 dark:hover:bg-zinc-900 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-slate-650 dark:text-zinc-300 cursor-pointer"
             >
               <User size={13} className="text-slate-400 dark:text-zinc-500 animate-pulse" />
               <span>Try Anonymously (Guest access)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <X size={13} />
+              <span>Cancel & Close</span>
             </button>
           </div>
 

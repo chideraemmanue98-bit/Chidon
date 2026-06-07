@@ -149,6 +149,14 @@ service cloud.firestore {
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
+    // Subscriber Validation
+    function isValidSubscriber(data) {
+      return data.keys().hasAll(['email', 'createdAt']) &&
+             data.keys().size() == 2 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.createdAt == request.time;
+    }
+
     match /users/{userId} {
       allow get: if isSignedIn() && userId == request.auth.uid;
       allow create, update: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming());
@@ -174,6 +182,16 @@ service cloud.firestore {
       allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
       allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+
+      // Dedicated co-authoring presence node
+      match /presence/{userId} {
+        allow read, list, write, delete: if true;
+      }
+
+      // Dedicated teammate live chat/comments feed node
+      match /comments/{commentId} {
+        allow read, list, write, delete: if true;
+      }
     }
 
     match /notes/{noteId} {
@@ -239,6 +257,11 @@ service cloud.firestore {
       allow read, list: if isSignedIn();
       allow create, update: if isSignedIn() && userId == request.auth.uid && isValidGlobalPresence(incoming());
       allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /subscribers/{subscriberId} {
+      allow create: if isValidId(subscriberId) && isValidSubscriber(incoming());
+      allow read, list, update, delete: if false;
     }
   }
 }

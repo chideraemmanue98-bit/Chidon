@@ -2,6 +2,8 @@
 import React from 'react';
 import postsData from '../../data/posts.json';
 import { BlogCard } from '../../components/BlogCard';
+import { ResumeReadingBridge } from '../../components/ResumeReadingBridge';
+import { RecentlyReadSection } from '../../components/RecentlyReadSection';
 
 export const metadata = {
   title: 'Chidon Iq Blog - Advanced AI Content Optimization and Marketing',
@@ -72,9 +74,12 @@ export default function BlogListPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main className="max-w-7xl mx-auto px-6 py-16 sm:py-24 relative z-10 space-y-12">
+      <main className="max-w-7xl mx-auto px-6 py-12 sm:py-16 relative z-10 space-y-12">
+        {/* Resume Reading Bridge Popup */}
+        <ResumeReadingBridge />
+
         {/* Banner Headers */}
-        <div className="text-center space-y-4 max-w-3xl mx-auto mb-16 border-b border-white/5 pb-12">
+        <div className="text-center space-y-4 max-w-3xl mx-auto mb-8 border-b border-white/5 pb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 text-brand rounded-full text-[10px] font-mono uppercase tracking-widest font-black">
             Niche Intelligence Portal
           </div>
@@ -88,11 +93,22 @@ export default function BlogListPage() {
           </p>
         </div>
 
-        {/* Catalog Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {posts.map((post) => (
-            <BlogCard key={post.slug} post={post} isLink={true} />
-          ))}
+        {/* Recent Reading History Section */}
+        <RecentlyReadSection posts={posts} />
+
+        {/* Catalog Catalog List */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <h2 className="text-xs font-mono uppercase tracking-widest text-slate-400 font-black flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+              Catalogue Hub
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {posts.map((post) => (
+              <BlogCard key={post.slug} post={post} isLink={true} />
+            ))}
+          </div>
         </div>
 
         {/* Static home directory button */}

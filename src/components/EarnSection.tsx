@@ -34,6 +34,7 @@ interface EarnJob {
   buyerEmail: string;
   sellerId?: string;
   status: 'open' | 'completed' | 'in_progress';
+  stage?: 'briefing' | 'drafting' | 'revision' | 'completed';
   createdAt: any;
 }
 
@@ -53,6 +54,7 @@ interface EarnResult {
   jobId: string;
   jobTitle: string;
   buyerId: string;
+  buyerEmail?: string;
   sellerId: string;
   sellerEmail: string;
   resultText: string;
@@ -61,6 +63,8 @@ interface EarnResult {
   paymentStatus?: 'awaiting_payment' | 'paid';
   amount?: string;
   status: 'pending' | 'accepted' | 'revision';
+  rating?: number;
+  reviewText?: string;
   createdAt: any;
 }
 
@@ -75,6 +79,13 @@ interface EarnProfile {
   instagramUrl?: string;
   tiktokUrl?: string;
   twitterUrl?: string;
+  portfolioItems?: {
+    id: string;
+    title: string;
+    url: string;
+    description: string;
+    category: string;
+  }[];
   email: string;
   createdAt: any;
 }
@@ -118,6 +129,22 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
   const [profileTiktok, setProfileTiktok] = useState('');
   const [profileTwitter, setProfileTwitter] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Portfolio Showcase Items State
+  const [portfolioItems, setPortfolioItems] = useState<{ id: string; title: string; url: string; description: string; category: string; }[]>([]);
+  const [newPortTitle, setNewPortTitle] = useState('');
+  const [newPortUrl, setNewPortUrl] = useState('');
+  const [newPortDesc, setNewPortDesc] = useState('');
+  const [newPortCategory, setNewPortCategory] = useState('Thumbnail Design');
+
+  // Rating & Review Feedback States
+  const [showRateModal, setShowRateModal] = useState(false);
+  const [resultToRate, setResultToRate] = useState<EarnResult | null>(null);
+  const [rateRating, setRateRating] = useState<number>(5);
+  const [rateReviewText, setRateReviewText] = useState<string>('');
+
+  // Milestone Progress State for submission
+  const [submitStage, setSubmitStage] = useState<'briefing' | 'drafting' | 'revision' | 'completed'>('completed');
 
   // Form States - Buyer posting a Gig
   const [jobTitle, setJobTitle] = useState('');
@@ -207,13 +234,16 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
           setProfileInstagram(found.instagramUrl || '');
           setProfileTiktok(found.tiktokUrl || '');
           setProfileTwitter(found.twitterUrl || '');
+          setPortfolioItems(found.portfolioItems || []);
         } else {
           setMyProfile(null);
           // Pre-fill display name from user email
           setProfileName(user.email ? user.email.split('@')[0] : 'Social Creator');
+          setPortfolioItems([]);
         }
       } else {
         setMyProfile(null);
+        setPortfolioItems([]);
       }
     }, err => console.error("Error loading earn_profiles:", err));
 
@@ -526,21 +556,22 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
         sellerEmail: user.email || 'Anonymous Seller',
         resultText: resultText,
         proofUrl: proofUrl || '',
-        status: 'pending',
+        status: submitStage === 'completed' ? 'accepted' : 'pending',
         paymentStatus: 'awaiting_payment',
         amount: job.budget || '0',
         createdAt: serverTimestamp()
       });
 
-      // Update status of actual job
+      // Update status and stage of actual job
       await updateDoc(doc(db, 'earn_jobs', job.id), {
-        status: 'completed'
+        status: submitStage === 'completed' ? 'completed' : 'in_progress',
+        stage: submitStage
       });
 
       setResultText('');
       setProofUrl('');
       setSubmittingResultId(null);
-      alert("Completed job delivers to buyer securely! Waiting for client review & payment release.");
+      alert(`Milestone [${submitStage.toUpperCase()}] delivered to buyer securely! Live metadata sync updated.`);
     } catch (err) {
       console.error("Failed to post result delivery:", err);
     } finally {
@@ -549,18 +580,59 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
   };
 
   // Actions - Buyer Approves / Accepts job execution & Releases payment
-  const handleAcceptResult = async (result: EarnResult) => {
-    const confirmRelease = window.confirm(`Release escrow contract payment of $${result.amount || '0.00'} to candidate ${result.sellerEmail}?`);
-    if (!confirmRelease) return;
+  const handleAcceptResult = (result: EarnResult) => {
+    setResultToRate(result);
+    setRateRating(5);
+    setRateReviewText('');
+    setShowRateModal(true);
+  };
+
+  const submitPayoutReview = async () => {
+    if (!resultToRate) return;
     try {
-      await updateDoc(doc(db, 'earn_results', result.id), {
+      await updateDoc(doc(db, 'earn_results', resultToRate.id), {
         status: 'accepted',
-        paymentStatus: 'paid'
+        paymentStatus: 'paid',
+        rating: rateRating,
+        reviewText: rateReviewText
       });
-      alert(`Success! Payout of $${result.amount || '0.00'} has been securely disbursed to candidate. Contract completed.`);
+
+      // Update associated job status and stage to completed
+      await updateDoc(doc(db, 'earn_jobs', resultToRate.jobId), {
+        status: 'completed',
+        stage: 'completed'
+      });
+
+      setShowRateModal(false);
+      setResultToRate(null);
+      alert(`Success! Secure payout of $${resultToRate.amount || '0.00'} has been disbursed to candidate ${resultToRate.sellerEmail}. Review posted.`);
     } catch (err) {
       console.error("Action approval failed:", err);
+      alert("Error saving review feedback and finalizing escrow.");
     }
+  };
+
+  // Portfolio list helpers
+  const addPortfolioShowcaseItem = () => {
+    if (!newPortTitle.trim() || !newPortUrl.trim()) {
+      alert("Please provide at least a Title and Showcase URL for the work item!");
+      return;
+    }
+    const newItem = {
+      id: 'port_' + Date.now(),
+      title: newPortTitle.trim(),
+      url: newPortUrl.trim(),
+      description: newPortDesc.trim(),
+      category: newPortCategory
+    };
+    setPortfolioItems(prev => [...prev, newItem]);
+    setNewPortTitle('');
+    setNewPortUrl('');
+    setNewPortDesc('');
+  };
+
+  const removePortfolioShowcaseItem = (itemId: string) => {
+    setPortfolioItems(prev => prev.filter(item => item.id !== itemId));
   };
 
   // Actions - Delete elements easily
@@ -598,6 +670,7 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
         instagramUrl: profileInstagram || '',
         tiktokUrl: profileTiktok || '',
         twitterUrl: profileTwitter || '',
+        portfolioItems: portfolioItems,
         email: user.email || 'Anonymous',
         createdAt: serverTimestamp()
       }, { merge: true });
@@ -889,37 +962,54 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {profiles.map((profile) => (
-                        <div
-                          key={profile.id}
-                          onClick={() => setSelectedProfile(profile)}
-                          className="p-5 border border-white/5 bg-[#090F1E] rounded-2xl hover:border-cyan-500/30 transition-all cursor-pointer flex items-start gap-4 group relative overflow-hidden"
-                        >
-                          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-b from-[#22D3EE]/3 via-transparent to-transparent pointer-events-none" />
-                          <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500/10 to-indigo-500/10 border border-white/10 flex items-center justify-center text-white shrink-0 font-extrabold text-sm group-hover:scale-105 transition-transform duration-300">
-                            {profile.displayName?.[0]?.toUpperCase() || 'S'}
-                          </div>
-
-                          <div className="space-y-1.5 flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <h5 className="font-extrabold text-sm text-slate-100 group-hover:text-[#22D3EE] transition-colors truncate">
-                                {profile.displayName}
-                              </h5>
-                              <span className="text-[10px] font-black font-mono text-[#22D3EE] shrink-0">
-                                {profile.hourlyRate}
-                              </span>
+                      {profiles.map((profile) => {
+                        const profileResults = results.filter(r => r.sellerId === profile.id && r.status === 'accepted' && r.rating);
+                        const avgRating = profileResults.length > 0 
+                          ? Math.round((profileResults.reduce((sum, r) => sum + (r.rating || 0), 0) / profileResults.length) * 10) / 10
+                          : null;
+                        return (
+                          <div
+                            key={profile.id}
+                            onClick={() => setSelectedProfile(profile)}
+                            className="p-5 border border-white/5 bg-[#090F1E] rounded-2xl hover:border-cyan-500/30 transition-all cursor-pointer flex items-start gap-4 group relative overflow-hidden"
+                          >
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-b from-[#22D3EE]/3 via-transparent to-transparent pointer-events-none" />
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-cyan-500/10 to-indigo-500/10 border border-white/10 flex items-center justify-center text-white shrink-0 font-extrabold text-sm group-hover:scale-105 transition-transform duration-300">
+                              {profile.displayName?.[0]?.toUpperCase() || 'S'}
                             </div>
 
-                            <span className="inline-block text-[9px] font-mono uppercase text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/20 px-2 py-0.5 rounded">
-                              {profile.specialty}
-                            </span>
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <h5 className="font-extrabold text-sm text-slate-100 group-hover:text-[#22D3EE] transition-colors truncate">
+                                  {profile.displayName}
+                                </h5>
+                                <span className="text-[10px] font-black font-mono text-[#22D3EE] shrink-0">
+                                  {profile.hourlyRate}
+                                </span>
+                              </div>
 
-                            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                              {profile.bio || 'Social media optimization specialist.'}
-                            </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-block text-[9px] font-mono uppercase text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/20 px-2 py-0.5 rounded">
+                                  {profile.specialty}
+                                </span>
+                                {avgRating ? (
+                                  <span className="inline-block text-[9px] font-mono text-yellow-400 bg-yellow-400/10 border border-yellow-450/20 px-1.5 py-0.5 rounded">
+                                    ★ {avgRating} ({profileResults.length} {profileResults.length === 1 ? 'Review' : 'Reviews'})
+                                  </span>
+                                ) : (
+                                  <span className="inline-block text-[8px] font-mono text-slate-500 bg-white/5 border border-white/5 px-1.5 py-0.5 rounded">
+                                    No reviews yet
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                                {profile.bio || 'Social media optimization specialist.'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1143,95 +1233,143 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {results.filter(r => !user || r.buyerId === user.uid).map((res) => (
-                          <div key={res.id} className="p-5 border border-white/10 bg-[#0F172A]/90 rounded-2xl space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-2">
-                              <div>
-                                <span className="text-[9px] font-mono text-slate-500 uppercase block">Contract target workflow</span>
-                                <h5 className="text-xs font-bold text-white capitalize">{res.jobTitle}</h5>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className={cn(
-                                  "px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest rounded-full font-bold border",
-                                  res.status === 'accepted' 
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/10"
-                                    : "bg-amber-500/10 text-amber-400 border-amber-500/10 animate-pulse"
-                                )}>
-                                  {res.status === 'accepted' ? 'Completed' : 'Reviewing'}
-                                </span>
-                                <span className={cn(
-                                  "px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest rounded-full font-bold border",
-                                  res.paymentStatus === 'paid'
-                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/25"
-                                    : "bg-yellow-500/20 text-yellow-300 border-yellow-500/25 animate-pulse"
-                                )}>
-                                  {res.paymentStatus === 'paid' ? 'Paid & Released' : 'Held in Escrow'}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <span className="text-[9px] text-slate-500 font-mono block uppercase">Completed Deliverables:</span>
-                              <p className="text-[11px] text-slate-300 bg-black/40 p-4 rounded-xl border border-white/5 font-mono whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">
-                                {res.resultText}
-                              </p>
-                            </div>
-
-                            {res.proofUrl && (
-                              <div className="flex items-center gap-2 text-xs bg-cyan-955/20 border border-cyan-500/10 p-3 rounded-xl">
-                                <FileText size={14} className="text-cyan-primary text-[#22D3EE]" />
-                                <div className="truncate">
-                                  <span className="text-[8px] text-slate-500 font-mono block uppercase">Proof Attachment / Delivery URL:</span>
-                                  <a 
-                                    href={res.proofUrl} 
-                                    target="_blank" 
-                                    referrerPolicy="no-referrer" 
-                                    className="text-[#22D3EE] hover:underline font-bold text-[10px] break-all"
-                                  >
-                                    {res.proofUrl}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <div className="text-[11px] flex items-center gap-3">
+                        {results.filter(r => !user || r.buyerId === user.uid).map((res) => {
+                          const associatedJob = jobs.find(j => j.id === res.jobId);
+                          const activeStage = associatedJob?.stage || (res.status === 'accepted' ? 'completed' : 'briefing');
+                          return (
+                            <div key={res.id} className="p-5 border border-white/10 bg-[#0F172A]/90 rounded-2xl space-y-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-2">
                                 <div>
-                                  <span className="text-[9px] text-slate-500 font-mono block uppercase">Assigned Candidate</span>
-                                  <span className="font-bold text-slate-200">{res.sellerEmail}</span>
+                                  <span className="text-[9px] font-mono text-slate-500 uppercase block">Contract target workflow</span>
+                                  <h5 className="text-xs font-bold text-white capitalize">{res.jobTitle}</h5>
                                 </div>
-                                {user && res.sellerId !== user.uid && (
-                                  <button
-                                    onClick={() => handleStartChat(res.sellerId, res.sellerEmail)}
-                                    className="p-1 px-2.25 bg-white/5 hover:bg-slate-800 border border-white/5 text-slate-300 hover:text-white rounded-lg transition-all text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer"
-                                    title="Chat with Creator"
-                                  >
-                                    <MessageSquare size={11} /> MESSAGE
-                                  </button>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  <span className={cn(
+                                    "px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest rounded-full font-bold border",
+                                    res.status === 'accepted' 
+                                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/10"
+                                      : "bg-amber-500/10 text-amber-400 border-amber-500/10 animate-pulse"
+                                  )}>
+                                    {res.status === 'accepted' ? 'Completed' : 'Reviewing'}
+                                  </span>
+                                  <span className={cn(
+                                    "px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest rounded-full font-bold border",
+                                    res.paymentStatus === 'paid'
+                                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/25"
+                                      : "bg-yellow-500/20 text-yellow-300 border-yellow-500/25 animate-pulse"
+                                  )}>
+                                    {res.paymentStatus === 'paid' ? 'Paid & Released' : 'Held in Escrow'}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <div className="text-right shrink-0">
-                                  <span className="text-[9px] text-slate-500 font-mono block uppercase">Escrow Value</span>
-                                  <span className="text-xs font-black text-white">${res.amount || '0'}</span>
+
+                              {/* Milestone Progress Interactive Line Tracker */}
+                              <div className="space-y-1.5 p-3.5 bg-[#070A13]/50 border border-white/5 rounded-xl text-left">
+                                <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                                  <span className="tracking-wider">CONTRACT PROGRESS MILESTONE:</span>
+                                  <span className="text-[#22D3EE] font-black uppercase tracking-widest">{activeStage}</span>
                                 </div>
-                                {res.status !== 'accepted' ? (
-                                  <button
-                                    onClick={() => handleAcceptResult(res)}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-black text-[10px] rounded-xl uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                                  >
-                                    <CheckCircle size={12} />
-                                    Verify Work & Release Payout
-                                  </button>
-                                ) : (
-                                  <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
-                                    <Check className="text-emerald-400" size={14} /> Payout Cleared
+                                <div className="grid grid-cols-4 gap-2 pt-1">
+                                  {['briefing', 'drafting', 'revision', 'completed'].map((st, i) => {
+                                    const states = ['briefing', 'drafting', 'revision', 'completed'];
+                                    const currentIdx = states.indexOf(activeStage);
+                                    const isPassed = i <= currentIdx;
+                                    return (
+                                      <div key={st} className="space-y-1">
+                                        <div className={cn(
+                                          "h-1.5 rounded-full transition-all duration-300",
+                                          isPassed ? "bg-[#22D3EE] shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "bg-white/5"
+                                        )} />
+                                        <span className={cn(
+                                          "text-[7px] font-mono tracking-tight uppercase block text-center truncate",
+                                          isPassed ? "text-slate-200 font-bold" : "text-slate-600"
+                                        )}>{st}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <span className="text-[9px] text-slate-500 font-mono block uppercase">Completed Deliverables:</span>
+                                <p className="text-[11px] text-slate-300 bg-black/40 p-4 rounded-xl border border-white/5 font-mono whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">
+                                  {res.resultText}
+                                </p>
+                              </div>
+
+                              {res.proofUrl && (
+                                <div className="flex items-center gap-2 text-xs bg-cyan-955/20 border border-cyan-500/10 p-3 rounded-xl">
+                                  <FileText size={14} className="text-cyan-primary text-[#22D3EE]" />
+                                  <div className="truncate">
+                                    <span className="text-[8px] text-slate-500 font-mono block uppercase">Proof Attachment / Delivery URL:</span>
+                                    <a 
+                                      href={res.proofUrl} 
+                                      target="_blank" 
+                                      referrerPolicy="no-referrer" 
+                                      className="text-[#22D3EE] hover:underline font-bold text-[10px] break-all"
+                                    >
+                                      {res.proofUrl}
+                                    </a>
                                   </div>
-                                )}
+                                </div>
+                              )}
+
+                              {/* Render review text and stars if rating exists */}
+                              {res.status === 'accepted' && res.rating && (
+                                <div className="p-3.5 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-left space-y-1">
+                                  <div className="flex items-center gap-1 border-b border-white/5 pb-1 mb-1.5">
+                                    <span className="text-[9px] font-mono text-emerald-400 block uppercase font-black tracking-wider">CLIENT RATING & COMMENTS:</span>
+                                    <div className="flex items-center text-yellow-500 text-xs ml-auto">
+                                      {Array.from({ length: 5 }).map((_, i) => (
+                                        <span key={i} className={i < (res.rating || 0) ? "text-yellow-400" : "text-slate-700"}>★</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <p className="text-[11px] text-slate-300 italic font-sans leading-relaxed">
+                                    "{res.reviewText || 'Approved without written text.'}"
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="text-[11px] flex items-center gap-3">
+                                  <div>
+                                    <span className="text-[9px] text-slate-500 font-mono block uppercase">Assigned Candidate</span>
+                                    <span className="font-bold text-slate-200">{res.sellerEmail}</span>
+                                  </div>
+                                  {user && res.sellerId !== user.uid && (
+                                    <button
+                                      onClick={() => handleStartChat(res.sellerId, res.sellerEmail)}
+                                      className="p-1 px-2.25 bg-white/5 hover:bg-slate-800 border border-white/5 text-slate-300 hover:text-white rounded-lg transition-all text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                                      title="Chat with Creator"
+                                    >
+                                      <MessageSquare size={11} /> MESSAGE
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right shrink-0">
+                                    <span className="text-[9px] text-slate-500 font-mono block uppercase">Escrow Value</span>
+                                    <span className="text-xs font-black text-white">${res.amount || '0'}</span>
+                                  </div>
+                                  {res.status !== 'accepted' ? (
+                                    <button
+                                      onClick={() => handleAcceptResult(res)}
+                                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-black text-[10px] rounded-xl uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                                    >
+                                      <CheckCircle size={12} />
+                                      Verify Work & Release Payout
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+                                      <Check className="text-emerald-400" size={14} /> Payout Cleared
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1462,26 +1600,41 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                                     className="w-full bg-[#070A13] border border-white/15 rounded-xl p-3 outline-none focus:border-[#A78BFA] text-slate-300 text-xs font-mono"
                                     placeholder="Optional Delivery / Proof Link (e.g. GitHub URL, Drive Folder, Demo Link)"
                                   />
-                                  <div className="flex items-center justify-end gap-2.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSubmittingResultId(null);
-                                        setResultText('');
-                                        setProofUrl('');
-                                      }}
-                                      className="px-3.5 py-2 hover:bg-white/5 border border-white/10 rounded-lg text-[10px] text-slate-400 hover:text-white uppercase font-bold"
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSendResult(job)}
-                                      disabled={sendingResult || !resultText}
-                                      className="px-4 py-2 bg-[#A78BFA] text-[#070A13] rounded-lg text-[10px] font-black uppercase tracking-wider disabled:opacity-50 cursor-pointer"
-                                    >
-                                      {sendingResult ? "Submitting..." : "Send Release Deliverable"}
-                                    </button>
+                                  <div className="pt-2 border-t border-white/5 space-y-3">
+                                    <div className="space-y-1.5 text-left">
+                                      <label className="block text-[9px] font-mono uppercase text-slate-400 font-bold">Select Active Progress Milestone Stage</label>
+                                      <select
+                                        value={submitStage}
+                                        onChange={(e) => setSubmitStage(e.target.value as any)}
+                                        className="w-full bg-[#070A13] border border-white/10 rounded-xl p-3 outline-none focus:border-[#A78BFA] text-slate-100 font-sans text-xs cursor-pointer"
+                                      >
+                                        <option value="briefing">📝 Session Briefing & Specifications Audit</option>
+                                        <option value="drafting">🎨 First Draft & Custom Concept Preview</option>
+                                        <option value="revision">🔄 Subcontract Revisions & Tuning Cycles</option>
+                                        <option value="completed">🚀 Final Premium Deliverables / Escrow Payout Ready</option>
+                                      </select>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-2.5 pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSubmittingResultId(null);
+                                          setResultText('');
+                                          setProofUrl('');
+                                        }}
+                                        className="px-3.5 py-2 hover:bg-white/5 border border-white/10 rounded-lg text-[10px] text-slate-400 hover:text-white uppercase font-bold"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSendResult(job)}
+                                        disabled={sendingResult || !resultText}
+                                        className="px-4 py-2 bg-[#A78BFA] text-[#070A13] hover:bg-[#8B5CF6] hover:text-white transition-colors duration-200 rounded-lg text-[10px] font-black uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+                                      >
+                                        {sendingResult ? "Submitting..." : "Send Release Deliverable"}
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
@@ -1851,6 +2004,89 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                   </div>
                 </div>
 
+                {/* Dynamic Portfolio Showcases list builder */}
+                <div className="border-t border-white/10 pt-4 space-y-3 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-[#22D3EE] uppercase font-black tracking-wider flex items-center gap-1.5">
+                      <Layers size={12} /> Portfolio Showcases Tracker ({portfolioItems.length})
+                    </span>
+                    <span className="text-[8px] text-slate-500 font-mono">Max 6 Projects</span>
+                  </div>
+
+                  {portfolioItems.length > 0 && (
+                    <div className="space-y-2 max-h-36 overflow-y-auto custom-scrollbar bg-slate-950/30 p-2.5 rounded-xl border border-white/5">
+                      {portfolioItems.map((pi, idx) => (
+                        <div key={idx} className="flex items-start justify-between gap-3 text-[10.5px] p-2 bg-[#0E1526] rounded-lg border border-white/5">
+                          <div className="truncate">
+                            <span className="font-bold text-slate-200 block truncate">{pi.title}</span>
+                            <span className="text-[8px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.2 rounded mr-1.5 uppercase font-bold">{pi.category}</span>
+                            {pi.url && <span className="text-[8.5px] text-slate-500 font-mono truncate">{pi.url}</span>}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removePortfolioShowcaseItem(pi.id)}
+                            className="p-1 hover:bg-slate-800 text-slate-500 hover:text-red-400 rounded transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add New Project Section */}
+                  <div className="p-3 bg-slate-950/40 rounded-xl border border-white/5 space-y-2 text-[11px]">
+                    <span className="text-[9px] uppercase font-mono tracking-wider font-bold text-slate-400 block">+ Add Portfolio Showpiece Info</span>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <input 
+                        type="text"
+                        placeholder="Project Title (e.g. Finance Reel)"
+                        value={newPortTitle}
+                        onChange={(e) => setNewPortTitle(e.target.value)}
+                        className="bg-[#070A13] border border-white/10 rounded-lg p-2 text-[10.5px] text-slate-200 outline-none focus:border-[#22D3EE]"
+                      />
+                      <select
+                        value={newPortCategory}
+                        onChange={(e) => setNewPortCategory(e.target.value)}
+                        className="bg-[#070A13] border border-white/10 rounded-lg p-2 text-[10.5px] text-slate-200 outline-none focus:border-[#22D3EE]"
+                      >
+                        <option value="thumbnail">🎨 Graphic/Thumbnail</option>
+                        <option value="video">🎬 Video/Short Reel</option>
+                        <option value="script">📝 Script/Copywriting</option>
+                        <option value="seo">📊 Audit/Growth Deck</option>
+                      </select>
+                    </div>
+
+                    <input 
+                      type="url"
+                      placeholder="Showcase URL (e.g. Behance, YouTube Link)"
+                      value={newPortUrl}
+                      onChange={(e) => setNewPortUrl(e.target.value)}
+                      className="w-full bg-[#070A13] border border-white/10 rounded-lg p-2 text-[10.5px] text-slate-200 outline-none focus:border-[#22D3EE]"
+                    />
+
+                    <input 
+                      type="text"
+                      placeholder="Brief work outcome description..."
+                      value={newPortDesc}
+                      onChange={(e) => setNewPortDesc(e.target.value)}
+                      className="w-full bg-[#070A13] border border-white/10 rounded-lg p-2 text-[10.5px] text-slate-200 outline-none focus:border-[#22D3EE]"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newPortTitle) return;
+                        addPortfolioShowcaseItem();
+                      }}
+                      className="w-full py-2 bg-indigo-600/30 hover:bg-indigo-600/50 hover:text-white text-indigo-300 font-bold uppercase text-[9.5px] rounded-lg border border-indigo-500/20 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Plus size={12} /> ADD PROJECT TO SHOWCASE
+                    </button>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={savingProfile}
@@ -1935,29 +2171,91 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                   )}
 
                   {/* Social Handles Badge Array */}
-                  <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="flex flex-wrap gap-2 pt-1 border-b border-white/5 pb-3">
                     {selectedProfile.youtubeUrl && (
-                      <span className="px-2.5 py-1.5 bg-red-500/10 border border-red-500/15 text-red-450 text-[10px] rounded-lg">
+                      <span className="px-2.5 py-1.5 bg-red-500/10 border border-red-500/15 text-red-400 text-[10px] rounded-lg">
                         YouTube: {selectedProfile.youtubeUrl}
                       </span>
                     )}
                     {selectedProfile.instagramUrl && (
-                      <span className="px-2.5 py-1.5 bg-[#E1306C]/10 border border-[#E1306C]/15 text-[#E1306C]/85 text-[10px] rounded-lg">
+                      <span className="px-2.5 py-1.5 bg-[#E1306C]/10 border border-[#E1306C]/15 text-[#E1306C]/80 text-[10px] rounded-lg">
                         Instagram: {selectedProfile.instagramUrl}
                       </span>
                     )}
                     {selectedProfile.tiktokUrl && (
-                      <span className="px-2.5 py-1.5 bg-teal-500/10 border border-teal-500/15 text-teal-455 text-[10px] rounded-lg">
+                      <span className="px-2.5 py-1.5 bg-teal-500/10 border border-teal-500/15 text-teal-400 text-[10px] rounded-lg">
                         TikTok: {selectedProfile.tiktokUrl}
                       </span>
                     )}
                     {selectedProfile.twitterUrl && (
-                      <span className="px-2.5 py-1.5 bg-sky-500/10 border border-sky-500/15 text-sky-455 text-[10px] rounded-lg">
+                      <span className="px-2.5 py-1.5 bg-sky-500/10 border border-sky-500/15 text-sky-400 text-[10px] rounded-lg">
                         X / Twitter: {selectedProfile.twitterUrl}
                       </span>
                     )}
                   </div>
                 </div>
+
+                {/* Creator Portfolio Showcase Items */}
+                {selectedProfile.portfolioItems && selectedProfile.portfolioItems.length > 0 && (
+                  <div className="space-y-2 text-left">
+                    <span className="text-[9.5px] text-[#22D3EE] font-mono uppercase tracking-widest block font-black">
+                      💼 ACTIVE PORTFOLIO PROJECTS ({selectedProfile.portfolioItems.length})
+                    </span>
+                    <div className="space-y-2.5 max-h-48 overflow-y-auto custom-scrollbar bg-slate-950/30 p-3 rounded-2xl border border-white/5">
+                      {selectedProfile.portfolioItems.map((item, idx) => (
+                        <div key={idx} className="p-3 bg-[#0F172A] rounded-xl border border-white/5 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-extrabold text-white text-xs">{item.title}</h5>
+                            <span className="text-[8px] font-mono uppercase text-[#22D3EE] bg-[#22D3EE]/10 border border-[#22D3EE]/25 px-1.5 py-0.5 rounded font-black">
+                              {item.category}
+                            </span>
+                          </div>
+                          <p className="text-[10.5px] text-slate-400 leading-normal font-sans">{item.description}</p>
+                          {item.url && (
+                            <a 
+                              href={item.url} 
+                              target="_blank" 
+                              referrerPolicy="no-referrer" 
+                              className="text-[#22D3EE] hover:underline font-mono text-[9px] block truncate mt-1"
+                            >
+                              🔗 Work Link: {item.url}
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ratings & Client Feedbacks Section */}
+                {(() => {
+                  const creatorReviews = results.filter(r => r.sellerId === selectedProfile.id && r.status === 'accepted' && r.rating);
+                  if (creatorReviews.length === 0) return null;
+                  return (
+                    <div className="space-y-2 text-left pt-1">
+                      <span className="text-[9.5px] text-[#A78BFA] font-mono uppercase tracking-widest block font-black">
+                        ★ CLIENT RATINGS & TESTIMONIALS ({creatorReviews.length})
+                      </span>
+                      <div className="space-y-2.5 max-h-40 overflow-y-auto custom-scrollbar bg-slate-950/30 p-3 rounded-2xl border border-white/5">
+                        {creatorReviews.map((rev) => (
+                          <div key={rev.id} className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl space-y-1 text-left">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-mono text-slate-400 font-bold">Client: {rev.buyerEmail ? rev.buyerEmail.split('@')[0] : 'Trade Partner'}</span>
+                              <div className="flex items-center text-yellow-500 text-[10px]">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <span key={i} className={i < (rev.rating || 0) ? "text-yellow-405" : "text-slate-700"}>★</span>
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-[10.5px] text-slate-300 italic font-sans leading-relaxed">
+                              "{rev.reviewText || 'No written test details left by client.'}"
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Hire/Call to Action */}
                 <div className="border-t border-white/5 pt-4 flex gap-3">
@@ -2137,6 +2435,90 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
               >
                 ENTER CONTRACT WORKSPACE
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* CLIENT FEEDBACK AND RATING REVIEW POPUP MODAL */}
+        {showRateModal && resultToRate && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+            <div className="relative w-full max-w-md bg-[#0E1526] border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+              
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <span className="text-[9px] font-mono tracking-widest bg-[#22D3EE]/10 border border-[#22D3EE]/25 text-[#22D3EE] px-2.5 py-1 rounded-full uppercase font-bold">
+                  Client Verification Feedback
+                </span>
+                <button 
+                  onClick={() => {
+                    setShowRateModal(false);
+                    setResultToRate(null);
+                  }}
+                  className="p-1 px-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-mono text-slate-400 hover:text-white cursor-pointer"
+                >
+                  [CLOSE]
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="text-center space-y-1.5">
+                  <h4 className="text-base font-black text-white uppercase tracking-tight">Rate Seller Performance & Release Escalated Escrow</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
+                    Evaluate your creator specifications. Submitting this review releases the held escrow of <strong className="text-white">${resultToRate.amount}</strong> to <strong className="text-[#22D3EE]">{resultToRate.sellerEmail}</strong> instantly.
+                  </p>
+                </div>
+
+                {/* Rating selection Stars Picker */}
+                <div className="space-y-2 text-left">
+                  <label className="block text-[10px] font-mono text-slate-400 tracking-wider uppercase font-bold text-center">Score Rating (1 - 5 Stars)</label>
+                  <div className="flex items-center justify-center gap-2">
+                    {[1, 2, 3, 4, 5].map((starValue) => {
+                      const starActive = starValue <= rateRating;
+                      return (
+                        <button
+                          key={starValue}
+                          type="button"
+                          onClick={() => setRateRating(starValue)}
+                          className={cn(
+                            "text-3xl transition-transform duration-150 hover:scale-110 cursor-pointer p-1 focus:outline-none",
+                            starActive ? "text-yellow-400 animate-pulse" : "text-slate-700"
+                          )}
+                        >
+                          ★
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-mono text-center uppercase tracking-widest">
+                    {rateRating === 1 && "⚠️ Needs serious improvement"}
+                    {rateRating === 2 && "⚡ Below standard specs"}
+                    {rateRating === 3 && "📝 Good baseline output"}
+                    {rateRating === 4 && "🔥 Very solid deliverables"}
+                    {rateRating === 5 && "👑 Outstanding star-expert tier!"}
+                  </p>
+                </div>
+
+                {/* Custom Review / Feedbacks written box */}
+                <div className="space-y-1 text-left">
+                  <label className="block text-[10px] font-mono text-slate-400 tracking-wider uppercase font-bold">Written Client Review / Endorsement</label>
+                  <textarea
+                    rows={3}
+                    value={rateReviewText}
+                    onChange={(e) => setRateReviewText(e.target.value)}
+                    className="w-full bg-[#070A13] border border-white/10 rounded-xl p-3 outline-none focus:border-[#22D3EE] text-slate-100 text-xs font-mono leading-relaxed"
+                    placeholder="e.g. Magnificent graphic assets delivery! Fast turnaround, exceptional retention rates on YouTube..."
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={submitPayoutReview}
+                  className="w-full py-3 bg-[#22D3EE] text-[#070A13] hover:bg-[#06B6D4] transition-all rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_20px_rgba(34,211,238,0.2)]"
+                >
+                  RELEASE FUNDS & POST REVIEW
+                  <CheckCircle size={13} />
+                </button>
+              </div>
+
             </div>
           </div>
         )}

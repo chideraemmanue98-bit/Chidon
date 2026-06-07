@@ -1,29 +1,76 @@
 import React, { useState, useMemo } from 'react';
 import postsData from '../../data/posts.json';
-import { BlogCard, BlogPostType } from '../../components/BlogCard';
+import { BlogCard, BlogPostType, BLOG_CATEGORIES, getPostCategory } from '../../components/BlogCard';
 import { BlogPost } from '../../components/BlogPost';
-import { Search, Sparkles, BookOpen, Clock, Calendar, ArrowRight, Rss } from 'lucide-react';
+import { ResumeReadingBridge } from '../../components/ResumeReadingBridge';
+import { RecentlyReadSection } from '../../components/RecentlyReadSection';
+import { Search, Sparkles, BookOpen, Clock, Calendar, ArrowRight, Rss, Image as ImageIcon } from 'lucide-react';
 
 export function BlogSection() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showImages, setShowImages] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chidoniq_blog_show_images');
+      return saved !== 'false';
+    }
+    return true;
+  });
+
+  const handleToggleImages = () => {
+    const newVal = !showImages;
+    setShowImages(newVal);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chidoniq_blog_show_images', String(newVal));
+    }
+  };
+
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/blog/')) {
+        return path.replace('/blog/', '');
+      }
+    }
+    return null;
+  });
+
+  // Keep state in sync with URL changes (browser back/forward or programmatic navigation)
+  React.useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/blog/')) {
+        setSelectedSlug(path.replace('/blog/', ''));
+      } else {
+        setSelectedSlug(null);
+      }
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
 
   // Parse posts list securely
   const posts: BlogPostType[] = useMemo(() => {
     return (postsData as BlogPostType[]) || [];
   }, []);
 
-  // Filter posts based on searches
+  // Filter posts based on searches and category
   const filteredPosts = useMemo(() => {
-    if (!searchQuery.trim()) return posts;
+    let result = posts;
+    if (selectedCategory !== 'all') {
+      result = posts.filter(post => getPostCategory(post.slug).id === selectedCategory);
+    }
+    if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
-    return posts.filter(
+    return result.filter(
       post =>
         post.title.toLowerCase().includes(query) ||
         post.excerpt.toLowerCase().includes(query) ||
         (post.keywords && post.keywords.toLowerCase().includes(query))
     );
-  }, [posts, searchQuery]);
+  }, [posts, searchQuery, selectedCategory]);
 
   // Find currently active post
   const activePost = useMemo(() => {
@@ -32,27 +79,43 @@ export function BlogSection() {
   }, [posts, selectedSlug]);
 
   // Handle article view actions
-  const handleViewPost = (slug: string) => {
+  const handleViewPost = (slug: string, autoResume?: boolean) => {
     setSelectedSlug(slug);
-    // Scroll container to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== 'undefined') {
+      const searchSuffix = autoResume ? '?resume=true' : window.location.search;
+      const url = `/blog/${slug}` + searchSuffix;
+      window.history.pushState({}, document.title, url);
+    }
+    // Skip scroll-to-top if we are trying to restore their progress
+    if (!autoResume) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleBackToList = () => {
     setSelectedSlug(null);
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, document.title, '/blog' + window.location.search);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const featuredPost = posts[0];
+  const featuredCategory = featuredPost ? getPostCategory(featuredPost.slug) : null;
 
   if (activePost) {
     return (
       <div className="w-full">
-        <BlogPost post={activePost} onBack={handleBackToList} isSpaView={true} />
+        <BlogPost post={activePost} onBack={handleBackToList} isSpaView={true} showImage={showImages} />
       </div>
     );
   }
 
   return (
     <div className="w-full space-y-12 pb-20">
+      {/* Resume Progress Bridge Node */}
+      <ResumeReadingBridge onResume={(slug) => handleViewPost(slug, true)} />
+
       {/* Editorial Hub Masthead Hero Section */}
       <div className="relative rounded-3xl overflow-hidden border border-white/5 bg-[#0E1526]/40 p-8 sm:p-12 mb-8 backdrop-blur shadow-2xl">
         <div className="absolute top-0 right-0 w-80 h-80 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
@@ -99,12 +162,21 @@ export function BlogSection() {
               <Rss size={13} className="text-brand" />
               <span>RSS FEEDS</span>
             </a>
+
+            <button 
+              onClick={handleToggleImages}
+              className="px-5 py-3.5 bg-white/[0.02] border border-white/5 hover:border-brand/30 text-xs font-mono font-bold text-slate-350 hover:text-white rounded-2xl inline-flex items-center justify-center gap-2 transition-all cursor-pointer"
+              title="Toggle featured image visibility for full reader mode optimization"
+            >
+              <ImageIcon size={13} className={showImages ? "text-cyan-primary" : "text-slate-500"} />
+              <span>IMAGES: {showImages ? "ON" : "OFF"}</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Featured Headline Post Block (only visible when not filtering) */}
-      {!searchQuery && posts.length > 0 && (
+      {!searchQuery && selectedCategory === 'all' && featuredPost && featuredCategory && (
         <section className="space-y-4">
           <h2 className="text-xs font-mono uppercase tracking-widest text-[#7C3AED] font-black flex items-center gap-2">
             <Sparkles size={13} />
@@ -112,39 +184,62 @@ export function BlogSection() {
           </h2>
           
           <div 
-            onClick={() => handleViewPost(posts[0].slug)}
+            onClick={() => handleViewPost(featuredPost.slug)}
             className="group grid grid-cols-1 lg:grid-cols-12 gap-6 bg-[#0E1526]/60 rounded-3xl border border-white/5 hover:border-brand/35 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-brand/5 cursor-pointer relative"
           >
-            <div className="lg:col-span-7 relative overflow-hidden aspect-[16/9] lg:aspect-auto min-h-[240px] sm:min-h-[300px] bg-[#070A13]">
-              <img
-                src={posts[0].image}
-                alt={posts[0].title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#070A13]/90 via-[#070A13]/20 to-transparent pointer-events-none" />
-            </div>
+            {showImages && (
+              <div className={`lg:col-span-7 relative overflow-hidden aspect-[16/9] lg:aspect-auto min-h-[240px] sm:min-h-[300px] ${
+                featuredCategory.id === 'ai-basics' ? 'bg-gradient-to-br from-cyan-950 via-slate-900 to-cyan-900/40' :
+                featuredCategory.id === 'content-strategy' ? 'bg-gradient-to-br from-purple-950 via-slate-900 to-purple-900/40' :
+                featuredCategory.id === 'freelancing' ? 'bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-900/40' :
+                featuredCategory.id === 'development' ? 'bg-gradient-to-br from-amber-950 via-slate-900 to-amber-900/40' :
+                featuredCategory.id === 'ethics' ? 'bg-gradient-to-br from-pink-950 via-slate-900 to-pink-900/40' :
+                'bg-gradient-to-br from-brand/20 via-[#070A13] to-slate-900'
+              }`}>
+                {/* Glowing featured category pill overlay */}
+                <div className={`absolute top-4 left-4 z-20 px-2.5 py-1 backdrop-blur-md border rounded-full text-[9px] font-mono tracking-widest font-black uppercase flex items-center gap-1 shadow-lg pointer-events-none transition-all duration-300 group-hover:scale-102 ${featuredCategory.color}`}>
+                  <span>{featuredCategory.icon}</span>
+                  <span>{featuredCategory.label}</span>
+                </div>
 
-            <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+                <img
+                  src={featuredPost.image}
+                  alt={featuredPost.title}
+                  className="absolute inset-0 w-full h-full object-cover z-10 transition-transform duration-500 group-hover:scale-[1.02]"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // Instantly hide the image to keep the beautiful, stable local color gradient
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#070A13]/90 via-[#070A13]/25 to-transparent pointer-events-none z-15" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-0">
+                  <span className="text-4xl mb-3 opacity-50 filter saturate-150">{featuredCategory.icon}</span>
+                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500 font-bold">{featuredCategory.label}</span>
+                </div>
+              </div>
+            )}
+
+            <div className={showImages ? "lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between space-y-6" : "lg:col-span-12 p-6 sm:p-8 flex flex-col justify-between space-y-6"}>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-slate-455">
                   <span className="flex items-center gap-1">
                     <Calendar size={11} className="text-brand" />
-                    {posts[0].date}
+                    {featuredPost.date}
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-white/10" />
                   <span className="flex items-center gap-1">
                     <Clock size={11} className="text-cyan-primary" />
-                    {posts[0].readTime}
+                    {featuredPost.readTime}
                   </span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-black text-white group-hover:text-cyan-primary transition-colors uppercase tracking-tight leading-tight">
-                  {posts[0].title}
+                  {featuredPost.title}
                 </h3>
 
-                <p className="text-xs sm:text-sm text-slate-350 leading-relaxed">
-                  {posts[0].excerpt}
+                <p className="text-sm text-neutral-50 font-bold leading-relaxed">
+                  {featuredPost.excerpt}
                 </p>
               </div>
 
@@ -159,11 +254,36 @@ export function BlogSection() {
 
       {/* Catalog Grid block */}
       <section className="space-y-6">
-        <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
           <h2 className="text-xs font-mono uppercase tracking-widest text-slate-400 font-black flex items-center gap-2">
             <BookOpen size={13} className="text-cyan-primary" />
             {searchQuery ? `Search Results (${filteredPosts.length})` : 'Knowledge Vault Catalogue'}
           </h2>
+
+          {/* Dynamic counter */}
+          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-450 font-black">
+            {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''} index
+          </span>
+        </div>
+
+        {/* Category Filtration Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          {BLOG_CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-4 py-2 text-[10.5px] font-mono font-black uppercase rounded-2xl border transition-all shrink-0 cursor-pointer ${
+                  isActive
+                    ? 'bg-brand/10 border-brand/40 text-brand shadow-md shadow-brand/10'
+                    : 'bg-[#0E1526]/30 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
 
         {filteredPosts.length > 0 ? (
@@ -174,6 +294,7 @@ export function BlogSection() {
                 post={post} 
                 onClick={handleViewPost} 
                 isLink={false} 
+                showImage={showImages}
               />
             ))}
           </div>
@@ -183,6 +304,9 @@ export function BlogSection() {
           </div>
         )}
       </section>
+
+      {/* Recently Read dynamic list */}
+      <RecentlyReadSection posts={posts} onPostClick={(slug) => handleViewPost(slug)} />
     </div>
   );
 }
