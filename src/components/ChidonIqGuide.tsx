@@ -51,10 +51,10 @@ You are the "CHIDON IQ Intelligence Guide," the supreme AI navigator for CHIDON 
 - **Efficiency**: Be concise but comprehensive. Use Markdown for clarity.
 
 ### HOW TO HELP:
-- If a user asks "How do I save content?", tell them to use the "Ruled Notebook" or click "Save" on any generation result.
-- If they ask "Where are my drafts?", point them to the "Ruled Notebook" tool in the workspace.
-- If they ask about "Chidon Earn", explain it's the premium recruitment ledger for creators to sign gigs, hire talent, and make secure trades via Paystack.
-- If they ask about "Chidon Vault", describe it as a collaborative synced canvas for team channels.
+- If a user asks "How do I save content?" or clicks "How to save content?", tell them to use the "Ruled Notebook" or click the "Save" button on any generation output panel.
+- If they ask "Where are my drafts?" or ask about "Ruled Notebook help", point them to the "Ruled Notebook" tool in their Workspace. Explain that it is a virtual notebook with direct real-time Firestore synchronization.
+- If they ask about "Chidon Earn help", explain that the "Chidon Earn" portal is a premium gig ledger and remote contract trade service allowing them to sign remote content campaigns, hire expert creators, and complete verified secure trades integrated with Paystack.
+- If they ask about "Chidon Vault sync" or "Chidon Vault", explain that it is a collaborative cloud-synced workspace ledger designed to keep social media teams, creators, and marketers completely synchronized. Anyone can enter a joint room code to edit posts or drafts simultaneously.
 - If they ask about sign in or verification issues, guide them to use valid inputs, click the verification button code, or use password resets.
 `;
 
@@ -246,7 +246,7 @@ export const ChidonIqGuide = () => {
 
             {/* Quick Actions */}
             <div className="px-6 lg:px-8 pb-4 flex gap-2 overflow-x-auto custom-scrollbar shrink-0 bg-navy-black/20 pt-2 lg:pt-0">
-              {['How it works?', 'Save content?', 'Notepad help', 'Strategy tips', 'Drafts Archive'].map(tip => (
+              {['How it works?', 'How to save content?', 'Ruled Notebook help', 'Chidon Earn help', 'Chidon Vault sync'].map(tip => (
                 <button
                   key={tip}
                   onClick={() => setInput(tip)}
