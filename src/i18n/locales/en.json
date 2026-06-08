@@ -111,11 +111,11 @@
     },
     "post-scheduler": {
       "label": "Command Calendar",
-      "desc": "Scheduled command central to add post descriptions, media links, and preview the posting timeline."
+      "desc": "Tactical content scheduling and queue management."
     },
     "drafts": {
       "label": "CHIDON Vault",
-      "desc": "Collaborative cloud-synced workspace ledger for real-time team synchronization and joint draft editing."
+      "desc": "Specialized index of saved scripts, social bios, and intelligence reports."
     },
     "post-optimizer": {
       "label": "Time Optimizer",
