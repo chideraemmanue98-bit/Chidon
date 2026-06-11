@@ -42,6 +42,7 @@ import {
   doc,
   where
 } from 'firebase/firestore';
+import { GoogleGenAI } from "@google/genai";
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { exportToJSON, exportToCSV } from '../lib/exportUtils';
@@ -93,6 +94,8 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
     setAiError(null);
 
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
       const prompt = `Act as a Viral Social Media Strategist. Generate a high-performance caption for ${platform} about the topic: "${aiTopic}".
       
       Requirements:
@@ -104,25 +107,17 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
       
       Return ONLY the caption text, no prefixes, no surrounding quotes, and no commentary.`;
 
-      const res = await fetch("/api/gemini/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt }),
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt
       });
-
-      if (!res.ok) {
-        throw new Error(`Server responded with status ${res.status}`);
-      }
-
-      const data = await res.json();
-      const text = data.text;
+      
+      const text = response.text;
       if (text) {
         setCaption(text);
         setAiTopic('');
       } else {
-        throw new Error("Empty response from CHIDON AI Core");
+        throw new Error("Empty response from AI");
       }
     } catch (err: any) {
       console.error("AI Generation Error:", err);

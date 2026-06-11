@@ -29,9 +29,8 @@
     "minutes": "मिनट",
     "minute": "मिनट",
     "neverUsed": "कभी उपयोग नहीं किया गया",
-    "back": "पीछे",
-    "launchHub": "लॉन्च हब",
-    "systemLanguage": "भाषा"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "मुख्य प्रोटोकॉल",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "कमांड सेंटर पर वापस जाएं"
+    "back": "__NOT_TRANSLATED__"
   }
 }

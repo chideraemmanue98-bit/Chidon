@@ -29,9 +29,8 @@
     "minutes": "мин.",
     "minute": "мин.",
     "neverUsed": "Не использовалось",
-    "back": "Назад",
-    "launchHub": "Запустить Центр",
-    "systemLanguage": "Язык"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "Основные протоколы",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "Вернуться в Командный Центр"
+    "back": "__NOT_TRANSLATED__"
   }
 }

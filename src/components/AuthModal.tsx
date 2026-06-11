@@ -12,10 +12,13 @@ import {
   ChevronRight,
   ArrowRight
 } from 'lucide-react';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider 
+} from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '../lib/utils';
-import { ChidonIqLogo } from './ChidonIqLogo';
 import { 
   signUpWithEmail, 
   loginWithEmail, 
@@ -38,9 +41,6 @@ const sanitizeError = (msg: string): string => {
   let clean = msg;
   
   // Map common auth error codes to beautiful human-readable explanations
-  if (msg.includes('network-request-failed') || msg.includes('network_request_failed')) {
-    return "Network connection to Google Identity nodes failed. Feel free to use the 'Simulate Sandbox Account (Bypass Link)' below to easily bypass cloud credential requirements in this development sandbox.";
-  }
   if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) {
     return "Invalid email or password credentials.";
   }
@@ -50,8 +50,8 @@ const sanitizeError = (msg: string): string => {
   if (msg.includes('auth/weak-password')) {
     return "Password must be at least 6 characters long.";
   }
-  if (msg.includes('auth/operation-not-allowed') || msg.includes('operation_not_allowed')) {
-    return "The Email & Password Auth Provider is not enabled in your Firebase Console. Please go to your Firebase Console -> Authentication -> Sign-in method tab, click 'Add new provider', and enable 'Email/Password'. In the meantime, use 'Simulate Sandbox Account' below to test immediately!";
+  if (msg.includes('auth/operation-not-allowed')) {
+    return "Email/Password node connections are temporarily disabled.";
   }
   if (msg.includes('Please verify your email first')) {
     return "Verification node signature is incomplete. Please confirm your email before connecting.";
@@ -85,14 +85,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setCanResendVerification(false);
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // Initialize or sync user document
+      if (result.user) {
+        const userRef = doc(db, 'users', result.user.uid);
+        await setDoc(userRef, {
+          email: result.user.email,
+          displayName: result.user.displayName || 'CHIDON Creator',
+          createdAt: serverTimestamp()
+        }, { merge: true });
+      }
+      setSuccess("Successfully synchronized neural node via Google.");
+      setTimeout(() => {
+        onClose();
+        if (onSuccess) onSuccess();
+      }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      setError(sanitizeError(err.message || "Failed Google Authentication."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAnonymousLogin = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     try {
       const result = await signInAsAnonymous();
-      localStorage.removeItem('simulated_user');
-      localStorage.removeItem('membership_tier');
       if (result.user) {
         const userRef = doc(db, 'users', result.user.uid);
         await setDoc(userRef, {
@@ -110,34 +136,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     } catch (err: any) {
       console.error(err);
       setError(sanitizeError(err.message || "Failed Guest Sign In."));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSimulatedBypass = () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const mockUser = {
-        uid: "simulated-creator-node",
-        email: "chideraemmanue98@gmail.com",
-        displayName: "Simulated Chidon Pro Node",
-        isAnonymous: false,
-        photoURL: null
-      };
-      localStorage.setItem('simulated_user', JSON.stringify(mockUser));
-      setSuccess("Neural network simulation bypass engaged! Pro access credentials synced.");
-      
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-        window.location.reload();
-      }, 1000);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to engage simulator nodes.");
     } finally {
       setLoading(false);
     }
@@ -174,10 +172,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           throw new Error("Please enter your Display Name.");
         }
         
-        // Pass custom display name directly to our enhanced signup utility
-        const userCredential = await signUpWithEmail(email, password, displayName);
-        localStorage.removeItem('simulated_user');
-        localStorage.removeItem('membership_tier');
+        // Use custom wrapper signUpWithEmail which automatically sets display name and sends action verifications
+        const userCredential = await signUpWithEmail(email, password);
 
         // Initialize user document in firestore
         const userRef = doc(db, 'users', userCredential.user.uid);
@@ -187,22 +183,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           createdAt: serverTimestamp()
         });
 
-        setSuccess("Creator Node established successfully on the network dashboard.");
-        setTimeout(() => {
-          onClose();
-          if (onSuccess) onSuccess();
-          window.location.reload();
-        }, 1200);
+        setSuccess("Creator Node established. Verification email sent! Please check your inbox.");
+        setCanResendVerification(true);
       } else if (activeTab === 'login') {
+        // Use custom wrapper loginWithEmail which verifies active verified claims
         await loginWithEmail(email, password);
-        localStorage.removeItem('simulated_user');
-        localStorage.removeItem('membership_tier');
         setSuccess("Successfully connected to CHIDON network.");
         
         setTimeout(() => {
           onClose();
           if (onSuccess) onSuccess();
-          window.location.reload();
         }, 1000);
       } else if (activeTab === 'forgot') {
         if (!email.trim()) {
@@ -216,6 +206,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       const errString = err.message || "Action halted.";
       setError(sanitizeError(errString));
       
+      // If user requires verifying, activate resend options
       if (errString.includes('verify') || errString.includes('verifyEmail')) {
         setCanResendVerification(true);
       }
@@ -235,7 +226,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-slate-950/65 backdrop-blur-md cursor-default"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-md cursor-default"
         />
 
         {/* Modal Window */}
@@ -243,45 +234,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto custom-scrollbar text-left"
+          className="relative bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full overflow-hidden text-left"
         >
           {/* Decorative futuristic glow */}
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-brand/10 blur-2xl pointer-events-none" />
           <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-brand/5 blur-2xl pointer-events-none" />
 
-          {/* Premium Logo Header */}
-          <div className="flex flex-col items-center justify-center text-center mt-2 mb-6 relative">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6 pr-6">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-6 h-6 rounded-lg bg-brand flex items-center justify-center text-white">
+                  <Sparkles size={11} className="animate-pulse" />
+                </div>
+                <span className="text-[10px] font-mono font-black text-brand tracking-widest uppercase">
+                  CHIDON AUTH GATEWAY
+                </span>
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 leading-tight">
+                {activeTab === 'login' && 'Connect Channel Node'}
+                {activeTab === 'signup' && 'Initialize Creator Identity'}
+                {activeTab === 'forgot' && 'Reset Channel Password'}
+              </h2>
+            </div>
+            
             <button
               onClick={onClose}
-              className="absolute right-0 top-0 p-1.5 hover:bg-neutral-100 dark:hover:bg-zinc-800 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+              className="absolute right-4 top-4 p-2 hover:bg-neutral-100 dark:hover:bg-zinc-800 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors"
               title="Close Panel"
             >
-              <X size={15} />
+              <X size={16} />
             </button>
-
-            {/* App Logo */}
-            <ChidonIqLogo size={56} cropped className="mb-2.5" />
-            
-            <h1 className="text-xl font-black tracking-widest text-slate-900 dark:text-white uppercase font-sans">
-              CHIDON<span className="text-brand">IQ</span>
-            </h1>
-            <p className="text-[10px] font-mono tracking-widest text-slate-400 dark:text-zinc-500 uppercase mt-0.5">
-              Secure Intelligence Gateway
-            </p>
-          </div>
-
-          <div className="mb-5">
-            <h2 className="text-sm font-bold text-center text-slate-700 dark:text-zinc-400 tracking-tight leading-tight">
-              {activeTab === 'login' && 'Connect your creative credentials'}
-              {activeTab === 'signup' && 'Establish your creator signature'}
-              {activeTab === 'forgot' && 'Reset secure session password'}
-            </h2>
           </div>
 
           {/* Custom Tabs */}
           <div className="flex border-b border-neutral-150 dark:border-zinc-800 mb-6 font-bold text-xs">
             <button
-              type="button"
               onClick={() => { setActiveTab('login'); setError(null); setSuccess(null); }}
               className={cn(
                 "flex-1 pb-3 text-center border-b-2 transition-all outline-none cursor-pointer",
@@ -290,10 +278,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   : "border-transparent text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-350"
               )}
             >
-              Sign In Node
+              Login Node
             </button>
             <button
-              type="button"
               onClick={() => { setActiveTab('signup'); setError(null); setSuccess(null); }}
               className={cn(
                 "flex-1 pb-3 text-center border-b-2 transition-all outline-none cursor-pointer",
@@ -302,7 +289,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   : "border-transparent text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-350"
               )}
             >
-              Register Account
+              Establishing Register
             </button>
           </div>
 
@@ -345,7 +332,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             )}
           </AnimatePresence>
 
-          {/* Switchable views based on activeTab */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {activeTab === 'signup' && (
               <div className="space-y-1">
@@ -424,12 +411,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               {loading ? (
                 <>
                   <Loader2 size={13} className="animate-spin" />
-                  Connecting...
+                  Synchronizing Neural Node...
                 </>
               ) : (
                 <>
                   <span>
-                    {activeTab === 'login' && 'Sign In'}
+                    {activeTab === 'login' && 'Synchronize Login'}
                     {activeTab === 'signup' && 'Register Creator Signature'}
                     {activeTab === 'forgot' && 'Send Password Reset Link'}
                   </span>
@@ -442,43 +429,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               <button 
                 type="button" 
                 onClick={() => { setActiveTab('login'); setError(null); setSuccess(null); }} 
-                className="w-full text-center text-[11px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-zinc-350 hover:underline cursor-pointer block mt-2"
+                className="w-full text-center text-[11px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-zinc-300 hover:underline cursor-pointer block mt-2"
               >
-                Back to Sign In
+                Back to Login
               </button>
             )}
           </form>
 
-          <div className="mt-4 space-y-2.5 border-t border-neutral-150 dark:border-zinc-800 pt-4">
-            <button
-              type="button"
-              onClick={handleSimulatedBypass}
-              disabled={loading}
-              className="w-full py-2 bg-brand/5 border border-dashed border-brand/35 hover:bg-brand/10 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-brand hover:text-brand-active cursor-pointer"
-            >
-              <Sparkles size={13} className="animate-pulse text-brand" />
-              <span>Simulate Sandbox Account (Creator Bypass)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleAnonymousLogin}
-              disabled={loading}
-              className="w-full py-2 bg-neutral-50 border border-dashed border-neutral-200 dark:bg-zinc-950 dark:border-zinc-850 dark:border-dashed hover:bg-neutral-100 dark:hover:bg-zinc-900 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-slate-650 dark:text-zinc-300 cursor-pointer"
-            >
-              <User size={13} className="text-slate-400 dark:text-zinc-500 animate-pulse" />
-              <span>Try Anonymously (Guest access)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <X size={13} />
-              <span>Cancel & Close</span>
-            </button>
+          {/* Google SSO divider */}
+          <div className="relative my-6 flex items-center justify-center">
+            <div className="absolute inset-x-0 h-px bg-neutral-150 dark:bg-zinc-800" />
+            <span className="relative bg-white dark:bg-zinc-900 px-3 text-[10px] font-mono text-slate-400 uppercase tracking-widest z-10">
+              OR SYNC SECURE KEYS
+            </span>
           </div>
+
+          <button
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full py-2.5 bg-neutral-50 dark:bg-zinc-950 border border-neutral-200 dark:border-zinc-800 hover:bg-neutral-100 dark:hover:bg-zinc-900 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-800 dark:text-zinc-200 cursor-pointer"
+          >
+            <svg className="w-4 h-4 mr-1 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAnonymousLogin}
+            disabled={loading}
+            className="w-full mt-3 py-2.5 bg-neutral-50 border border-dashed border-neutral-200 dark:bg-zinc-950 dark:border-zinc-850 dark:border-dashed hover:bg-neutral-100 dark:hover:bg-zinc-900 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-slate-650 dark:text-zinc-300 cursor-pointer"
+          >
+            <User size={13} className="text-slate-400 dark:text-zinc-500 animate-pulse" />
+            <span>Try Anonymously (Guest access)</span>
+          </button>
 
           <p className="text-[10px] text-slate-400 dark:text-zinc-500 text-center mt-5 leading-normal">
             By connecting, you authorize secure end-to-end credential sync on the Chidon IQ Matrix protocol.

@@ -25,13 +25,12 @@
     "notepad": "Envoyer vers Bloc-notes",
     "share": "Partager",
     "lastUsed": "Dernière utilisation il y a",
-    "ago": "il y a",
+    "ago": "",
     "minutes": "minutes",
     "minute": "minute",
     "neverUsed": "Jamais utilisé",
-    "back": "Retour",
-    "launchHub": "Lancer le Hub",
-    "systemLanguage": "Langue"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "Protocoles de base",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "Retour au Centre de Commande"
+    "back": "__NOT_TRANSLATED__"
   }
 }

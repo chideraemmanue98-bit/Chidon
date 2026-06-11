@@ -260,78 +260,21 @@ const mergeLocale = (base: any, extensions: any) => {
   };
 };
 
-// High-fidelity deep merge to guarantee English baseline coverage on missing/incomplete keys
-const isObject = (item: any): boolean => !!(item && typeof item === 'object' && !Array.isArray(item));
-
-const deepMergeFallback = (target: any, source: any): any => {
-  if (!target) return source;
-  if (!source) return target;
-
-  const output = { ...target };
-  if (isObject(target) && isObject(source)) {
-    Object.keys(source).forEach((key) => {
-      if (isObject(source[key])) {
-        if (!(key in target)) {
-          Object.assign(output, { [key]: source[key] });
-        } else {
-          output[key] = deepMergeFallback(target[key], source[key]);
-        }
-      } else {
-        if (source[key] !== undefined && source[key] !== null && source[key] !== '') {
-          Object.assign(output, { [key]: source[key] });
-        }
-      }
-    });
-  }
-  return output;
-};
-
-// Deploy version constant for automated translation and locale chunk cache busting
-const DEPLOY_VERSION = "2026.06.04.v2";
-
-try {
-  const cachedVersion = localStorage.getItem('chidon_iq_i18n_v');
-  if (cachedVersion !== DEPLOY_VERSION) {
-    console.info(`🔄 [i18n DEPLOY UPDATE] New version detected: ${DEPLOY_VERSION}. Invalidating client translation buffers.`);
-    // Clean translation cache keys
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('tr_') || key.startsWith('i18next')) {
-        localStorage.removeItem(key);
-      }
-    });
-    localStorage.setItem('chidon_iq_i18n_v', DEPLOY_VERSION);
-  }
-} catch (e) {
-  console.warn("Failed cache-busting evaluation context:", e);
-}
-
-const enMerged = mergeLocale(en, extensionResources.en);
-
-// Seamlessly build complete translation matrices
-const getCompleteResource = (langCode: string, langJson: any, extensionJson: any) => {
-  const nativeMerged = mergeLocale(langJson, extensionJson);
-  if (langCode === 'en') {
-    return nativeMerged;
-  }
-  // Deep-merge onto English baseline to guarantee non-blank keys
-  return deepMergeFallback(enMerged, nativeMerged);
-};
-
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
-      en: { translation: enMerged },
-      es: { translation: getCompleteResource('es', es, extensionResources.es) },
-      zh: { translation: getCompleteResource('zh', zh, extensionResources.zh) },
-      hi: { translation: getCompleteResource('hi', hi, extensionResources.hi) },
-      ar: { translation: getCompleteResource('ar', ar, extensionResources.ar) },
-      pt: { translation: getCompleteResource('pt', pt, extensionResources.pt) },
-      fr: { translation: getCompleteResource('fr', fr, extensionResources.fr) },
-      ru: { translation: getCompleteResource('ru', ru, extensionResources.ru) },
-      de: { translation: getCompleteResource('de', de, extensionResources.de) },
-      ja: { translation: getCompleteResource('ja', ja, extensionResources.ja) }
+      en: { translation: mergeLocale(en, extensionResources.en) },
+      es: { translation: mergeLocale(es, extensionResources.es) },
+      zh: { translation: mergeLocale(zh, extensionResources.zh) },
+      hi: { translation: mergeLocale(hi, extensionResources.hi) },
+      ar: { translation: mergeLocale(ar, extensionResources.ar) },
+      pt: { translation: mergeLocale(pt, extensionResources.pt) },
+      fr: { translation: mergeLocale(fr, extensionResources.fr) },
+      ru: { translation: mergeLocale(ru, extensionResources.ru) },
+      de: { translation: mergeLocale(de, extensionResources.de) },
+      ja: { translation: mergeLocale(ja, extensionResources.ja) }
     },
     fallbackLng: 'en',
     interpolation: {
@@ -342,13 +285,5 @@ i18n
       caches: ['localStorage']
     }
   });
-
-// Dev diagnostics mode: catch keyless queries or unmapped strings at developer runtime
-if (process.env.NODE_ENV !== 'production' || (import.meta as any).env?.DEV) {
-  i18n.on('missingKey', (lngs, namespace, key) => {
-    console.warn(`⚠️ [i18n DEVELOPMENT WARNING] Application queried key "${key}" under language set "${lngs.join(', ')}", but it resolved undefined.`);
-    console.log(`Missing translation key: ${key}`);
-  });
-}
 
 export default i18n;

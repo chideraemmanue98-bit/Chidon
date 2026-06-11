@@ -76,12 +76,10 @@ export const RuledBook: React.FC<RuledBookProps> = ({
   useEffect(() => {
     let unsubscribe = () => {};
 
-    const activeUser = auth.currentUser || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!) : null);
-
-    if (activeUser) {
+    if (auth.currentUser) {
       const q = query(
         collection(db, 'notes'),
-        where('userId', '==', activeUser.uid),
+        where('userId', '==', auth.currentUser.uid),
         orderBy('createdAt', 'desc')
       );
       
@@ -167,15 +165,14 @@ export const RuledBook: React.FC<RuledBookProps> = ({
     const newPageContent = customContent || '';
 
     setSaving(true);
-    const activeUser = auth.currentUser || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!) : null);
     try {
-      if (activeUser) {
+      if (auth.currentUser) {
         const docPayload = {
           title: newPageTitle,
           content: newPageContent,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          userId: activeUser.uid
+          userId: auth.currentUser.uid
         };
         const docRef = await addDoc(collection(db, 'notes'), docPayload);
         
@@ -186,7 +183,7 @@ export const RuledBook: React.FC<RuledBookProps> = ({
           content: newPageContent,
           createdAt: new Date(),
           updatedAt: new Date(),
-          userId: activeUser.uid
+          userId: auth.currentUser.uid
         };
         
         const newPages = [...pages, tempPage];
@@ -231,9 +228,8 @@ export const RuledBook: React.FC<RuledBookProps> = ({
     if (content.length > 50000) return alert("Content exceeds maximum length.");
 
     setSaving(true);
-    const activeUser = auth.currentUser || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!) : null);
     try {
-      if (activeUser) {
+      if (auth.currentUser) {
         const noteRef = doc(db, 'notes', activePage.id);
         await updateDoc(noteRef, {
           title: title,
@@ -264,9 +260,8 @@ export const RuledBook: React.FC<RuledBookProps> = ({
     if (!window.confirm("Are you sure you want to rip this page out of your notebook?")) return;
     
     const pageToDelete = pages[indexToDelete];
-    const activeUser = auth.currentUser || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!) : null);
     try {
-      if (activeUser) {
+      if (auth.currentUser) {
         await deleteDoc(doc(db, 'notes', pageToDelete.id));
       } else {
         const updatedList = pages.filter((_, idx) => idx !== indexToDelete);

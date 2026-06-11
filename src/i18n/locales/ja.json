@@ -29,9 +29,8 @@
     "minutes": "分",
     "minute": "分",
     "neverUsed": "未使用",
-    "back": "戻る",
-    "launchHub": "起動ハブ",
-    "systemLanguage": "Language"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "コアプロトコル",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "コマンドセンターに戻る"
+    "back": "__NOT_TRANSLATED__"
   }
 }

@@ -1,100 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useTranslation } from 'react-i18next';
-import { ChidonIqLogo } from './ChidonIqLogo';
 import { 
   FileText, Shield, Mail, Info, BookOpen, Cpu, Sparkles, X, 
   ChevronRight, Download, Send, AlertCircle, Briefcase, FileCheck, CheckCircle2,
-  Calendar, MapPin, Users, HeartHandshake, HelpCircle, Laptop, Share2, Zap, Trash2, Plus, 
-  RefreshCw
+  Calendar, MapPin, Users, HeartHandshake, HelpCircle, Laptop, Share2, Zap, Trash2, Plus
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-
-// Dedicated automatic AI translator container for Downbase content to translate to the active language natively
-const AutoTranslate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { i18n } = useTranslation();
-  const [translatedText, setTranslatedText] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  
-  // Extract all text content recursively from React nodes
-  const getTextFromChildren = (node: React.ReactNode): string => {
-    if (!node) return '';
-    if (typeof node === 'string' || typeof node === 'number') return String(node);
-    if (Array.isArray(node)) return node.map(getTextFromChildren).join('');
-    if (React.isValidElement(node)) {
-      return getTextFromChildren((node.props as any)?.children);
-    }
-    return '';
-  };
-
-  const textVal = getTextFromChildren(children);
-
-  useEffect(() => {
-    const lang = (i18n.language || 'en').split('-')[0].toLowerCase();
-    if (lang === 'en') {
-      setTranslatedText(null);
-      return;
-    }
-
-    if (!textVal.trim()) return;
-
-    const cacheKey = `tr_${lang}_${textVal.slice(0, 80)}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      setTranslatedText(cached);
-      return;
-    }
-
-    let active = true;
-    const runTranslation = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/gemini/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textVal, targetLanguage: lang })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.text && active) {
-            setTranslatedText(data.text);
-            localStorage.setItem(cacheKey, data.text);
-          }
-        }
-      } catch (e) {
-        console.error("Auto-trans element failed:", e);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    runTranslation();
-    return () => { active = false; };
-  }, [textVal, i18n.language]);
-
-  if (loading) {
-    return (
-      <div className="space-y-3 py-6 animate-pulse">
-        <div className="h-2 bg-slate-400/20 dark:bg-slate-700/40 rounded w-5/6"></div>
-        <div className="h-2 bg-slate-400/20 dark:bg-slate-700/40 rounded w-full"></div>
-        <div className="h-2 bg-slate-400/20 dark:bg-slate-700/40 rounded w-4/5"></div>
-        <div className="h-2 bg-slate-400/20 dark:bg-slate-700/40 rounded w-2/3"></div>
-        <span className="text-[10px] text-brand/70 font-mono tracking-widest block font-bold">TRANSLATING COMMAND MATRIX INTEL...</span>
-      </div>
-    );
-  }
-
-  if (translatedText) {
-    return (
-      <div className="whitespace-pre-line leading-relaxed text-[var(--text-secondary)]">
-        {translatedText}
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-};
 
 interface DownbaseFooterProps {}
 
@@ -109,7 +21,6 @@ interface JobOpening {
 }
 
 export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
-  const { t } = useTranslation();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   
   // Job App State
@@ -288,7 +199,9 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
         {/* Brand visual header inside downbase */}
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="flex items-center gap-2">
-            <ChidonIqLogo size={24} cropped />
+            <div className="w-6 h-6 rounded bg-brand flex items-center justify-center text-white scale-90">
+              <Zap size={14} />
+            </div>
             <span className="font-bold tracking-wider text-sm font-mono text-[var(--text-primary)]">CHIDON IQ COGNITIVE SUITE</span>
           </div>
           <p className="text-[10px] text-[var(--text-secondary)] font-mono max-w-lg uppercase tracking-widest leading-relaxed">
@@ -297,7 +210,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
         </div>
 
         {/* Separated Links grid structure specified by Downbase Requirements */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 w-full max-w-4xl text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 w-full max-w-4xl text-center">
           <button 
             type="button"
             onClick={() => setActiveModal('about')}
@@ -355,19 +268,10 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
           <button 
             type="button"
             onClick={() => setActiveModal('privacy')}
-            className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-[var(--border-base)]/60 bg-[var(--bg-card)]/40 hover:bg-brand/5 hover:border-brand/40 transition-all group cursor-pointer"
+            className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-[var(--border-base)]/60 bg-[var(--bg-card)]/40 hover:bg-brand/5 hover:border-brand/40 transition-all group cursor-pointer col-span-2 sm:col-span-1"
           >
             <Shield size={16} className="text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
             <span className="text-xs font-bold text-[var(--text-primary)]">Privacy Policy</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => setActiveModal('refund')}
-            className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-[var(--border-base)]/60 bg-[var(--bg-card)]/40 hover:bg-brand/5 hover:border-brand/40 transition-all group cursor-pointer"
-          >
-            <RefreshCw size={16} className="text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
-            <span className="text-xs font-bold text-[var(--text-primary)]">Refund Policy</span>
           </button>
         </div>
 
@@ -404,28 +308,25 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                     {activeModal === 'contact' && <Mail size={16} />}
                     {activeModal === 'terms' && <FileText size={16} />}
                     {activeModal === 'privacy' && <Shield size={16} />}
-                    {activeModal === 'refund' && <RefreshCw size={16} />}
                   </div>
                   <div>
                     <h2 className="text-sm font-black tracking-wider font-mono text-[var(--text-secondary)] uppercase">
-                      {activeModal === 'about' && t("downbase.header.about.sub", "Project Codex")}
-                      {activeModal === 'solutions' && t("downbase.header.solutions.sub", "Sectoral Resolution Lab")}
-                      {activeModal === 'resources' && t("downbase.header.resources.sub", "Operational Downloads")}
-                      {activeModal === 'careers' && t("downbase.header.careers.sub", "Cognitive Recruitment Gate")}
-                      {activeModal === 'contact' && t("downbase.header.contact.sub", "Uplink Center")}
-                      {activeModal === 'terms' && t("downbase.header.terms.sub", "Compliance Frame")}
-                      {activeModal === 'privacy' && t("downbase.header.privacy.sub", "Secure Integrity Standards")}
-                      {activeModal === 'refund' && t("downbase.header.refund.sub", "Billing Guarantee Resolution")}
+                      {activeModal === 'about' && 'Project Codex'}
+                      {activeModal === 'solutions' && 'Sectoral Resolution Lab'}
+                      {activeModal === 'resources' && 'Operational Downloads'}
+                      {activeModal === 'careers' && 'Cognitive Recruitment Gate'}
+                      {activeModal === 'contact' && 'Uplink Center'}
+                      {activeModal === 'terms' && 'Compliance Frame'}
+                      {activeModal === 'privacy' && 'Secure Integrity Standards'}
                     </h2>
                     <h3 className="text-lg font-bold text-[var(--text-primary)] leading-tight">
-                      {activeModal === 'about' && t("downbase.header.about.title", "About CHIDON IQ")}
-                      {activeModal === 'solutions' && t("downbase.header.solutions.title", "Platform & Application Solutions")}
-                      {activeModal === 'resources' && t("downbase.header.resources.title", "Advanced Knowledge Bases")}
-                      {activeModal === 'careers' && t("downbase.header.careers.title", "Join the Frontier")}
-                      {activeModal === 'contact' && t("downbase.header.contact.title", "Contact Support Channels")}
-                      {activeModal === 'terms' && t("downbase.header.terms.title", "Terms of Use Agreement")}
-                      {activeModal === 'privacy' && t("downbase.header.privacy.title", "Privacy Blueprint & Standards")}
-                      {activeModal === 'refund' && t("downbase.header.refund.title", "Refund Policy & Guarantee")}
+                      {activeModal === 'about' && 'About CHIDON IQ'}
+                      {activeModal === 'solutions' && 'Platform & Application Solutions'}
+                      {activeModal === 'resources' && 'Advanced Knowledge Bases'}
+                      {activeModal === 'careers' && 'Join the Frontier'}
+                      {activeModal === 'contact' && 'Contact Support Channels'}
+                      {activeModal === 'terms' && 'Terms of Use Agreement'}
+                      {activeModal === 'privacy' && 'Privacy Blueprint & Standards'}
                     </h3>
                   </div>
                 </div>
@@ -433,7 +334,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                   onClick={() => { setActiveModal(null); setSelectedJob(null); }}
                   className="p-1 px-2 hover:bg-rose-500/10 hover:text-rose-500 text-[var(--text-secondary)] rounded-lg transition-all cursor-pointer font-bold flex items-center gap-1 text-xs"
                 >
-                  <X size={15} /> {t("downbase.header.close_btn", "Close")}
+                  <X size={15} /> Close
                 </button>
               </div>
 
@@ -442,142 +343,138 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                 
                 {/* 1. ABOUT THE APP */}
                 {activeModal === 'about' && (
-                  <AutoTranslate>
-                    <div className="space-y-4 leading-relaxed">
-                      <p className="text-zinc-600 dark:text-zinc-300">
-                        <strong>CHIDON IQ</strong> is a sovereign cognitive engine designed to align advanced generative language intelligence with standard social architectures. Emphasizing premium design layouts, rigorous data encapsulation, and lightning-fast prompt dispatch, CHIDON IQ replaces fragmented workflow patterns with high-fidelity, production-grade output.
-                      </p>
-                      <div className="bg-neutral-100 dark:bg-zinc-900/50 p-4 rounded-xl border border-[var(--border-base)]/60">
-                        <h4 className="font-bold text-xs font-mono text-brand mb-2 tracking-widest uppercase">System Core Specifications:</h4>
-                        <ul className="space-y-2 text-xs font-mono text-[var(--text-secondary)]">
-                          <li className="flex items-center gap-2">
-                            <Cpu size={12} className="text-brand" /> Engine Model: CHIDON IQ Core Real-time Context Integration
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Sparkles size={12} className="text-brand" /> State Cache: Cloud Firestore Reactive Sync Streams
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Users size={12} className="text-brand" /> User Target: Creators, Media Broadcasters, SEO Architects
-                          </li>
-                        </ul>
-                      </div>
+                  <div className="space-y-4 leading-relaxed">
+                    <p className="text-zinc-600 dark:text-zinc-300">
+                      <strong>CHIDON IQ</strong> is a sovereign cognitive engine designed to align advanced generative language intelligence with standard social architectures. Emphasizing premium design layouts, rigorous data encapsulation, and lightning-fast prompt dispatch, CHIDON IQ replaces fragmented workflow patterns with high-fidelity, production-grade output.
+                    </p>
+                    <div className="bg-neutral-100 dark:bg-zinc-900/50 p-4 rounded-xl border border-[var(--border-base)]/60">
+                      <h4 className="font-bold text-xs font-mono text-brand mb-2 tracking-widest uppercase">System Core Specifications:</h4>
+                      <ul className="space-y-2 text-xs font-mono text-[var(--text-secondary)]">
+                        <li className="flex items-center gap-2">
+                          <Cpu size={12} className="text-brand" /> Engine Model: Gemini 1.5/2.0 Real-time Context Integration
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Sparkles size={12} className="text-brand" /> State Cache: Cloud Firestore Reactive Sync Streams
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Users size={12} className="text-brand" /> User Target: Creators, Media Broadcasters, SEO Architects
+                        </li>
+                      </ul>
                     </div>
-                  </AutoTranslate>
+                  </div>
                 )}
 
                 {/* 2. SOLUTIONS */}
                 {activeModal === 'solutions' && (
-                  <AutoTranslate>
-                    <div className="space-y-5">
-                      {/* Switcher */}
-                      <div className="flex border-b border-[var(--border-base)]/60">
-                        <button
-                          onClick={() => { setSolutionsTab('social'); setActiveSolutionId(null); }}
-                          className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${solutionsTab === 'social' ? 'border-brand text-brand' : 'border-transparent text-[var(--text-secondary)]'}`}
-                        >
-                          Social Media Problems
-                        </button>
-                        <button
-                          onClick={() => { setSolutionsTab('app'); setActiveSolutionId(null); }}
-                          className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${solutionsTab === 'app' ? 'border-brand text-brand' : 'border-transparent text-[var(--text-secondary)]'}`}
-                        >
-                          App Problems & Tech Hacks
-                        </button>
-                      </div>
-
-                      {solutionsTab === 'social' ? (
-                        <div className="space-y-3">
-                          {/* Solved 1 */}
-                          <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
-                            <button
-                              onClick={() => setActiveSolutionId(activeSolutionId === 'social1' ? null : 'social1')}
-                              className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
-                            >
-                              <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                                <span className="text-brand">●</span> Shadowban Alignment Matrix
-                              </span>
-                              <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'social1' ? 'Collapse ▲' : 'Expand ▼'}</span>
-                            </button>
-                            {activeSolutionId === 'social1' && (
-                              <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                                <p className="font-bold text-[var(--text-primary)]">Symptoms: Sudden drops in non-follower reach, tag exclusion.</p>
-                                <p><strong>Step-by-Step Resolution:</strong></p>
-                                <ol className="list-decimal list-inside space-y-1 pl-1">
-                                  <li><strong>Purge Systemic Metadata:</strong> Delete non-original audio tags and excessive copy-paste links from your previous 5 descriptions.</li>
-                                  <li><strong>Cooling Protocol:</strong> Deactivate all automation plugins and limit outgoing interactions for exactly 36 hours.</li>
-                                  <li><strong>Native Seed Feeding:</strong> Post a single high-engagement native text thread without links on day 3. Use search-grounded topics.</li>
-                                </ol>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Solved 2 */}
-                          <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
-                            <button
-                              onClick={() => setActiveSolutionId(activeSolutionId === 'social2' ? null : 'social2')}
-                              className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
-                            >
-                              <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                                <span className="text-brand">●</span> Algorithmic Retention Hook collapse
-                              </span>
-                              <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'social2' ? 'Collapse ▲' : 'Expand ▼'}</span>
-                            </button>
-                            {activeSolutionId === 'social2' && (
-                              <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                                <p className="font-bold text-[var(--text-primary)]">Symptoms: High initial impressions but catastrophic drop-offs in under 3 seconds.</p>
-                                <p><strong>Retention Engineering Hacks:</strong></p>
-                                <ul className="list-disc list-inside space-y-1 pl-1">
-                                  <li><strong>Phase Shift Frame:</strong> Inject a dual-sentence paradox hook within the very first 1.5 seconds. Do not intro yourself.</li>
-                                  <li><strong>Visual Micro-Stimulation:</strong> Ensure dynamic secondary overlays of B-roll or typography appear at precisely a 2.1-second frequency.</li>
-                                  <li><strong>Reverse Climax Hook:</strong> Show the final synthesis outcome first in the dynamic thumbnail layout.</li>
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {/* Solved 3 */}
-                          <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
-                            <button
-                              onClick={() => setActiveSolutionId(activeSolutionId === 'app1' ? null : 'app1')}
-                              className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
-                            >
-                              <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                                <span className="text-zinc-500">■</span> Slow Generator / Core AI Delay Timeouts
-                              </span>
-                              <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app1' ? 'Collapse ▲' : 'Expand ▼'}</span>
-                            </button>
-                            {activeSolutionId === 'app1' && (
-                              <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                                <p><strong>App Platform Resolution:</strong></p>
-                                <p>When high load stresses the server-side proxy pipeline, response generation might stall. Toggle your system local cache or reduce the scope of prompt instruction modifiers in the Settings menu. Ensure you do not submit multiple quick identical triggers while a generation block is locked green.</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Solved 4 */}
-                          <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
-                            <button
-                              onClick={() => setActiveSolutionId(activeSolutionId === 'app2' ? null : 'app2')}
-                              className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
-                            >
-                              <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                                <span className="text-zinc-500">■</span> Cloud Sync & Vault Offline status
-                              </span>
-                              <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app2' ? 'Collapse ▲' : 'Expand ▼'}</span>
-                            </button>
-                            {activeSolutionId === 'app2' && (
-                              <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                                <p><strong>Synchronization Solutions:</strong></p>
-                                <p>CHIDON IQ writes draft blueprints securely to cloud-provisioned Firestore channels. If you encounter an "Offline status" alert state in the vault, it indicates either missing auth verification or a localized internet latency drop. Ensure you are completely signed in using the Auth modal on top, or clear the storage state once via the language reload link.</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                  <div className="space-y-5">
+                    {/* Switcher */}
+                    <div className="flex border-b border-[var(--border-base)]/60">
+                      <button
+                        onClick={() => { setSolutionsTab('social'); setActiveSolutionId(null); }}
+                        className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${solutionsTab === 'social' ? 'border-brand text-brand' : 'border-transparent text-[var(--text-secondary)]'}`}
+                      >
+                        Social Media Problems
+                      </button>
+                      <button
+                        onClick={() => { setSolutionsTab('app'); setActiveSolutionId(null); }}
+                        className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${solutionsTab === 'app' ? 'border-brand text-brand' : 'border-transparent text-[var(--text-secondary)]'}`}
+                      >
+                        App Problems & Tech Hacks
+                      </button>
                     </div>
-                  </AutoTranslate>
+
+                    {solutionsTab === 'social' ? (
+                      <div className="space-y-3">
+                        {/* Solved 1 */}
+                        <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
+                          <button
+                            onClick={() => setActiveSolutionId(activeSolutionId === 'social1' ? null : 'social1')}
+                            className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
+                          >
+                            <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
+                              <span className="text-brand">●</span> Shadowban Alignment Matrix
+                            </span>
+                            <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'social1' ? 'Collapse ▲' : 'Expand ▼'}</span>
+                          </button>
+                          {activeSolutionId === 'social1' && (
+                            <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
+                              <p className="font-bold text-[var(--text-primary)]">Symptoms: Sudden drops in non-follower reach, tag exclusion.</p>
+                              <p><strong>Step-by-Step Resolution:</strong></p>
+                              <ol className="list-decimal list-inside space-y-1 pl-1">
+                                <li><strong>Purge Systemic Metadata:</strong> Delete non-original audio tags and excessive copy-paste links from your previous 5 descriptions.</li>
+                                <li><strong>Cooling Protocol:</strong> Deactivate all automation plugins and limit outgoing interactions for exactly 36 hours.</li>
+                                <li><strong>Native Seed Feeding:</strong> Post a single high-engagement native text thread without links on day 3. Use search-grounded topics.</li>
+                              </ol>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Solved 2 */}
+                        <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
+                          <button
+                            onClick={() => setActiveSolutionId(activeSolutionId === 'social2' ? null : 'social2')}
+                            className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
+                          >
+                            <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
+                              <span className="text-brand">●</span> Algorithmic Retention Hook collapse
+                            </span>
+                            <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'social2' ? 'Collapse ▲' : 'Expand ▼'}</span>
+                          </button>
+                          {activeSolutionId === 'social2' && (
+                            <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
+                              <p className="font-bold text-[var(--text-primary)]">Symptoms: High initial impressions but catastrophic drop-offs in under 3 seconds.</p>
+                              <p><strong>Retention Engineering Hacks:</strong></p>
+                              <ul className="list-disc list-inside space-y-1 pl-1">
+                                <li><strong>Phase Shift Frame:</strong> Inject a dual-sentence paradox hook within the very first 1.5 seconds. Do not intro yourself.</li>
+                                <li><strong>Visual Micro-Stimulation:</strong> Ensure dynamic secondary overlays of B-roll or typography appear at precisely a 2.1-second frequency.</li>
+                                <li><strong>Reverse Climax Hook:</strong> Show the final synthesis outcome first in the dynamic thumbnail layout.</li>
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Solved 3 */}
+                        <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
+                          <button
+                            onClick={() => setActiveSolutionId(activeSolutionId === 'app1' ? null : 'app1')}
+                            className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
+                          >
+                            <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
+                              <span className="text-zinc-500">■</span> Slow Generator / Gemini Delay Timeouts
+                            </span>
+                            <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app1' ? 'Collapse ▲' : 'Expand ▼'}</span>
+                          </button>
+                          {activeSolutionId === 'app1' && (
+                            <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
+                              <p><strong>App Platform Resolution:</strong></p>
+                              <p>When high load stresses the server-side proxy pipeline, response generation might stall. Toggle your system local cache or reduce the scope of prompt instruction modifiers in the Settings menu. Ensure you do not submit multiple quick identical triggers while a generation block is locked green.</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Solved 4 */}
+                        <div className="border border-[var(--border-base)]/60 rounded-xl overflow-hidden bg-[var(--bg-card)]/50">
+                          <button
+                            onClick={() => setActiveSolutionId(activeSolutionId === 'app2' ? null : 'app2')}
+                            className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
+                          >
+                            <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
+                              <span className="text-zinc-500">■</span> Cloud Sync & Vault Offline status
+                            </span>
+                            <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app2' ? 'Collapse ▲' : 'Expand ▼'}</span>
+                          </button>
+                          {activeSolutionId === 'app2' && (
+                            <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
+                              <p><strong>Synchronization Solutions:</strong></p>
+                              <p>CHIDON IQ writes draft blueprints securely to cloud-provisioned Firestore channels. If you encounter an "Offline status" alert state in the vault, it indicates either missing auth verification or a localized internet latency drop. Ensure you are completely signed in using the Auth modal on top, or clear the storage state once via the language reload link.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* 3. RESOURCES */}
@@ -911,12 +808,23 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       Need direct engineering support or brand alignment consulting? Establish an uplink message to our central NOC (Network Operations Center).
                     </p>
 
-                    <div className="p-4 border border-[var(--border-base)]/60 rounded-xl bg-[var(--bg-card)]/50 space-y-2">
-                      <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-wider block">SUPPORT CORE:</span>
-                      <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
-                        <p className="flex items-center gap-2"><Mail size={12} className="text-brand" /> support@chidon.iq</p>
-                        <p className="flex items-center gap-2"><Users size={12} className="text-brand" /> developer@chidon.iq</p>
-                        <p className="flex items-center gap-2"><Calendar size={12} className="text-brand" /> NOC Hours: 08:00 - 18:00 UTC</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 border border-[var(--border-base)]/60 rounded-xl bg-[var(--bg-card)]/50 space-y-2">
+                        <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-wider block">SUPPORT CORE:</span>
+                        <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+                          <p className="flex items-center gap-2"><Mail size={12} className="text-brand" /> support@chidon.iq</p>
+                          <p className="flex items-center gap-2"><Users size={12} className="text-brand" /> developer@chidon.iq</p>
+                          <p className="flex items-center gap-2"><Calendar size={12} className="text-brand" /> NOC Hours: 08:00 - 18:00 UTC</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 border border-[var(--border-base)]/60 rounded-xl bg-[var(--bg-card)]/50 space-y-2">
+                        <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-wider block">CHANNELS:</span>
+                        <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+                          <p className="flex items-center gap-2"><Laptop size={12} className="text-brand" /> AI Studio Integration Dev Server Port</p>
+                          <p className="flex items-center gap-2"><Share2 size={12} className="text-brand" /> live-preview-tunneling-uplink</p>
+                          <p className="font-bold text-[var(--text-primary)]">Response window: Under 4 hours</p>
+                        </div>
                       </div>
                     </div>
 
@@ -963,223 +871,46 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
 
                 {/* 6. TERMS OF USE */}
                 {activeModal === 'terms' && (
-                  <AutoTranslate>
-                    <div className="space-y-5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                      <p className="font-bold text-[var(--text-primary)]">Last Updated: April 2026</p>
-                      
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>📝</span> Agreement
-                        </h4>
-                        <p>
-                          Welcome to Chidon Iq! By accessing and using our web application, tools, or smart generators, you are agreeing to these Terms of Use. Please read them carefully. If you do not agree to everything here, you should not use Chidon Iq.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>👤</span> Accounts
-                        </h4>
-                        <p>
-                          To explore our intelligent tools, you must create an account. You agree to give us a real email address that belongs to you. Please only create one account per person. Keep your password safe! If we find out you are using fake profiles or abusing the platform, we reserve the right to suspend or block your account immediately.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>💳</span> Payments & Refunds
-                        </h4>
-                        <p>
-                          Payments processed by Paystack. See <a href="https://paystack.com/legal/terms" target="_blank" rel="noopener noreferrer" className="text-[var(--text-primary)] underline">paystack.com/legal/terms</a>. When you subscribe to Pro Creator tools, premium features activate instantly. Because custom computing power is used right away to generate your content, we do not cover refunds after access is granted, unless a severe, unresolvable technical failure happens on our end. For any billing problems or concerns, please reach out to our dedicated support channels at <strong className="text-[var(--text-primary)]">support@chidoniq.com</strong>.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>✅</span> Acceptable Use
-                        </h4>
-                        <p>
-                          We love dynamic content creators, but please use Chidon Iq responsibly. You promise not to use our product for illegal things, create spam networks, or try to decode or reverse engineer the inner workings of Chidon Iq. Please do not overload our servers or run automated bots to scrape content.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🧠</span> Content & IP
-                        </h4>
-                        <p>
-                          You own all the custom social scripts, descriptions, and ideas you generate using our assistant. However, Chidon Iq owns the app wrapper, entire brand, logo designs, systems, underlying source code, and intellectual property. No copying of our layout or code is allowed!
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🚫</span> Termination
-                        </h4>
-                        <p>
-                          We want our community to remain safe and fair. We reserve the right to block or terminate your access for credit fraud, unauthorized chargebacks, or violations of these Terms of Use. If your account is closed for causa, you will not be issued any refunds for unused subscription periods.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>⚠️</span> Disclaimers
-                        </h4>
-                        <p>
-                          Chidon Iq is provided on an "as is" and "as available" basis. While we work around the clock to build premium engines, we do not guarantee 100% continuous uptime or that our generated ideas will always match your social audience forecasts. We hope they do, but we are not legally responsible if they do not.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🌍</span> Governing Law
-                        </h4>
-                        <p>
-                          These Terms and any platform disputes will be regulated by the modern laws of Everyone. If you are having issues, please talk to us first! We are dedicated to peace and want to settle all matters through direct support. Send an email to <strong className="text-[var(--text-primary)]">support@chidoniq.com</strong> before initiating any external processes.
-                        </p>
-                      </div>
-                    </div>
-                  </AutoTranslate>
+                  <div className="space-y-4 text-xs leading-relaxed text-[var(--text-secondary)]">
+                    <p className="font-bold text-[var(--text-primary)]">Last Updated: May 30, 2026</p>
+                    <p>
+                      Welcome to <strong>CHIDON IQ</strong> (the "System"). By mapping credentials, accessing cognitive tool sectors, or initiating generation triggers, you agree to comply with the operational conditions outlined within this regulatory frame.
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">1. Cognitive Output & Ownership</h4>
+                    <p>
+                      All content pieces, hashtags, script structures, and SEO score summaries generated by CHIDON IQ models under individual account sessions are owned entirely by the generating actor. CHIDON IQ claims zero proprietary title to user outcomes but does not promise accuracy against localized platform updates.
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">2. Respectful Automation Guidelines</h4>
+                    <p>
+                      Users are strictly requested not to stress the Gemini core API via bulk automated loop scripts or script injection vectors. CHIDON IQ serves human creators looking to align content pipelines organically.
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">3. Limitation of Liability</h4>
+                    <p>
+                      CHIDON IQ is provided "AS-IS". We accept zero liability for subsequent social platform reach decay, shadowbanners, deletion of draft indices, or regional connectivity issues.
+                    </p>
+                  </div>
                 )}
 
                 {/* 7. PRIVACY POLICY */}
                 {activeModal === 'privacy' && (
-                  <AutoTranslate>
-                    <div className="space-y-5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                      <p className="font-bold text-[var(--text-primary)]">Last Updated: June 4, 2026</p>
-                      <p>
-                        Welcome to <strong>Chidon Iq</strong>! We believe privacy rules should be easy to understand. We want you to feel totally safe and relaxed while building cool things. Here is a simple, human-friendly breakdown of how we protect you and your data:
-                      </p>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🔒</span> What data we collect
-                        </h4>
-                        <p>
-                          We keep things super simple. Here is what we collect from you when you use Chidon Iq:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1 text-[var(--text-secondary)]">
-                          <li><strong>Your Account Details:</strong> Your email address and display name so we can secure your account and greet you on your dashboard.</li>
-                          <li><strong>Your Creator Canvas:</strong> Your customized social scripts, keyword research lists, tone choices, and content schedules. We save these inside our secure database so you never lose your hard work.</li>
-                        </ul>
-                        <p>
-                          We do not collect sneaky background information, and we do not track your device location.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>💳</span> Payments with Paystack
-                        </h4>
-                        <p>
-                          Chidon Iq uses Paystack to process payments. We do not store your card details. All card information is encrypted and processed directly by Paystack, our PCI-DSS compliant secure payment partner. Paystack sends us a safe confirmation token so we can instantly unlock your premium Pro tools!
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🍪</span> Cookies & Analytics
-                        </h4>
-                        <p>
-                          We use tiny, safe files called cookies to keep you signed in so you do not have to write your password every time. We also use light, privacy-friendly analytics trackers to check which features (like script generators) are used the most. This helps us make Chidon Iq faster and more helpful for you.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🤝</span> Who we share data with
-                        </h4>
-                        <p>
-                          We respect your ideas! We will <strong>never</strong> sell or rent your digital ideas, scripts, or details to spam networks or third-party advertising companies. We only share necessary instructions with trusted services like CHIDON AI Engine (to generate your content) and Firebase (to host your secure vault).
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🌍</span> Your rights - GDPR & NDPR
-                        </h4>
-                        <p>
-                          Whether you are creating content from Everyone or standard cities worldwide, you have absolute control over your digital identity under laws like GDPR and NDPR. You can:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1 text-[var(--text-secondary)]">
-                          <li>View all the information we have about your account at any time.</li>
-                          <li>Fix or update your account name and email.</li>
-                          <li>Ask us to completely delete your account and erase all your scripts from our databases forever.</li>
-                        </ul>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🔐</span> How we protect your data
-                        </h4>
-                        <p>
-                          We work hard to protect your records from bad actors. Chidon Iq uses top-grade servers, firewalls, and modern encryption to lock down your personal records. Only you can access, read, or print your creative content logs using your secure password login.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1 border-t border-white/5 pt-3">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>📧</span> Contact us
-                        </h4>
-                        <p>
-                          Have some feedback, privacy questions, or just want to swap ideas? Shoot us a friendly note at <strong className="text-[var(--text-primary)]">support@chidon.iq</strong> or reach our lead developer directly at <strong className="text-[var(--text-primary)]">chideraemmanue98@gmail.com</strong>. We always love hearing from you!
-                        </p>
-                      </div>
-                    </div>
-                  </AutoTranslate>
-                )}
-
-                {/* 8. REFUND POLICY */}
-                {activeModal === 'refund' && (
-                  <AutoTranslate>
-                    <div className="space-y-5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                      <p className="font-bold text-[var(--text-primary)]">Last Updated: June 4, 2026</p>
-                      <p>
-                        At <strong>Chidon Iq</strong>, we are committed to building advanced social intelligence and content optimization tools. We want you to feel totally confident when using our platform. If you find that the service does not meet your expectations, we have established a customer-first refund guarantee.
-                      </p>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>⌛</span> 14-Day Money-Back Guarantee
-                        </h4>
-                        <p>
-                          We offer a full <strong>14-day refund policy</strong> for all our premium membership subscription tiers. If you subscribe to our pro tier and decide within 14 days that our platform doesn't suit your workflow needs, you can demand a full refund—no difficult questions asked.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>🔄</span> Eligibility Guidelines
-                        </h4>
-                        <p>
-                          To protect our network from bad actors while keeping legitimate creatives completely safe, refunds are approved based on standard compliance guidelines:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1 text-[var(--text-secondary)]">
-                          <li>The request must be raised within exactly <strong>14 calendar days</strong> of the billing or upgrade transaction.</li>
-                          <li>The account should not have registered excessive robotic content extraction or script generation volume indicating intentional commercial mining of the engines prior to cancellation.</li>
-                          <li>Only your most recent subscription renewal or original registration purchase is eligible for refund resolution.</li>
-                        </ul>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>💳</span> Processing & Settlement
-                        </h4>
-                        <p>
-                          Once your refund is approved, the total amount will be credited back via our PCI-compliant payment channel (Paystack) to your original card, bank channel, or digital wallet. Standard settlement cycles may take between <strong>3 to 7 working days</strong>, depending on your financial institution.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1 border-t border-white/5 pt-3">
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-1 mt-3">
-                          <span>📧</span> How to Request a Refund
-                        </h4>
-                        <p>
-                          Initiating a refund is simple! You do not need to fill out any complicated compliance grids. Just send an email containing your account user identifier or email to our direct billing team. Contact us at <strong className="text-[var(--text-primary)]">billing@chidoniq.com</strong> or reach out directly to the principal support channel <strong className="text-[var(--text-primary)]">support@chidoniq.com</strong>. We will review and process your request immediately.
-                        </p>
-                      </div>
-                    </div>
-                  </AutoTranslate>
+                  <div className="space-y-4 text-xs leading-relaxed text-[var(--text-secondary)]">
+                    <p className="font-bold text-[var(--text-primary)]">Last Updated: May 30, 2026</p>
+                    <p>
+                      At <strong>CHIDON IQ</strong>, your privacy is decoupled from tracking metrics. We operate clean sandbox configurations as detailed below to preserve candidate and content integrity:
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">1. Local Storage State Handling</h4>
+                    <p>
+                      All tone choices, customized system preferences, and theme choices are compiled directly inside your client-side browser storage (React state + `localStorage`). We do not scrape parameters outside specified database schemas.
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">2. Firebase Core Auth & Database Integration</h4>
+                    <p>
+                      When checking your blueprints in the Vault, files are cataloged securely inside Firestore. Authorized rules keep records visible strictly to authenticated owners.
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2 font-mono uppercase tracking-wider mt-2">3. Model Prompt Encapsulation</h4>
+                    <p>
+                      When transmitting input text parameter fields to our generative agents, text feeds do not persist for secondary telemetry modeling or corporate profiling purposes.
+                    </p>
+                  </div>
                 )}
 
               </div>

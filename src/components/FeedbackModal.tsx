@@ -30,9 +30,8 @@ export const FeedbackModal = ({ isOpen, onClose, featureId, generatedContent }: 
         timestamp: serverTimestamp(),
       };
       
-      const activeUserId = auth.currentUser?.uid || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!).uid : null);
-      if (activeUserId) {
-        feedbackPayload.userId = activeUserId;
+      if (auth.currentUser) {
+        feedbackPayload.userId = auth.currentUser.uid;
       }
 
       await addDoc(collection(db, 'feedback'), feedbackPayload);

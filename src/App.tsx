@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Forced fresh-render static options for deep caching evasion
-export const revalidate = 0;
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect, useMemo, useRef, lazy, Suspense, createContext, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
@@ -71,11 +67,7 @@ import {
   Sparkles,
   Copy,
   Check,
-  Coins,
-  Lock,
-  Unlock,
-  Crown,
-  Gem
+  Coins
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -93,10 +85,9 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { exportToJSON, exportToCSV, exportToTXT, exportToPDF } from './lib/exportUtils';
+import { exportToJSON, exportToCSV, exportToTXT } from './lib/exportUtils';
 import { Tooltip } from './components/Tooltip';
 import { LoadingOverlay } from './components/LoadingOverlay';
-import { ChidonIqLogo } from './components/ChidonIqLogo';
 
 // PERF: Lazy load heavy overlays and non-critical modular sub-components to reduce initial load times and optimize bundle sizing
 const FeedbackModal = lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -113,8 +104,6 @@ import { cn } from './lib/utils';
 import LanguageSelector, { LANGUAGES } from './components/LanguageSelector';
 import { AuthModal } from './components/AuthModal';
 import { EarnSection } from './components/EarnSection';
-import { PricingTiers } from './components/PricingTiers';
-import { BlogSection } from './components/BlogSection';
 import { 
   collection, 
   addDoc, 
@@ -130,6 +119,8 @@ import {
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
   signOut, 
   User 
 } from 'firebase/auth';
@@ -254,25 +245,6 @@ const FORMATTING_PROTOCOL = `
 `;
 
 const categories = ['Core', 'Video SEO', 'Trends', 'Growth', 'Pro'];
-
-const PREMIUM_FEATURE_IDS: FeatureId[] = [
-  'content-ideas',
-  'scripts',
-  'thumbnails',
-  'trending',
-  'personas',
-  'repurposing',
-  'template-library',
-  'vseo-title-desc',
-  'vseo-tags',
-  'vseo-scorecard',
-  'vseo-keywords',
-  'vseo-best-time',
-  'trending-topics',
-  'daily-ideas',
-  'trend-alerts',
-  'ai-script-outline'
-];
 
 const FEATURES: Feature[] = [
   { 
@@ -429,7 +401,7 @@ const FEATURES: Feature[] = [
     id: 'template-library', 
     label: 'CHIDON IQ Template Library', 
     icon: Sparkles, 
-    description: 'Populate professional social posts, bios, and competitor maps with CHIDON Intelligent Engine.', 
+    description: 'Populate professional social posts, bios, and competitor maps with Gemini API.', 
     category: 'Core',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
@@ -608,7 +580,7 @@ const useHybridAI = (geminiKey: string | null, hfKey: string | null) => {
 
       const data = await res.json();
       const geminiText = data.text;
-      if (!geminiText) throw new Error("No response from CHIDON AI Core.");
+      if (!geminiText) throw new Error("No response from Gemini.");
 
       let finalResult = geminiText;
 
@@ -669,7 +641,7 @@ const SystemStatus = ({ activeNodes = 0, geminiActive = false }: { activeNodes: 
       "Establishing secure CHIDON IQ uplink...",
       "Neural pathway synchronized.",
       "Global intelligence nodes detected: " + activeNodes,
-      geminiActive ? "CHIDON AI Neural Core: ONLINE" : "CHIDON AI Neural Core: STANDBY",
+      geminiActive ? "Gemini Neural Core: ONLINE" : "Gemini Neural Core: STANDBY",
       "Optimizing content delivery protocols...",
       "Status: Declassified. Network operational."
     ];
@@ -809,222 +781,6 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-const FeatureMessageItem = ({ 
-  msg, 
-  feature, 
-  actions, 
-  onSendToBook 
-}: { 
-  msg: ChatMessage; 
-  feature: Feature; 
-  actions?: (msg: ChatMessage) => React.ReactNode; 
-  onSendToBook?: (content: string, title: string) => void; 
-}) => {
-  const { t, i18n } = useTranslation();
-  const [content, setContent] = useState(msg.content);
-  const [originalContent] = useState(msg.content);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [currentLangCode, setCurrentLangCode] = useState(msg.language || 'en');
-  const [error, setError] = useState<string | null>(null);
-
-  // Keep content in sync if parent message updates
-  useEffect(() => {
-    setContent(msg.content);
-  }, [msg.content]);
-
-  const handleTranslate = async (targetLangCode: string) => {
-    setIsTranslating(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/gemini/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content, targetLanguage: targetLangCode })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.text) {
-          setContent(data.text);
-          setCurrentLangCode(targetLangCode);
-        } else {
-          setError("Translation empty");
-        }
-      } else {
-        setError(`Failed to translate (${res.status})`);
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to connect to Translation node");
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
-  const currentSystemLang = (i18n.language || 'en').split('-')[0].toLowerCase();
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "flex flex-col space-y-3 w-full animate-fadeIn",
-        msg.role === 'user' ? "items-end" : "items-start"
-      )}
-    >
-      <div className={cn(
-        "w-full p-6 rounded-2xl border relative group/msg transition-all duration-300",
-        msg.role === 'user' 
-          ? "bg-brand text-white border-brand shadow-lg max-w-[85%]" 
-          : "card-base hover:border-slate-700 max-w-full"
-      )}>
-        {/* Translation source/target badge */}
-        {msg.role === 'assistant' && (
-          <div className="absolute top-4 right-4 flex items-center gap-1.5 text-[9px] font-mono uppercase bg-neutral-900/40 border border-white/5 px-2 py-0.5 rounded-full text-slate-400">
-            <Globe size={10} className="text-brand animate-pulse" />
-            <span>Lang: {currentLangCode.toUpperCase()}</span>
-          </div>
-        )}
-
-        <div id={`msg-content-${msg.id}`} className="prose prose-sm dark:prose-invert max-w-none">
-          <div className={cn(
-            "markdown-body leading-relaxed text-sm whitespace-pre-wrap break-words",
-            msg.role === 'user' ? "text-white" : "text-[var(--text-primary)]"
-          )}>
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </div>
-        </div>
-
-        {error && (
-          <p className="text-[10px] text-rose-500 font-mono mt-2 animate-pulse">
-            ⚠️ {error}
-          </p>
-        )}
-      </div>
-
-      {msg.role === 'assistant' && (
-        <div className="flex flex-wrap items-center gap-2 px-1 w-full justify-start z-10">
-          {actions && actions({ ...msg, content })}
-          <CopyButton text={content} />
-
-          <button 
-            type="button"
-            onClick={() => exportToTXT(content, `${feature.label.replace(/\s+/g, '_')}_Result_${msg.id.substring(0, 5)}`)}
-            className="btn-secondary h-8 py-0 px-3 rounded-lg font-medium text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-slate-300 hover:text-white"
-            title="Download result as a text file"
-          >
-            <Download size={12} className="text-cyan-primary" />
-            <span>TXT</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => exportToPDF(`msg-content-${msg.id}`, `${feature.label.replace(/\s+/g, '_')}_Result_${msg.id.substring(0, 5)}`)}
-            className="btn-secondary h-8 py-0 px-3 rounded-lg font-medium text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-slate-300 hover:text-white"
-            title="Download result as a PDF document"
-          >
-            <FileText size={12} className="text-violet-500" />
-            <span>PDF</span>
-          </button>
-          
-          {onSendToBook && (
-            <button 
-              onClick={() => onSendToBook(content, t(`features.${feature.id}.label`) || feature.label)}
-              className="btn-primary h-8 py-0 px-3 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-white"
-            >
-              <Book size={12} />
-              <span>Send to Book with Lines</span>
-            </button>
-          )}
-
-          {/* Quick toggle translators */}
-          <div className="flex items-center flex-wrap gap-1.5">
-            {/* Convert between other languages and English respectively */}
-            {currentLangCode !== 'en' ? (
-              <button
-                disabled={isTranslating}
-                onClick={() => handleTranslate('en')}
-                className="btn-secondary h-8 py-0 px-2.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1 active:scale-95 duration-200 cursor-pointer text-slate-300 border-white/5 hover:border-brand/30"
-              >
-                {isTranslating ? (
-                  <Loader2 size={12} className="animate-spin text-brand" />
-                ) : (
-                  <span>🇬🇧</span>
-                )}
-                <span>Convert to English</span>
-              </button>
-            ) : (
-              currentSystemLang !== 'en' && (
-                <button
-                  disabled={isTranslating}
-                  onClick={() => handleTranslate(currentSystemLang)}
-                  className="btn-secondary h-8 py-0 px-2.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1 active:scale-95 duration-200 cursor-pointer text-slate-300 border-white/5 hover:border-brand/30"
-                >
-                  {isTranslating ? (
-                    <Loader2 size={12} className="animate-spin text-brand" />
-                  ) : (
-                    <span>
-                      {LANGUAGES.find(l => l.code === currentSystemLang)?.flag || '🌐'}
-                    </span>
-                  )}
-                  <span>Convert to {LANGUAGES.find(l => l.code === currentSystemLang)?.label || 'Selected Lang'}</span>
-                </button>
-              )
-            )}
-
-            {/* Custom Multi-Language Selector Dropdown per message */}
-            <div className="relative inline-block text-left group/drop text-slate-300">
-              <button
-                type="button"
-                disabled={isTranslating}
-                className="btn-secondary h-8 py-0 px-2.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer text-slate-400 group-hover/drop:text-white border-white/5 group-hover/drop:border-white/10"
-              >
-                <span>🌐</span>
-                <span>Translate to...</span>
-                <ChevronDown size={10} />
-              </button>
-              <div className="hidden group-hover/drop:block absolute bottom-full left-0 mb-1 w-44 bg-[#0E1526] border border-white/10 rounded-xl shadow-xl p-1 z-35">
-                <div className="px-2 py-1 text-[9px] font-bold font-mono text-slate-400 uppercase tracking-widest border-b border-white/5 mb-1">
-                  Choose Target Lang
-                </div>
-                <div className="max-h-40 overflow-y-auto space-y-0.5 custom-scrollbar">
-                  {LANGUAGES.map((lang) => (
-                    <button
-                      key={lang.code}
-                      type="button"
-                      onClick={() => handleTranslate(lang.code)}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-2 py-1 rounded-lg text-[11px] text-left text-slate-300 hover:bg-brand/15 hover:text-brand transition-colors cursor-pointer",
-                        currentLangCode === lang.code && "text-brand font-bold bg-brand/5"
-                      )}
-                    >
-                      <span className="text-sm">{lang.flag}</span>
-                      <span>{lang.native}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Restore/Show Original button */}
-            {content !== originalContent && (
-              <button
-                type="button"
-                onClick={() => {
-                  setContent(originalContent);
-                  setCurrentLangCode(msg.language || 'en');
-                }}
-                className="btn-secondary h-8 py-0 px-2.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1 active:scale-95 duration-200 cursor-pointer text-rose-400 hover:text-rose-300 border-rose-500/10 hover:border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10"
-              >
-                <span>↩️</span>
-                <span>Show Original</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
 const FeatureLayout = ({ feature, children, messages, actions, onBack }: { feature: Feature, children: React.ReactNode, messages?: ChatMessage[], actions?: (msg: ChatMessage) => React.ReactNode, onBack?: () => void }) => {
   const { t } = useTranslation();
   const { onSendToBook } = useContext(BookContext);
@@ -1058,13 +814,47 @@ const FeatureLayout = ({ feature, children, messages, actions, onBack }: { featu
        {/* Chat History */}
        <AnimatePresence mode="popLayout">
          {messages && messages.map((msg, idx) => (
-           <FeatureMessageItem 
-             key={msg.id} 
-             msg={msg} 
-             feature={feature} 
-             actions={actions} 
-             onSendToBook={onSendToBook} 
-           />
+           <motion.div
+             key={msg.id}
+             initial={{ opacity: 0, y: 10 }}
+             animate={{ opacity: 1, y: 0 }}
+             className={cn(
+               "flex flex-col space-y-4",
+               msg.role === 'user' ? "items-end" : "items-start"
+             )}
+           >
+             <div className={cn(
+                "max-w-[90%] sm:max-w-[80%] p-6 rounded-2xl border",
+                msg.role === 'user' 
+                  ? "bg-brand text-white border-brand shadow-lg" 
+                  : "card-base"
+             )}>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <div className={cn(
+                    "markdown-body leading-relaxed text-sm",
+                    msg.role === 'user' ? "text-white" : "text-[var(--text-primary)]"
+                  )}>
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                </div>
+             </div>
+
+              {msg.role === 'assistant' && (
+                <div className="flex flex-wrap gap-2 px-1">
+                   {actions && actions(msg)}
+                   <CopyButton text={msg.content} />
+                   {onSendToBook && (
+                     <button 
+                       onClick={() => onSendToBook(msg.content, t(`features.${feature.id}.label`) || feature.label)}
+                       className="btn-primary h-8 py-0 px-3 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-white"
+                     >
+                       <Book size={12} />
+                       <span>Send to Book with Lines</span>
+                     </button>
+                   )}
+                </div>
+              )}
+           </motion.div>
          ))}
        </AnimatePresence>
 
@@ -2502,7 +2292,7 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
 
 const STATIC_QUALITIES = [
   { id: "realtime", label: "Real-time Intelligence", description: "Hyper-speed neural synchronization across global nodes." },
-  { id: "ai-native", label: "CHIDON AI Native", description: "Deep integration with advanced generative AI models." },
+  { id: "ai-native", label: "Gemini-Native", description: "Deep integration with advanced generative AI models." },
   { id: "tactical", label: "Tactical Design", description: "Modern, high-performance content operations." },
   { id: "secure", label: "Secure Vault", description: "Fragmented intelligence storage with encrypted signal protocols." }
 ];
@@ -2528,30 +2318,6 @@ const Dashboard = ({
 }) => {
   const { t } = useTranslation();
   const [qualities, setQualities] = useState<any[]>(STATIC_QUALITIES);
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-
-  const faqItems = [
-    { 
-      q: "What is CHIDON IQ and how does it optimize content?", 
-      a: "CHIDON IQ is an elite social performance terminal that aggregates real-time intelligence nodes to solve developer and creator blocks. By syncing with optimized search layers, it generates high-CTR titles, scripts, and hashtags." 
-    },
-    { 
-      q: "How do I unlock Pro features?", 
-      a: "You can easily unlock the Pro Creator tier by upgrading your plan. If you are evaluating, you can also use our Simulated 1-Click Instant Demo Bypass in the billing screen to unlock all high-speed AI clusters instantly." 
-    },
-    { 
-      q: "Where are my drafted scripts and keywords saved?", 
-      a: "Every time you click 'Vault' on a generated result, your data is securely stored in your personal encrypted space. You can access these anytime under the 'CHIDON Vault' directory." 
-    },
-    { 
-      q: "Can I repurpose content across different platforms?", 
-      a: "Absolutely! Our specialized protocols allow you to translate, adapt, and restructure video concepts across YouTube, Reels, LinkedIn, Twitter/X, and Newsletter formats seamlessly." 
-    },
-    { 
-      q: "What language localization channels are supported?", 
-      a: "CHIDON IQ natively operates with multi-language synchronization. You can dynamically switch systems and translate any generated output across 10+ international languages instantly." 
-    }
-  ];
 
   useEffect(() => {
     fetch('/api/chidon_iq/qualities')
@@ -2580,8 +2346,8 @@ const Dashboard = ({
             animate={{ opacity: 1, x: 0 }}
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10 border border-brand/20 text-brand text-[10px] uppercase tracking-wider font-bold"
           >
-            <ChidonIqLogo size={14} cropped />
-            <span>{t("dashboard.systemLive") || "System Live: ACTIVE"}</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+            {t("dashboard.systemLive") || "System Live: ACTIVE"}
           </motion.div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-[var(--text-primary)] leading-tight">
             {t("dashboard.title1") || "Intelligence for"} <br />
@@ -2692,74 +2458,6 @@ const Dashboard = ({
             </div>
           </motion.div>
         ))}
-      </div>
-
-      {/* Collapsible FAQ Accordion Section on Dashboard */}
-      <div className="mt-16 pt-12 border-t border-white/5 space-y-8 max-w-4xl mx-auto">
-        <div className="text-center space-y-3">
-          <span className="text-[10px] font-mono uppercase tracking-[0.3em] bg-brand/10 text-brand px-3 py-1 rounded-full font-bold">
-            Support Node
-          </span>
-          <h2 className="text-2xl md:text-3xl font-black text-[var(--text-primary)] uppercase tracking-tight">
-            Frequently Asked Questions
-          </h2>
-          <p className="text-sm text-[var(--text-secondary)] max-w-lg mx-auto">
-            Got questions about our cognitive algorithms and workspace interfaces? We've decoded the answers below.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          {faqItems.map((item, idx) => {
-            const isOpen = openFaqIndex === idx;
-            return (
-              <div 
-                key={idx} 
-                className={cn(
-                  "border rounded-2xl transition-all duration-350 overflow-hidden",
-                  isOpen 
-                    ? "bg-brand/5 border-brand/40 shadow-lg shadow-brand/5" 
-                    : "bg-[#0E1526]/40 hover:bg-[#0E1526]/70 border-white/5 hover:border-slate-700"
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                  className="w-full flex items-center justify-between p-5 text-left font-bold text-sm sm:text-base text-[var(--text-primary)] hover:text-brand transition-colors cursor-pointer"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className={cn(
-                      "flex items-center justify-center w-6 h-6 rounded-lg text-xs font-mono font-bold transition-colors",
-                      isOpen ? "bg-brand text-[#070A13]" : "bg-white/5 text-slate-400"
-                    )}>
-                      {String(idx + 1).padStart(2, '0')}
-                    </span>
-                    {item.q}
-                  </span>
-                  <div className={cn(
-                    "p-1 rounded-md transition-transform duration-350",
-                    isOpen ? "rotate-180 text-brand" : "text-slate-500"
-                  )}>
-                    <ChevronDown size={18} />
-                  </div>
-                </button>
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeInOut" }}
-                    >
-                      <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed border-t border-white/5 pl-[2.75rem]">
-                        {item.a}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
@@ -3000,25 +2698,7 @@ export default function App() {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'pricing' | 'blog'>(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      if (path === '/blog' || path.startsWith('/blog/')) {
-        return 'blog';
-      }
-    }
-    return 'dashboard';
-  });
-  const [membershipTier, setMembershipTier] = useState<'free' | 'pro'>('free');
-  const [paymentSuccessModal, setPaymentSuccessModal] = useState<{
-    reference: string;
-    amount: number;
-    simulated?: boolean;
-  } | null>(null);
-  const [paystackVerificationState, setPaystackVerificationState] = useState<{
-    status: 'idle' | 'loading' | 'success' | 'error';
-    message: string;
-  }>({ status: 'idle', message: '' });
+  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn'>('dashboard');
   const [activeFeature, setActiveFeature] = useState<FeatureId>('keyword-research');
   const [toolSearchQuery, setToolSearchQuery] = useState<string>('');
   
@@ -3070,100 +2750,6 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    
-    const reference = params.get('reference') || params.get('paystack_ref');
-    if (reference && !reference.startsWith("sim_paystack_")) {
-      const cleanUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, document.title, cleanUrl);
-      
-      const executeVerification = async () => {
-        setPaystackVerificationState({
-          status: 'loading',
-          message: 'Initiating server-side security validation chain...'
-        });
-
-        try {
-          console.log("Analyzing payment reference via secure cloud backend:", reference);
-          
-          // Challenge the POST /api/verify-payment node first
-          let verifyRes = await fetch('/api/verify-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference })
-          });
-
-          let result: any = {};
-          let isVerified = false;
-          let finalAmount = 9.99;
-
-          if (verifyRes.ok) {
-            result = await verifyRes.json();
-            if (result.status === 'success') {
-              isVerified = true;
-              finalAmount = (result.amount || 999) / 100;
-            }
-          }
-
-          // Fallback to GET endpoint if POST response is unresolved
-          if (!isVerified) {
-            console.warn("Primary endpoint busy or unmapped. Attempting backup route check...");
-            const fallbackRes = await fetch(`/api/paystack/verify/${reference}`);
-            if (fallbackRes.ok) {
-              const fallbackResult = await fallbackRes.json();
-              if (fallbackResult.status && fallbackResult.data?.status === 'success') {
-                result = fallbackResult;
-                isVerified = true;
-                finalAmount = (fallbackResult.data.amount || 499000) / 100;
-              }
-            }
-          }
-
-          if (isVerified) {
-            setPaystackVerificationState({
-              status: 'success',
-              message: 'Payment authorized! Your Pro Creator license keys are synchronized.'
-            });
-
-            setPaymentSuccessModal({
-              reference: reference,
-              amount: finalAmount,
-              simulated: result.data?.simulated || result.simulated || false
-            });
-
-            if (auth.currentUser) {
-              const userDocRef = doc(db, 'users', auth.currentUser.uid);
-              await setDoc(userDocRef, {
-                membershipTier: 'pro',
-                upgradedAt: serverTimestamp(),
-                paymentStatus: 'verified_pro_paystack',
-                paymentReference: reference,
-                amountPaid: finalAmount
-              }, { merge: true });
-            }
-
-            // Standard timeout delay to clear notification UI
-            setTimeout(() => {
-              setPaystackVerificationState({ status: 'idle', message: '' });
-            }, 6000);
-          } else {
-            console.error("Core transaction validation failed. Data parameters:", result);
-            setPaystackVerificationState({
-              status: 'error',
-              message: result.error || "Payment verification failed. Handshake refused by transaction center."
-            });
-          }
-        } catch (error: any) {
-          console.error("Critical catch failure on Paystack secure loop sync:", error);
-          setPaystackVerificationState({
-            status: 'error',
-            message: `Handshake exception: ${error.message || 'Cloud endpoint did not respond'}`
-          });
-        }
-      };
-      
-      executeVerification();
-    }
-
     const toolParam = params.get('tool') as FeatureId;
     if (toolParam) {
       const match = FEATURES.find(f => f.id === toolParam);
@@ -3326,32 +2912,16 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
-        if (user && user.email === 'chideraemmanue98@gmail.com') {
-          setMembershipTier('pro');
-          localStorage.setItem('membership_tier', 'pro');
-        } else if (data.membershipTier !== undefined) {
-          setMembershipTier(data.membershipTier);
-          localStorage.setItem('membership_tier', data.membershipTier);
-        } else {
-          setMembershipTier('free');
-          localStorage.setItem('membership_tier', 'free');
-        }
-      } else if (user && user.email === 'chideraemmanue98@gmail.com') {
-        setMembershipTier('pro');
-        localStorage.setItem('membership_tier', 'pro');
       }
-    }, (error) => {
-      console.info("🔌 [Cloud Sync Settings Info] Operating in local offline/cached configuration.");
     });
     return () => unsubscribe();
   }, [user]);
 
   // Sync state helpers
   const saveUserSetting = async (key: string, value: any) => {
-    const activeUserId = auth.currentUser?.uid || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!).uid : null);
-    if (!activeUserId) return;
+    if (!auth.currentUser) return;
     try {
-      const userRef = doc(db, 'users', activeUserId);
+      const userRef = doc(db, 'users', auth.currentUser.uid);
       await setDoc(userRef, {
         [key]: value,
         createdAt: serverTimestamp()
@@ -3366,10 +2936,9 @@ export default function App() {
     setCustomHfApiKey(hf);
     localStorage.setItem('custom_gemini_api_key', gemini);
     localStorage.setItem('custom_hf_api_key', hf);
-    const activeUserId = auth.currentUser?.uid || (localStorage.getItem('simulated_user') ? JSON.parse(localStorage.getItem('simulated_user')!).uid : null);
-    if (activeUserId) {
+    if (auth.currentUser) {
       try {
-        const userRef = doc(db, 'users', activeUserId);
+        const userRef = doc(db, 'users', auth.currentUser.uid);
         await setDoc(userRef, {
           apiKeys: {
             geminiApiKey: gemini,
@@ -3383,54 +2952,11 @@ export default function App() {
   };
   
   useEffect(() => {
-    const simulatedUserRaw = localStorage.getItem('simulated_user');
-    if (simulatedUserRaw) {
-      try {
-        const simUser = JSON.parse(simulatedUserRaw);
-        setUser(simUser);
-        setAuthLoading(false);
-        if (simUser.email === 'chideraemmanue98@gmail.com') {
-          setMembershipTier('pro');
-          localStorage.setItem('membership_tier', 'pro');
-        }
-      } catch (e) {
-        console.error("Failed to restore simulated user token:", e);
-      }
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (!localStorage.getItem('simulated_user')) {
-        setUser(u);
-        setAuthLoading(false);
-        if (u && u.email === 'chideraemmanue98@gmail.com') {
-          setMembershipTier('pro');
-          localStorage.setItem('membership_tier', 'pro');
-        }
-      }
+      setUser(u);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user && user.email === 'chideraemmanue98@gmail.com') {
-      setMembershipTier('pro');
-      localStorage.setItem('membership_tier', 'pro');
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/blog' || path.startsWith('/blog/')) {
-        setView('blog');
-      } else if (path === '/' || path === '') {
-        setView('dashboard');
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
   }, []);
 
   const handleSendToBook = (content: string, title?: string) => {
@@ -3449,17 +2975,13 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem('simulated_user');
-      localStorage.removeItem('membership_tier');
-      setUser(null);
-      setMembershipTier('free');
       setNavigationHistory([]);
       setView('dashboard');
     } catch (err) {
       console.error("Sign out error:", err);
     }
   };
-  const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'pricing' | 'blog', feature: FeatureId}[]>([]);
+  const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', feature: FeatureId}[]>([]);
   const [apiKey] = useState<string>(process.env.GEMINI_API_KEY || '');
   const [hfKey] = useState<string>(process.env.HUGGINGFACE_API_KEY || '');
   const activeGeminiKey = customGeminiApiKey || apiKey;
@@ -3467,85 +2989,13 @@ export default function App() {
   const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>({});
   const [isTranslatingResults, setIsTranslatingResults] = useState(false);
   const featureResultsRef = useRef(featureResults);
-  const lastTranslatedLangRef = useRef<string>(i18n.language || 'en');
   useEffect(() => {
     featureResultsRef.current = featureResults;
   }, [featureResults]);
 
-  // Translate all feature results when the language switches to align completely with the selected system language
+  // Pruned destructive auto-translation of chat history on language shift to prevent crash/infinite loop issues
   useEffect(() => {
-    const rawTargetLang = i18n.language || 'en';
-    const targetLangCode = rawTargetLang.split('-')[0].toLowerCase();
-    
-    if (lastTranslatedLangRef.current === targetLangCode) {
-      return;
-    }
-    
-    lastTranslatedLangRef.current = targetLangCode;
-
-    // Identify if there is actually any assistant content to translate
-    const hasUnmatchedContent = Object.values(featureResultsRef.current).some(messages =>
-      messages.some(msg => msg.role === 'assistant' && (msg.language || 'en').split('-')[0].toLowerCase() !== targetLangCode)
-    );
-
-    if (!hasUnmatchedContent) {
-      return;
-    }
-
-    const runAutoTranslation = async () => {
-      setIsTranslatingResults(true);
-      try {
-        const updatedResults = { ...featureResultsRef.current };
-        let anyChanged = false;
-
-        const keys = Object.keys(updatedResults);
-        for (const featId of keys) {
-          const messages = updatedResults[featId];
-          if (!messages || messages.length === 0) continue;
-
-          const translatedMessages = await Promise.all(
-            messages.map(async (msg) => {
-              const currentMsgLang = (msg.language || 'en').split('-')[0].toLowerCase();
-              if (msg.role === 'assistant' && currentMsgLang !== targetLangCode && msg.content) {
-                try {
-                  const res = await fetch('/api/gemini/translate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: msg.content, targetLanguage: targetLangCode })
-                  });
-                  if (res.ok) {
-                    const data = await res.json();
-                    if (data.text) {
-                      anyChanged = true;
-                      return {
-                        ...msg,
-                        content: data.text,
-                        language: targetLangCode
-                      };
-                    }
-                  }
-                } catch (e) {
-                  console.error(`Auto-translation for message ${msg.id} failed:`, e);
-                }
-              }
-              return msg;
-            })
-          );
-
-          updatedResults[featId] = translatedMessages;
-        }
-
-        if (anyChanged) {
-          setFeatureResults(updatedResults);
-        }
-      } catch (err) {
-        console.error("Auto translation error:", err);
-      } finally {
-        setIsTranslatingResults(false);
-      }
-    };
-
-    runAutoTranslation();
+    // Keep results in original generation language, no slow API translation sweeps are done on every language shift
   }, [i18n.language]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -3564,17 +3014,10 @@ export default function App() {
 
   const { generate, loading, error } = useHybridAI(activeGeminiKey || null, activeHfKey || null);
 
-  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'pricing' | 'blog', newFeature?: FeatureId) => {
+  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', newFeature?: FeatureId) => {
     const targetFeature = newFeature || activeFeature;
     // Don't push if it's the exact same state
     if (view === newView && activeFeature === targetFeature) return;
-
-    if (typeof window !== 'undefined') {
-      const targetPath = newView === 'blog' ? '/blog' : '/';
-      if (window.location.pathname !== targetPath) {
-        window.history.pushState({}, document.title, targetPath + window.location.search);
-      }
-    }
 
     setNavigationHistory(prev => {
       const next = [...prev, { view, feature: activeFeature } as any];
@@ -3595,20 +3038,9 @@ export default function App() {
     if (navigationHistory.length > 0) {
       const prev = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(prevHistory => prevHistory.slice(0, -1));
-      
-      if (typeof window !== 'undefined') {
-        const targetPath = prev.view === 'blog' ? '/blog' : '/';
-        if (window.location.pathname !== targetPath) {
-          window.history.pushState({}, document.title, targetPath + window.location.search);
-        }
-      }
-
       setView(prev.view);
       setActiveFeature(prev.feature);
     } else {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-        window.history.pushState({}, document.title, '/' + window.location.search);
-      }
       setView('dashboard');
     }
   };
@@ -3647,18 +3079,17 @@ export default function App() {
         title: title.slice(0, 199)
       };
       
-      const activeUserId = auth.currentUser?.uid || (user ? user.uid : null);
-      if (activeUserId) {
-        draftData.userId = activeUserId;
+      if (auth.currentUser) {
+        draftData.userId = auth.currentUser.uid;
       }
       
       await addDoc(collection(db, 'drafts'), draftData);
       
-      if (activeUserId) {
+      if (auth.currentUser) {
         await addDoc(collection(db, 'notes'), {
           title: `${title} - Neural Result`,
           content,
-          userId: activeUserId,
+          userId: auth.currentUser.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           isPinned: false
@@ -3710,48 +3141,6 @@ export default function App() {
   };
 
   const renderActiveContent = () => {
-    if (window.location.pathname === '/success' || window.location.pathname.startsWith('/success')) {
-      const params = new URLSearchParams(window.location.search);
-      const reference = params.get('reference') || 'N/A';
-      const amount = parseFloat(params.get('amount') || '9.99');
-      return (
-        <div className="max-w-xl mx-auto px-4 py-16 text-center">
-          <div className="bg-gradient-to-b from-[#0E1526] to-[#070A13] border border-emerald-500/30 p-8 rounded-3xl space-y-6 relative shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto relative border border-white/5">
-              <Crown className="w-8 h-8 animate-bounce text-emerald-400" />
-              <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#070A13] text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                Verified
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-white uppercase tracking-tight">PRO CREATOR ACTIVATED!</h3>
-              <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                Payment successful! <span className="text-emerald-400 font-bold font-mono">${amount.toFixed(2)} USD</span> has been securely processed and verified with reference code <span className="text-emerald-400 font-mono font-bold break-all">{reference}</span>.
-              </p>
-              <p className="text-xs text-slate-450 leading-relaxed font-sans">
-                Your identity signature has been updated in our live neural cloud. You now have full uninhibited access to all priority neural generators.
-              </p>
-            </div>
-
-            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-[10px] text-emerald-450 font-mono flex items-center justify-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>PROTOCOL SYNCING COMPLETE</span>
-            </div>
-
-            <button
-              onClick={() => {
-                window.location.href = '/';
-              }}
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-450 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl cursor-pointer shadow-lg shadow-emerald-500/15 text-center block"
-            >
-              PROCEED TO INTELLIGENCE TERMINAL
-            </button>
-          </div>
-        </div>
-      );
-    }
-
     if (view === 'dashboard') {
       return (
         <Dashboard 
@@ -3805,23 +3194,6 @@ export default function App() {
       );
     }
 
-    if (view === 'blog') {
-      return (
-        <BlogSection />
-      );
-    }
-
-    if (view === 'pricing') {
-      return (
-        <PricingTiers 
-          user={user}
-          membershipTier={membershipTier}
-          onSignIn={handleSignIn}
-          onClose={() => setView('dashboard')}
-        />
-      );
-    }
-
     const commonProps = {
       onGenerate: handleGenerate,
       messages: featureResults[activeFeature] || [],
@@ -3835,81 +3207,6 @@ export default function App() {
     };
 
     const renderFeature = () => {
-      const isFeaturePremium = PREMIUM_FEATURE_IDS.includes(activeFeature);
-      if (isFeaturePremium && membershipTier !== 'pro') {
-        const feat = FEATURES.find(f => f.id === activeFeature)!;
-        return (
-          <div className="max-w-xl mx-auto p-8 sm:p-12 text-center rounded-3xl bg-gradient-to-b from-[#0E1526] to-[#070A13] border border-brand/35 space-y-6 shadow-[0_0_50px_rgba(139,92,246,0.15)] flex flex-col items-center">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                <Lock size={28} className="animate-pulse" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 bg-brand text-slate-950 border-2 border-[#070A13] p-1 rounded-full">
-                <Crown size={10} />
-              </div>
-            </div>
-
-            <div className="space-y-2 text-center">
-              <span className="text-[10px] font-mono tracking-widest bg-brand/15 border border-brand/20 text-brand px-3 py-1 rounded-full uppercase font-black">
-                Pro Capability Locked
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
-                Unlock {feat?.label || 'Premium Tool'}
-              </h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                This diagnostic module leverages priority computing nodes. Upgrade your plan to activate live trend tracking, priority generation, and high-performance copywriters.
-              </p>
-            </div>
-
-            <div className="w-full p-4 bg-[#070A13]/90 border border-white/5 rounded-2xl text-[11px] text-slate-400 text-left space-y-1">
-              <div className="flex items-center gap-1.5 font-bold text-white mb-1.5">
-                <Sparkles size={11} className="text-brand" />
-                <span>Feature Includes:</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-300">
-                <div>✓ Priority GPU Clusters</div>
-                <div>✓ Advanced SEO Metrics</div>
-                <div>✓ Hot Keyword Spikes</div>
-                <div>✓ Infinite Daily Use</div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 w-full">
-              <button
-                onClick={() => setView('pricing')}
-                className="flex-1 py-3 bg-brand hover:bg-brand/80 text-[#070A13] font-black text-xs uppercase tracking-widest transition-all rounded-xl shadow-lg shadow-brand/20 cursor-pointer text-center"
-              >
-                VIEW PRICING PLANS
-              </button>
-              <button
-                onClick={async () => {
-                  if (!user) {
-                    handleSignIn();
-                    return;
-                  }
-                  try {
-                    const userRef = doc(db, 'users', user.uid);
-                    await setDoc(userRef, {
-                      membershipTier: 'pro',
-                      upgradedAt: serverTimestamp(),
-                      paymentStatus: 'verified_pro_simulation'
-                    }, { merge: true });
-                    alert("🎉 Sandboxed demo preview activated! Pro tools successfully unlocked.");
-                  } catch (err) {
-                    console.error(err);
-                  }
-                }}
-                className="py-3 px-4 bg-emerald-500 hover:bg-emerald-450 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1 shrink-0 shadow-lg shadow-emerald-500/15"
-                title="Bypass payment and activate pro tier for evaluation instantly"
-              >
-                <span>DEMO BYPASS</span>
-                <Crown size={11} className="fill-slate-950 animate-bounce" />
-              </button>
-            </div>
-          </div>
-        );
-      }
-
       switch (activeFeature) {
         case 'content-ideas': return <ContentGenerator {...commonProps} />;
         case 'hashtags': return <HashtagEngine {...commonProps} />;
@@ -4024,11 +3321,10 @@ export default function App() {
               }}
               className="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
-              <ChidonIqLogo size={32} cropped />
-              <div className="flex items-center">
-                <span className="font-bold tracking-tight text-[17px] text-[var(--text-primary)]">Chidon</span>
-                <span className="font-bold tracking-tight text-[17px] text-brand ml-0.5">IQ</span>
+              <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white">
+                <Zap size={18} />
               </div>
+              <span className="font-bold tracking-tight text-lg">Chidon Iq</span>
             </button>
             <button 
               onClick={() => setIsMenuOpen(false)}
@@ -4104,44 +3400,6 @@ export default function App() {
               >
                 <Coins size={15} className="text-cyan-primary" />
                 <span>CHIDON Earn</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  navigateTo('pricing');
-                  setIsMenuOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
-                  view === 'pricing'
-                    ? "bg-brand/10 text-brand border-brand/20 shadow-sm"
-                    : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
-                )}
-              >
-                <Crown size={15} className="text-brand shrink-0" />
-                <span className="flex-1">Pricing</span>
-                <span className="text-[9px] font-mono font-bold bg-brand/15 border border-brand/25 text-brand px-1.5 py-0.5 rounded uppercase tracking-wider scale-90">
-                  {membershipTier === 'pro' ? 'PRO' : 'Pro/upgrade'}
-                </span>
-              </button>
-
-              <button
-                onClick={() => {
-                  navigateTo('blog');
-                  setIsMenuOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
-                  view === 'blog'
-                    ? "bg-brand/10 text-brand border-brand/20 shadow-sm"
-                    : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
-                )}
-              >
-                <BookOpen size={15} className="text-brand shrink-0" />
-                <span className="flex-1">Knowledge Blog</span>
-                <span className="text-[9px] font-mono font-bold bg-[#7C3AED]/15 border border-[#7C3AED]/25 text-[#7C3AED] px-1.5 py-0.5 rounded uppercase tracking-wider scale-90">
-                  NEW
-                </span>
               </button>
             </div>
 
@@ -4253,29 +3511,19 @@ export default function App() {
 
           <div className="p-6 border-t border-[var(--border-base)]">
             <button 
-              onClick={() => {
-                if (user) {
-                  handleSignOut();
-                } else {
-                  handleSignIn();
-                }
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all group cursor-pointer text-left"
+              onClick={user ? handleSignOut : handleSignIn}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all group"
             >
               {user?.photoURL ? (
-                <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full object-cover animate-fade-in" />
+                <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full object-cover" />
               ) : (
-                <UserCircle className="w-8 h-8 text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
+                <UserCircle className="w-8 h-8 text-[var(--text-secondary)] group-hover:text-brand" />
               )}
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-bold text-[var(--text-primary)] truncate">{user ? (user.displayName || 'Account') : t('common.login')}</p>
-                <p className="text-[10px] text-[var(--text-secondary)] truncate">{user ? t('common.neuralNodeActive') : 'Offline Node'}</p>
+                <p className="text-[10px] text-[var(--text-secondary)] truncate">{t('common.neuralNodeActive')}</p>
               </div>
-              {user ? (
-                <LogOut size={14} className="text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
-              ) : (
-                <LogIn size={14} className="text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
-              )}
+              <LogOut size={14} className="text-[var(--text-secondary)]" />
             </button>
           </div>
         </aside>
@@ -4291,31 +3539,12 @@ export default function App() {
               >
                 {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-              
-              <div className="flex items-center gap-2">
-                <ChidonIqLogo size={26} cropped />
-                <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                  {view === 'dashboard' ? t('common.overview') : view === 'earn' ? "CHIDON Earn Portal" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? (t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}
-                </h2>
-              </div>
+              <h2 className="text-sm font-bold text-[var(--text-primary)]">
+                {view === 'dashboard' ? t('common.overview') : view === 'earn' ? "CHIDON Earn Portal" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? (t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}
+              </h2>
             </div>
 
             <div className="flex items-center gap-3">
-               {membershipTier !== 'pro' ? (
-                 <button
-                   onClick={() => navigateTo('pricing')}
-                   className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#8b5cf6] hover:bg-[#a78bfa] text-white font-extrabold text-[10px] uppercase tracking-wider rounded-lg shadow-sm cursor-pointer border border-white/5"
-                 >
-                   <Crown size={12} className="animate-pulse" />
-                   <span>UPGRADE TO PRO</span>
-                 </button>
-               ) : (
-                 <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider rounded-lg">
-                   <Crown size={12} />
-                   <span>PRO CREATOR ACTIVE</span>
-                 </div>
-               )}
-
                <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                   <button 
                     onClick={() => setIsDarkMode(false)} 
@@ -4402,51 +3631,6 @@ export default function App() {
         <ChidonIqGuide />
       </Suspense>
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-
-      <AnimatePresence>
-        {paymentSuccessModal && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999]">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gradient-to-b from-[#0E1526] to-[#070A13] border border-emerald-500/30 p-8 rounded-3xl max-w-md w-full text-center space-y-6 relative shadow-[0_0_50px_rgba(16,185,129,0.2)] text-left"
-            >
-              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto relative">
-                <Crown className="w-8 h-8 animate-bounce" />
-                <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#070A13] text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                  Success
-                </div>
-              </div>
-
-              <div className="space-y-2 text-center">
-                <h3 className="text-2xl font-black text-white uppercase tracking-tight">PRO CREATOR ACTIVATED!</h3>
-                <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                  Congratulations! Transaction of <span className="text-emerald-400 font-bold font-mono">${paymentSuccessModal.amount.toFixed(2)} USD</span> has been securely processed and verified with reference code <span className="text-emerald-400 font-mono font-bold break-all">{paymentSuccessModal.reference}</span>.
-                </p>
-                <p className="text-xs text-slate-450 leading-relaxed font-sans">
-                  Your identity signature has been updated in our live neural cloud. You now have full uninhibited access to all priority neural generators.
-                </p>
-              </div>
-
-              <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-[10px] text-emerald-450 font-mono flex items-center justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>PROTOCOL SYNCING COMPLETE</span>
-              </div>
-
-              <button
-                onClick={() => {
-                  setPaymentSuccessModal(null);
-                  setView('dashboard');
-                }}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-450 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl cursor-pointer shadow-lg shadow-emerald-500/15 text-center block"
-              >
-                PROCEED TO INTELLIGENCE TERMINAL
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
       
       {/* Reset Password Action Code Overlay */}
       <AnimatePresence>
@@ -4496,46 +3680,6 @@ export default function App() {
               <button 
                 onClick={() => setEmailActionState({ status: 'idle', message: '', mode: null, oobCode: null })}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Paystack Verification State feedback toast */}
-      <AnimatePresence>
-        {paystackVerificationState.status !== 'idle' && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 right-6 z-[99999] max-w-sm w-full p-4 rounded-2xl shadow-2xl border flex flex-col gap-2 backdrop-blur bg-[#070A13]/95 border-white/10 text-white"
-          >
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5">
-                {paystackVerificationState.status === 'loading' && (
-                  <Loader2 size={16} className="text-[#8B5CF6] animate-spin" />
-                )}
-                {paystackVerificationState.status === 'success' && (
-                  <CheckCircle2 size={16} className="text-emerald-500 animate-bounce" />
-                )}
-                {paystackVerificationState.status === 'error' && (
-                  <AlertCircle size={16} className="text-rose-500 animate-pulse" />
-                )}
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="text-[10px] font-black tracking-widest uppercase font-mono text-slate-400">
-                  {paystackVerificationState.status === 'loading' ? 'VERIFYING REFERENCE' : paystackVerificationState.status === 'success' ? 'TRANSACTION GRANTED' : 'HANDSHAKE REJECTED'}
-                </h4>
-                <p className="text-xs mt-1 font-semibold text-white leading-relaxed">
-                  {paystackVerificationState.message}
-                </p>
-              </div>
-              <button 
-                onClick={() => setPaystackVerificationState({ status: 'idle', message: '' })}
-                className="text-slate-450 hover:text-white transition-colors cursor-pointer"
               >
                 <X size={14} />
               </button>

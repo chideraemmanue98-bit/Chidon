@@ -29,9 +29,8 @@
     "minutes": "Minuten",
     "minute": "Minute",
     "neverUsed": "Nie verwendet",
-    "back": "Zurück",
-    "launchHub": "Hub Starten",
-    "systemLanguage": "Language"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "Kernprotokolle",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "Zurück zur Kommandozentrale"
+    "back": "__NOT_TRANSLATED__"
   }
 }

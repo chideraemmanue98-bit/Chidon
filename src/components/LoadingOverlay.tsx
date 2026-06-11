@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ChidonIqLogo } from './ChidonIqLogo';
+import { Zap } from 'lucide-react';
 
 interface LoadingOverlayProps {
   title?: string;
@@ -22,7 +22,9 @@ export const LoadingOverlay = ({
         {/* Animated logo container */}
         <div className="relative mb-6">
           <div className="absolute inset-x-0 -inset-y-2 bg-brand/25 blur-xl rounded-full animate-pulse" />
-          <ChidonIqLogo size={64} cropped className="relative z-10 animate-pulse shadow-[0_0_30px_rgba(var(--brand-rgb),0.3)]" />
+          <div className="relative w-16 h-16 rounded-2xl bg-brand flex items-center justify-center text-white shadow-[0_0_30px_rgba(var(--brand-rgb),0.3)] border border-white/10">
+            <Zap size={32} className="animate-pulse" />
+          </div>
           {/* Minimal spinning ring around logo */}
           <div 
             className="absolute -inset-2.5 rounded-[22px] border-2 border-t-brand border-r-cyan-primary/50 border-b-transparent border-l-transparent animate-spin" 

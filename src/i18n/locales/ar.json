@@ -25,13 +25,12 @@
     "notepad": "إرسال إلى المفكرة",
     "share": "مشاركة",
     "lastUsed": "آخر استخدام قبل",
-    "ago": "منذ",
+    "ago": "",
     "minutes": "دقائق",
     "minute": "دقيقة",
     "neverUsed": "لم يُستخدم بعد",
-    "back": "رجوع",
-    "launchHub": "مركز الإطلاق",
-    "systemLanguage": "اللغة"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "البروتوكولات الأساسية",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "العودة إلى مركز القيادة"
+    "back": "__NOT_TRANSLATED__"
   }
 }

@@ -29,9 +29,8 @@
     "minutes": "分钟",
     "minute": "分钟",
     "neverUsed": "未使用过",
-    "back": "返回",
-    "launchHub": "启动中心",
-    "systemLanguage": "语言"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "核心协议",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "返回控制中心"
+    "back": "__NOT_TRANSLATED__"
   }
 }

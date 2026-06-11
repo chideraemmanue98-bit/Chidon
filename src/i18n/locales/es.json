@@ -25,13 +25,12 @@
     "notepad": "Enviar a Bloc de notas",
     "share": "Compartir",
     "lastUsed": "Último uso hace",
-    "ago": "hace",
+    "ago": "",
     "minutes": "minutos",
     "minute": "minuto",
     "neverUsed": "Nunca usado",
-    "back": "Volver",
-    "launchHub": "Iniciar Central",
-    "systemLanguage": "Idioma"
+    "back": "__NOT_TRANSLATED__",
+    "launchHub": "__NOT_TRANSLATED__"
   },
   "categories": {
     "Core": "Protocolos principales",
@@ -176,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "Volver al Centro de Comando"
+    "back": "__NOT_TRANSLATED__"
   }
 }

@@ -15,64 +15,59 @@ import {
 import { auth } from '../../firebase';
 
 // Custom ActionCodeSettings to show "Chidon IQ" app name instead of Firebase / Project ID.
-const getVerifyEmailActionSettings = (): ActionCodeSettings => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://chidoniq.com';
-  return {
-    url: `${origin}/verify-email`,
-    handleCodeInApp: true,
-    iOS: {
-      bundleId: 'com.chidoniq.ios',
-    },
-    android: {
-      packageName: 'com.chidoniq.android',
-      installApp: true,
-      minimumVersion: '12',
-    },
-  };
-};
+const getVerifyEmailActionSettings = (): ActionCodeSettings => ({
+  url: 'https://chidoniq.com/verify-email',
+  handleCodeInApp: true,
+  iOS: {
+    bundleId: 'com.chidoniq.ios',
+  },
+  android: {
+    packageName: 'com.chidoniq.android',
+    installApp: true,
+    minimumVersion: '12',
+  },
+});
 
-const getResetPasswordActionSettings = (): ActionCodeSettings => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://chidoniq.com';
-  return {
-    url: `${origin}/reset-password`,
-    handleCodeInApp: true,
-    iOS: {
-      bundleId: 'com.chidoniq.ios',
-    },
-    android: {
-      packageName: 'com.chidoniq.android',
-      installApp: true,
-      minimumVersion: '12',
-    },
-  };
-};
+const getResetPasswordActionSettings = (): ActionCodeSettings => ({
+  url: 'https://chidoniq.com/reset-password',
+  handleCodeInApp: true,
+  iOS: {
+    bundleId: 'com.chidoniq.ios',
+  },
+  android: {
+    packageName: 'com.chidoniq.android',
+    installApp: true,
+    minimumVersion: '12',
+  },
+});
 
 /**
- * a) Create user, send confirmation email, set displayName to custom or default.
+ * a) Create user, send confirmation email, set displayName to "Chidon IQ User".
  */
-export const signUpWithEmail = async (email: string, password: string, displayName?: string): Promise<UserCredential> => {
+export const signUpWithEmail = async (email: string, password: string): Promise<UserCredential> => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
-  // Set custom display name or general placeholder
+  // Set display name custom placeholder
   await updateProfile(userCredential.user, {
-    displayName: displayName || 'Chidon IQ User',
+    displayName: 'Chidon IQ User',
   });
 
-  // Attempt to send verification email but do not block if sandbox/firebase quota is exceeded.
-  try {
-    await sendEmailVerification(userCredential.user, getVerifyEmailActionSettings());
-  } catch (err) {
-    console.warn("🔌 [Auth verification] Registration succeeded, but network email dispatch was bypassed:", err);
-  }
+  // Send verification email
+  await sendEmailVerification(userCredential.user, getVerifyEmailActionSettings());
   
   return userCredential;
 };
 
 /**
- * b) Sign in user. Relax email verification checks in developer sandbox for error-free experience.
+ * b) Sign in user, verify email state.
  */
 export const loginWithEmail = async (email: string, password: string): Promise<UserCredential> => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  
+  if (!userCredential.user.emailVerified) {
+    throw new Error('Please verify your email first');
+  }
+  
   return userCredential;
 };
 

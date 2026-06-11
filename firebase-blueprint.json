@@ -158,113 +158,15 @@
         "tiktokUrl": { "type": "string" },
         "twitterUrl": { "type": "string" },
         "email": { "type": "string" },
-        "portfolioItems": {
-          "type": "array",
-          "items": { "type": "object" },
-          "description": "Showcase items showing past thumbnail designs or media links"
-        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["displayName", "specialty", "email", "createdAt"]
-    },
-    "EarnJob": {
-      "title": "Earn Job",
-      "description": "A gig or contract posted by a buyer/client in Chidon Earn",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "budget": { "type": "string" },
-        "requirements": { "type": "string" },
-        "buyerId": { "type": "string" },
-        "buyerEmail": { "type": "string" },
-        "sellerId": { "type": "string" },
-        "paymentStatus": { "type": "string" },
-        "paymentReference": { "type": "string" },
-        "status": { "type": "string", "enum": ["open", "in_progress", "completed"] },
-        "stage": { "type": "string", "enum": ["briefing", "drafting", "revision", "completed"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "description", "budget", "buyerId", "buyerEmail", "status", "createdAt"]
-    },
-    "EarnService": {
-      "title": "Earn Service",
-      "description": "A pre-packaged gig service offered by a seller in Chidon Earn",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "price": { "type": "string" },
-        "sellerId": { "type": "string" },
-        "sellerEmail": { "type": "string" },
-        "deliveryTime": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "description", "price", "sellerId", "sellerEmail", "createdAt"]
-    },
-    "EarnResult": {
-      "title": "Earn Result",
-      "description": "Completed work deliverables submitted by a seller for client review",
-      "type": "object",
-      "properties": {
-        "jobId": { "type": "string" },
-        "jobTitle": { "type": "string" },
-        "buyerId": { "type": "string" },
-        "sellerId": { "type": "string" },
-        "sellerEmail": { "type": "string" },
-        "resultText": { "type": "string" },
-        "proofUrl": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "accepted", "revision"] },
-        "paymentStatus": { "type": "string", "enum": ["awaiting_payment", "paid"] },
-        "amount": { "type": "string" },
-        "rating": { "type": "number", "description": "Star rating out of 5 left by buyer" },
-        "reviewText": { "type": "string", "description": "Written review content left by buyer" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["jobId", "jobTitle", "buyerId", "sellerId", "sellerEmail", "resultText", "status", "paymentStatus", "createdAt"]
-    },
-    "EarnMessage": {
-      "title": "Earn Message",
-      "description": "Direct message between buyer and seller in Chidon Earn",
-      "type": "object",
-      "properties": {
-        "chatId": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "recipientId": { "type": "string" },
-        "recipientName": { "type": "string" },
-        "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["chatId", "senderId", "senderName", "recipientId", "text", "createdAt"]
-    },
-    "Subscriber": {
-      "title": "Subscriber",
-      "description": "Newsletter subscriber email address",
-      "type": "object",
-      "properties": {
-        "email": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["email", "createdAt"]
     }
   },
   "firestore": {
     "/earn_profiles/{profileId}": {
       "schema": "EarnProfile",
       "description": "Collection of Chidon Earn creator profile specifications"
-    },
-    "/earn_jobs/{jobId}": {
-      "schema": "EarnJob",
-      "description": "Collection of active and finished cognitive job contracts"
-    },
-    "/earn_services/{svcId}": {
-      "schema": "EarnService",
-      "description": "Collection of customizable service packages published by makers"
-    },
-    "/earn_results/{resId}": {
-      "schema": "EarnResult",
-      "description": "Collection of work submissions awaiting verification & payment release"
     },
     "/feedback/{feedbackId}": {
       "schema": "Feedback",
@@ -301,14 +203,6 @@
     "/global_presence/{userId}": {
       "schema": "GlobalPresence",
       "description": "Collection of global active users"
-    },
-    "/earn_messages/{messageId}": {
-      "schema": "EarnMessage",
-      "description": "Collection of direct messages between buyers and sellers in Chidon Earn"
-    },
-    "/subscribers/{subscriberId}": {
-      "schema": "Subscriber",
-      "description": "Collection of newsletter subscriber emails"
     }
   }
 }
