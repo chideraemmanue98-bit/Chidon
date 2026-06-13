@@ -92,7 +92,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ onBack, onSave
           label: 'High-Retention Listicle Thread',
           description: 'Break down complex technical insights into quick, bite-sized value snippets.',
           structure: `[CONTRIAN HOOK]: (Contrarian hook stating the mainstream opinion is wrong)\n\n[PILLAR 1]: (The biggest oversight + tactical fix)\n\n[PILLAR 2]: (An unconventional productivity leverage point + custom metrics)\n\n[PILLAR 3]: (A direct action item the user can run this afternoon)\n\n[ACTION TRIGGER]: (Encourage bookmark, share, and discussion)`,
-          previewExample: `[CONTRIAN HOOK]: Stop spending $2,000/month on manual prompt engineers. Here is the exact system we used to automate 95% of our copywriting pipelines with pristine quality:\n\n[PILLAR 1]: Ditch generic placeholders. Standard prompts default to boring corporate jargon. Utilize strict constraints and structural markdown rules instead to force Gemini into highly tactical language output.\n\n[PILLAR 2]: Streamline your caching. Re-running massive context loads is incredibly slow and expensive. Mount a server-side TanStack query caching layer to reuse static prompt weights instantly.\n\n[PILLAR 3]: Run localized tests directly inside small sandboxes. Optimize tone levels with primitive filters before deploying to production streams.\n\n[ACTION TRIGGER]: Bookmark this thread so you don't lose the roadmap. What is your biggest bottleneck with client prompts today?`
+          previewExample: `[CONTRIAN HOOK]: Stop spending $2,000/month on manual prompt engineers. Here is the exact system we used to automate 95% of our copywriting pipelines with pristine quality:\n\n[PILLAR 1]: Ditch generic placeholders. Standard prompts default to boring corporate jargon. Utilize strict constraints and structural markdown rules instead to force the AI engine into highly tactical language output.\n\n[PILLAR 2]: Streamline your caching. Re-running massive context loads is incredibly slow and expensive. Mount a server-side TanStack query caching layer to reuse static prompt weights instantly.\n\n[PILLAR 3]: Run localized tests directly inside small sandboxes. Optimize tone levels with primitive filters before deploying to production streams.\n\n[ACTION TRIGGER]: Bookmark this thread so you don't lose the roadmap. What is your biggest bottleneck with client prompts today?`
         }
       ]
     },
@@ -143,7 +143,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ onBack, onSave
           label: 'Competitor Gap & Defense Plan',
           description: 'Map out exactly how to position your brand as the obvious premium choice in a saturated tier.',
           structure: `## 1. THE GAP (Unserved Competitor Customers)\n(Define what the competitor is systematically ignoring or getting wrong)\n\n## 2. THE HIGHER STANDARD (Your Brand Solution)\n(Explain how your brand acts as a direct strategic upgrade)\n\n## 3. TACTICAL VALUE OFFERS\n- (Value point 1: Setup speed, transparency, cost clarity)\n- (Value point 2: Design excellence or advanced prompt architectures)\n\n## 4. PLATFORM-WIDE INTERCEPT ACTION PLAN\n- Command 1: (Deploy targeted case studies)\n- Command 2: (Position comparative SEO hooks)`,
-          previewExample: `## 1. THE GAP (Unserved Competitor Customers)\nScribeFlow has optimized entirely for rigid, slow enterprise contracts, leaving active social creators completely stranded without flexible, on-demand formatting rules.\n\n## 2. THE HIGHER STANDARD (CHIDON IQ)\nCHIDON IQ operates via clean, instant micro-dashboards. It delivers high-fidelity templates and Gemini-aligned structures within a single viewport, with 0ms server caching delays.\n\n## 3. TACTICAL VALUE OFFERS\n- No contracts required. Simple cloud-synced project vaults accessible on any screen.\n- Built-in multi-lingual translation and immediate social media scheduling queues.\n\n## 4. PLATFORM-WIDE INTERCEPT ACTION PLAN\n- Command 1: Publish comparison case studies on LinkedIn targeting the "hidden costs of ScribeFlow".\n- Command 2: Dominate search queries for alternatives using focused high-CTR hooks.`
+          previewExample: `## 1. THE GAP (Unserved Competitor Customers)\nScribeFlow has optimized entirely for rigid, slow enterprise contracts, leaving active social creators completely stranded without flexible, on-demand formatting rules.\n\n## 2. THE HIGHER STANDARD (CHIDON IQ)\nCHIDON IQ operates via clean, instant micro-dashboards. It delivers high-fidelity templates and intelligence-aligned structures within a single viewport, with 0ms server caching delays.\n\n## 3. TACTICAL VALUE OFFERS\n- No contracts required. Simple cloud-synced project vaults accessible on any screen.\n- Built-in multi-lingual translation and immediate social media scheduling queues.\n\n## 4. PLATFORM-WIDE INTERCEPT ACTION PLAN\n- Command 1: Publish comparison case studies on LinkedIn targeting the "hidden costs of ScribeFlow".\n- Command 2: Dominate search queries for alternatives using focused high-CTR hooks.`
         },
         {
           id: 'content-hijack',
@@ -305,7 +305,7 @@ ${paramsSummary}
               <span className="text-[10px] text-slate-500 font-mono">// SEGMENT: TEMPLATE LIBRARY</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">CHIDON IQ Template Library</h1>
-            <p className="text-xs text-[var(--text-secondary)]">Populate strategic copywriting blueprints instantly using automated Gemini modeling.</p>
+            <p className="text-xs text-[var(--text-secondary)]">Populate strategic copywriting blueprints instantly using automated intelligence modeling.</p>
           </div>
         </div>
         
@@ -314,7 +314,7 @@ ${paramsSummary}
           <Zap size={14} className="text-cyan-primary animate-pulse" />
           <div className="text-left">
             <p className="text-[10px] text-slate-500 tracking-wider">PROXY ENGINE</p>
-            <p className="text-[11px] font-bold text-cyan-primary">Gemini 3.5 Active</p>
+            <p className="text-[11px] font-bold text-cyan-primary">Chidon Aether 3.5 Active</p>
           </div>
         </div>
       </div>
@@ -700,7 +700,7 @@ ${paramsSummary}
                 </div>
                 <div className="space-y-1 max-w-sm">
                   <p className="text-xs font-mono text-cyan-primary tracking-widest uppercase">GENERATING BLUEPRINT</p>
-                  <p className="text-xs text-slate-300 font-bold">Gemini API is structuring and compiling your variables into the layout...</p>
+                  <p className="text-xs text-slate-300 font-bold">Aether Intelligence Engine is structuring and compiling your variables into the layout...</p>
                   <p className="text-[10px] text-slate-500 font-mono italic">"Ensuring pristine typography, structured metadata, and scroll-stopping retention..."</p>
                 </div>
               </div>
@@ -775,7 +775,7 @@ ${paramsSummary}
                     <div className="space-y-1 max-w-sm">
                       <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-300">Selected Blueprint Skeleton</h4>
                       <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                        Below is the static schema for your selected **{activeTemplate.label}** blueprint. Once you hit 'Populate', Gemini will instantly morph your inputs into premium content.
+                        Below is the static schema for your selected **{activeTemplate.label}** blueprint. Once you hit 'Populate', the intelligence engine will instantly morph your inputs into premium content.
                       </p>
                     </div>
 

@@ -123,58 +123,100 @@
     },
     "User": {
       "title": "User",
-      "description": "User profile with synchronized settings and secure credentials",
+      "description": "User profile with synchronized settings and credentials in GigSocial/Chidon IQ",
       "type": "object",
       "properties": {
         "email": { "type": "string" },
-        "displayName": { "type": "string" },
-        "creatorRole": { "type": "string" },
-        "experienceLevel": { "type": "string" },
-        "systemLanguage": { "type": "string" },
-        "generationTone": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "apiKeys": {
-          "type": "object",
-          "properties": {
-            "geminiApiKey": { "type": "string" },
-            "hfApiKey": { "type": "string" }
-          }
-        }
+        "username": { "type": "string" },
+        "fullName": { "type": "string" },
+        "avatarURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "country": { "type": "string" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "createdAt"]
     },
-    "EarnProfile": {
-      "title": "Earn Profile",
-      "description": "User profile with specialty rate, bio, and social handles in Chidon Earn",
+    "Portfolio": {
+      "title": "Portfolio",
+      "description": "Showcase of creator works and deliverables",
       "type": "object",
       "properties": {
-        "displayName": { "type": "string" },
-        "bio": { "type": "string" },
-        "specialty": { "type": "string" },
-        "hourlyRate": { "type": "string" },
-        "portfolioUrl": { "type": "string" },
-        "youtubeUrl": { "type": "string" },
-        "instagramUrl": { "type": "string" },
-        "tiktokUrl": { "type": "string" },
-        "twitterUrl": { "type": "string" },
-        "email": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "deliveryDays": { "type": "number" }
+      },
+      "required": ["userId", "title", "description", "category", "price", "deliveryDays"]
+    },
+    "Gig": {
+      "title": "Gig",
+      "description": "Active freelance job listing broadcasted by a creator",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "priceFrom": { "type": "number" },
+        "portfolioId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["displayName", "specialty", "email", "createdAt"]
+      "required": ["userId", "title", "description", "category", "priceFrom", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Real-time communication message inside a specific secure channel",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "content": { "type": "string" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "content", "read", "type", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Freelance escrows and transactions tracking",
+      "type": "object",
+      "properties": {
+        "buyerId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "gigId": { "type": "string" },
+        "status": { "type": "string" },
+        "amount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["buyerId", "sellerId", "gigId", "status", "amount", "createdAt"]
+    },
+    "Follow": {
+      "title": "Follow",
+      "description": "Subscribers/follows relationship between creator nodes",
+      "type": "object",
+      "properties": {
+        "followerId": { "type": "string" },
+        "followingId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["followerId", "followingId", "createdAt"]
     }
   },
   "firestore": {
-    "/earn_profiles/{profileId}": {
-      "schema": "EarnProfile",
-      "description": "Collection of Chidon Earn creator profile specifications"
-    },
     "/feedback/{feedbackId}": {
       "schema": "Feedback",
       "description": "Collection of user feedback entries"
     },
     "/users/{userId}": {
       "schema": "User",
-      "description": "Secure, private user settings and credentials synced across sessions"
+      "description": "Secure user details and settings synced across sessions"
     },
     "/scheduled_posts/{postId}": {
       "schema": "ScheduledPost",
@@ -203,6 +245,26 @@
     "/global_presence/{userId}": {
       "schema": "GlobalPresence",
       "description": "Collection of global active users"
+    },
+    "/portfolios/{portfolioId}": {
+      "schema": "Portfolio",
+      "description": "Collection of creator portfolio showcases"
+    },
+    "/gigs/{gigId}": {
+      "schema": "Gig",
+      "description": "Collection of freelance gig cards"
+    },
+    "/messages/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Sub-collection of active live chat texts"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of escrow payments"
+    },
+    "/follows/{followId}": {
+      "schema": "Follow",
+      "description": "Collection of follower actions"
     }
   }
 }

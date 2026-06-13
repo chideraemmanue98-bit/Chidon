@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ChidonLogo } from './ChidonLogo';
 import { 
   FileText, Shield, Mail, Info, BookOpen, Cpu, Sparkles, X, 
   ChevronRight, Download, Send, AlertCircle, Briefcase, FileCheck, CheckCircle2,
@@ -198,12 +199,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
         
         {/* Brand visual header inside downbase */}
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-brand flex items-center justify-center text-white scale-90">
-              <Zap size={14} />
-            </div>
-            <span className="font-bold tracking-wider text-sm font-mono text-[var(--text-primary)]">CHIDON IQ COGNITIVE SUITE</span>
-          </div>
+          <ChidonLogo size="sm" />
           <p className="text-[10px] text-[var(--text-secondary)] font-mono max-w-lg uppercase tracking-widest leading-relaxed">
             State-of-the-art social intelligence networks & organic CTR enhancement engines
           </p>
@@ -278,7 +274,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
         {/* Dynamic Legal Copyright and network latency badge */}
         <div className="w-full border-t border-[var(--border-base)]/40 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-widest text-center md:text-left">
-            © {new Date().getFullYear()} CHIDON IQ INC. ALL VECTOR CHANNELS SECURED.
+            © {new Date().getFullYear()} CHIDON IQ INC. ALL RIGHTS RESERVED.
           </span>
           <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
@@ -324,7 +320,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       {activeModal === 'solutions' && 'Platform & Application Solutions'}
                       {activeModal === 'resources' && 'Advanced Knowledge Bases'}
                       {activeModal === 'careers' && 'Join the Frontier'}
-                      {activeModal === 'contact' && 'Contact Support Channels'}
+                      {activeModal === 'contact' && 'Contact Engineering Support'}
                       {activeModal === 'terms' && 'Terms of Use Agreement'}
                       {activeModal === 'privacy' && 'Privacy Blueprint & Standards'}
                     </h3>
@@ -351,15 +347,27 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       <h4 className="font-bold text-xs font-mono text-brand mb-2 tracking-widest uppercase">System Core Specifications:</h4>
                       <ul className="space-y-2 text-xs font-mono text-[var(--text-secondary)]">
                         <li className="flex items-center gap-2">
-                          <Cpu size={12} className="text-brand" /> Engine Model: Gemini 1.5/2.0 Real-time Context Integration
+                          <Cpu size={12} className="text-brand" /> Engine Model: Aether Intelligence Core Integration
                         </li>
                         <li className="flex items-center gap-2">
-                          <Sparkles size={12} className="text-brand" /> State Cache: Cloud Firestore Reactive Sync Streams
+                          <Sparkles size={12} className="text-brand" /> State Cache: Chidon Cloud Database Sync Streams
                         </li>
                         <li className="flex items-center gap-2">
                           <Users size={12} className="text-brand" /> User Target: Creators, Media Broadcasters, SEO Architects
                         </li>
                       </ul>
+                    </div>
+                    
+                    <div className="pt-2">
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem('chidon_welcome_dismissed');
+                          window.location.reload();
+                        }}
+                        className="inline-flex items-center gap-2 p-2.5 px-4 bg-brand/10 border border-brand/25 hover:bg-brand/20 text-brand rounded-xl font-bold font-mono text-xs transition-all cursor-pointer"
+                      >
+                        <Zap size={12} /> Relaunch Visual Welcome Page &rarr;
+                      </button>
                     </div>
                   </div>
                 )}
@@ -442,7 +450,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
                           >
                             <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                              <span className="text-zinc-500">■</span> Slow Generator / Gemini Delay Timeouts
+                              <span className="text-zinc-500">■</span> Slow Generator / Intelligence Engine Timeouts
                             </span>
                             <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app1' ? 'Collapse ▲' : 'Expand ▼'}</span>
                           </button>
@@ -468,7 +476,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                           {activeSolutionId === 'app2' && (
                             <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
                               <p><strong>Synchronization Solutions:</strong></p>
-                              <p>CHIDON IQ writes draft blueprints securely to cloud-provisioned Firestore channels. If you encounter an "Offline status" alert state in the vault, it indicates either missing auth verification or a localized internet latency drop. Ensure you are completely signed in using the Auth modal on top, or clear the storage state once via the language reload link.</p>
+                              <p>CHIDON IQ writes draft blueprints securely to cloud-provisioned Chidon Sync Database. If you encounter any status sync issue in the vault, check your network and internet connectivity, or clear the storage state once via the language reload link.</p>
                             </div>
                           )}
                         </div>
@@ -808,22 +816,13 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       Need direct engineering support or brand alignment consulting? Establish an uplink message to our central NOC (Network Operations Center).
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 border border-[var(--border-base)]/60 rounded-xl bg-[var(--bg-card)]/50 space-y-2">
-                        <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-wider block">SUPPORT CORE:</span>
-                        <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
-                          <p className="flex items-center gap-2"><Mail size={12} className="text-brand" /> support@chidon.iq</p>
-                          <p className="flex items-center gap-2"><Users size={12} className="text-brand" /> developer@chidon.iq</p>
-                          <p className="flex items-center gap-2"><Calendar size={12} className="text-brand" /> NOC Hours: 08:00 - 18:00 UTC</p>
-                        </div>
-                      </div>
-
-                      <div className="p-4 border border-[var(--border-base)]/60 rounded-xl bg-[var(--bg-card)]/50 space-y-2">
-                        <span className="text-[10px] font-mono font-bold text-brand uppercase tracking-wider block">CHANNELS:</span>
-                        <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
-                          <p className="flex items-center gap-2"><Laptop size={12} className="text-brand" /> AI Studio Integration Dev Server Port</p>
-                          <p className="flex items-center gap-2"><Share2 size={12} className="text-brand" /> live-preview-tunneling-uplink</p>
-                          <p className="font-bold text-[var(--text-primary)]">Response window: Under 4 hours</p>
+                    <div className="w-full">
+                      <div className="p-5 border border-brand/20 rounded-xl bg-[var(--bg-card)]/80 space-y-3 shadow-md">
+                        <span className="text-[11px] font-mono font-bold text-brand uppercase tracking-wider block font-black">SUPPORT CORE UPLINK:</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[var(--text-secondary)]">
+                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Mail size={13} className="text-brand shrink-0" /> support@chidon.iq</p>
+                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Users size={13} className="text-brand shrink-0" /> developer@chidon.iq</p>
+                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Calendar size={13} className="text-brand shrink-0" /> Response: Under 4 Hours</p>
                         </div>
                       </div>
                     </div>
@@ -882,7 +881,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                     </p>
                     <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">2. Respectful Automation Guidelines</h4>
                     <p>
-                      Users are strictly requested not to stress the Gemini core API via bulk automated loop scripts or script injection vectors. CHIDON IQ serves human creators looking to align content pipelines organically.
+                      Users are strictly requested not to stress the Aether core API via bulk automated loop scripts or script injection vectors. CHIDON IQ serves human creators looking to align content pipelines organically.
                     </p>
                     <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">3. Limitation of Liability</h4>
                     <p>
@@ -904,7 +903,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                     </p>
                     <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">2. Firebase Core Auth & Database Integration</h4>
                     <p>
-                      When checking your blueprints in the Vault, files are cataloged securely inside Firestore. Authorized rules keep records visible strictly to authenticated owners.
+                      When checking your blueprints in the Vault, files are cataloged securely inside Chidon Cloud Database. Authorized rules keep records visible strictly to authenticated owners.
                     </p>
                     <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2 font-mono uppercase tracking-wider mt-2">3. Model Prompt Encapsulation</h4>
                     <p>

@@ -34,6 +34,7 @@ import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
+import emptyRuledBookImg from '../assets/images/empty_ruled_book_1781319215699.jpg';
 
 interface NotePage {
   id: string;
@@ -517,19 +518,25 @@ export const RuledBook: React.FC<RuledBookProps> = ({
 
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
-            <div className="p-4 rounded-full bg-cyan-primary/5 border border-cyan-primary/20">
-              <Book className="w-10 h-10 text-cyan-primary animate-bounce" />
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
+            <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-slate-900/40">
+              <img 
+                src={emptyRuledBookImg} 
+                alt="No active sheet loaded" 
+                className="w-full h-full object-cover select-none pointer-events-none"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
             </div>
-            <div>
-              <h4 className="font-sans font-bold text-base text-white">No active sheet loaded</h4>
-              <p className="text-xs text-slate-500 max-w-sm mt-1 mx-auto">
+            <div className="max-w-md">
+              <h4 className="font-sans font-bold text-sm text-white uppercase tracking-wider font-mono">No active sheet loaded</h4>
+              <p className="text-xs text-slate-400 max-w-xs mt-2 mx-auto leading-relaxed">
                 Open a sheet from the index sidebar, send generated copy from any growth tool, or insert a brand new ruled page directly.
               </p>
             </div>
             <button
               onClick={() => handleAddNewPage()}
-              className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest text-white mt-1 cursor-pointer active:scale-95 duration-150"
+              className="flex items-center gap-2 px-5 py-2.5 bg-cyan-primary text-black font-extrabold rounded-xl text-xs uppercase tracking-widest hover:bg-cyan-primary/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.3)] active:scale-95 duration-150 mt-1"
             >
               <Plus size={14} /> Insert Blank Page
             </button>

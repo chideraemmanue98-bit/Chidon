@@ -9,6 +9,7 @@ import {
 import { db, auth } from '../firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, updateDoc, setDoc } from 'firebase/firestore';
 import { cn } from '../lib/utils';
+import emptyEarnedImg from '../assets/images/empty_earned_1781319231364.jpg';
 
 interface EarnSectionProps {
   onBack: () => void;
@@ -648,12 +649,22 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                   </div>
 
                   {profiles.length === 0 ? (
-                    <div className="border border-dashed border-white/10 rounded-3xl p-12 text-center space-y-2 bg-slate-900/10">
-                      <User size={24} className="mx-auto text-slate-500 opacity-60" />
-                      <p className="text-xs uppercase font-mono font-bold text-slate-400">Directory Empty</p>
-                      <p className="text-[10px] text-slate-500 max-w-sm mx-auto">
-                        Be the first creator listed! Click "Create Specs profile" and claim your status as the premier social specialist.
-                      </p>
+                    <div className="border border-white/10 rounded-3xl p-8 text-center space-y-4 bg-slate-900/10 flex flex-col items-center justify-center">
+                      <div className="relative w-32 h-32 rounded-2xl overflow-hidden shadow-lg border border-white/5 bg-slate-950/40">
+                        <img 
+                          src={emptyEarnedImg} 
+                          alt="Directory Empty" 
+                          className="w-full h-full object-cover select-none pointer-events-none"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
+                      </div>
+                      <div className="max-w-xs space-y-1">
+                        <p className="text-xs uppercase font-mono font-bold text-slate-300 tracking-wider">Directory Empty</p>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          Be the first creator listed! Click "Create Specs profile" and claim your status as the premier social specialist.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -833,10 +844,22 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                     </div>
 
                     {services.length === 0 ? (
-                      <div className="border border-dashed border-white/5 rounded-2xl p-8 text-center space-y-1.5">
-                        <Layers size={20} className="mx-auto text-slate-500 opacity-60" />
-                        <p className="text-xs uppercase font-mono font-bold text-slate-400">NO SERVICE PACKAGES DETECTED</p>
-                        <p className="text-[10px] text-slate-500">Switch to Seller Portal to list your customized service packages!</p>
+                      <div className="border border-white/10 rounded-2xl p-6 text-center space-y-3 flex flex-col items-center justify-center">
+                        <div className="relative w-28 h-28 rounded-xl overflow-hidden shadow-md border border-white/5 bg-slate-950/40">
+                          <img 
+                            src={emptyEarnedImg} 
+                            alt="No service packages detected" 
+                            className="w-full h-full object-cover select-none pointer-events-none"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-slate-300 font-mono uppercase tracking-wider">No Service Packages</p>
+                          <p className="text-[10px] text-slate-500 max-w-[200px] leading-relaxed mx-auto">
+                            Switch to Seller Portal to list your customized service packages!
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -896,8 +919,9 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                     </h4>
 
                     {results.filter(r => !user || r.buyerId === user.uid).length === 0 ? (
-                      <div className="text-center py-6 text-[10px] text-slate-500 font-mono">
-                        No active work releases dispatched to your account. Orders will spawn records instantly.
+                      <div className="text-center py-6 text-[10px] text-slate-500 font-mono border border-[#22D3EE]/5 bg-[#22D3EE]/3 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                        <Coins size={16} className="text-[#22D3EE]/40" />
+                        <span>No active work releases dispatched to your account. Orders will spawn records instantly.</span>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1130,10 +1154,22 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                       const visibleJobs = jobs.filter(job => !job.sellerId || (user && job.sellerId === user.uid));
                       if (visibleJobs.length === 0) {
                         return (
-                          <div className="border border-dashed border-white/5 rounded-2xl p-8 text-center space-y-1.5">
-                            <AlertCircle className="mx-auto text-slate-500 opacity-60" size={20} />
-                            <p className="text-xs uppercase font-mono font-bold text-slate-400">NO COGNITIVE GIGS LISTED</p>
-                            <p className="text-[10px] text-slate-500">Go back to the Buyer Portal and launch a job opening first or purchase a Service!</p>
+                          <div className="border border-white/10 rounded-2xl p-6 text-center space-y-3 flex flex-col items-center justify-center">
+                            <div className="relative w-28 h-28 rounded-xl overflow-hidden shadow-md border border-white/5 bg-slate-950/40">
+                              <img 
+                                src={emptyEarnedImg} 
+                                alt="No cognitive gigs listed" 
+                                className="w-full h-full object-cover select-none pointer-events-none"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-bold text-slate-300 font-mono uppercase tracking-wider">No Cognitive Gigs</p>
+                              <p className="text-[10px] text-slate-400 max-w-[200px] leading-relaxed mx-auto">
+                                Go back to the Buyer Portal and launch a job opening first or purchase a Service!
+                              </p>
+                            </div>
                           </div>
                         );
                       }
@@ -1261,8 +1297,9 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
                     </h4>
 
                     {results.filter(r => !user || r.sellerId === user.uid).length === 0 ? (
-                      <div className="text-center py-6 text-[10px] text-slate-500 font-mono">
-                        No submissions logged from your workspace yet. Fulfill Gigs or complete orders to sync ledger status.
+                      <div className="text-center py-6 text-[10px] text-slate-500 font-mono border border-[#22D3EE]/5 bg-[#22D3EE]/3 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                        <CheckCircle size={16} className="text-[#22D3EE]/40 animate-pulse" />
+                        <span>No submissions logged from your workspace yet. Fulfill Gigs or complete orders to sync ledger status.</span>
                       </div>
                     ) : (
                       <div className="space-y-4">

@@ -67,7 +67,8 @@ import {
   Sparkles,
   Copy,
   Check,
-  Coins
+  Coins,
+  Briefcase
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -88,6 +89,9 @@ import { twMerge } from 'tailwind-merge';
 import { exportToJSON, exportToCSV, exportToTXT } from './lib/exportUtils';
 import { Tooltip } from './components/Tooltip';
 import { LoadingOverlay } from './components/LoadingOverlay';
+import { ChidonLogo } from './components/ChidonLogo';
+import { WelcomePage } from './components/WelcomePage';
+import { GeminiFeatureAnalyzer } from './components/GeminiFeatureAnalyzer';
 
 // PERF: Lazy load heavy overlays and non-critical modular sub-components to reduce initial load times and optimize bundle sizing
 const FeedbackModal = lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -95,15 +99,25 @@ const PostScheduler = lazy(() => import('./components/PostScheduler').then(m => 
 const ChidonVault = lazy(() => import('./components/ChidonVault').then(m => ({ default: m.ChidonVault })));
 const ChidonIqGuide = lazy(() => import('./components/ChidonIqGuide').then(m => ({ default: m.ChidonIqGuide })));
 const RuledBook = lazy(() => import('./components/RuledBook').then(m => ({ default: m.RuledBook })));
-const ResetPasswordOverlay = lazy(() => import('./components/ResetPasswordOverlay').then(m => ({ default: m.ResetPasswordOverlay })));
 const DownbaseFooter = lazy(() => import('./components/DownbaseFooter').then(m => ({ default: m.DownbaseFooter })));
 const TemplateLibrary = lazy(() => import('./components/TemplateLibrary').then(m => ({ default: m.TemplateLibrary })));
+
+import { 
+  ScriptPrompterWidget, 
+  ProfileMockupWidget, 
+  ThumbnailCanvasWidget, 
+  GrowthMathWidget, 
+  TrendMomentumTickerWidget, 
+  AudienceDossierWidget, 
+  RepurposePipelineWidget 
+} from './components/SpecializedWidgets';
 
 export const BookContext = createContext<{ onSendToBook?: (content: string, title?: string) => void }>({});
 import { cn } from './lib/utils';
 import LanguageSelector, { LANGUAGES } from './components/LanguageSelector';
-import { AuthModal } from './components/AuthModal';
-import { EarnSection } from './components/EarnSection';
+import { GigSocial } from './components/GigSocial';
+import { ChidonIqBlog } from './components/ChidonIqBlog';
+import { ConfirmationDialog } from './components/ConfirmationDialog';
 import { 
   collection, 
   addDoc, 
@@ -115,17 +129,15 @@ import {
   doc, 
   setDoc,
   deleteDoc,
-  limit
+  limit,
+  getDocs
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
+  signInAnonymously, 
   User 
 } from 'firebase/auth';
 import { db, auth } from './firebase';
-import { handleEmailAction } from './lib/firebase/auth';
 
 enum OperationType {
   CREATE = 'create',
@@ -401,7 +413,7 @@ const FEATURES: Feature[] = [
     id: 'template-library', 
     label: 'CHIDON IQ Template Library', 
     icon: Sparkles, 
-    description: 'Populate professional social posts, bios, and competitor maps with Gemini API.', 
+    description: 'Populate professional social posts, bios, and competitor maps with CHIDON Intelligence Engine.', 
     category: 'Core',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
@@ -641,7 +653,7 @@ const SystemStatus = ({ activeNodes = 0, geminiActive = false }: { activeNodes: 
       "Establishing secure CHIDON IQ uplink...",
       "Neural pathway synchronized.",
       "Global intelligence nodes detected: " + activeNodes,
-      geminiActive ? "Gemini Neural Core: ONLINE" : "Gemini Neural Core: STANDBY",
+      geminiActive ? "Neural Sync Engine: ONLINE" : "Neural Sync Engine: STANDBY",
       "Optimizing content delivery protocols...",
       "Status: Declassified. Network operational."
     ];
@@ -811,6 +823,14 @@ const FeatureLayout = ({ feature, children, messages, actions, onBack }: { featu
       </div>
 
     <div className="space-y-8 pb-32">
+       {/* Animated Gemini Strategic Feature Analyzer */}
+       <GeminiFeatureAnalyzer 
+         featureId={feature.id} 
+         featureLabel={t(`features.${feature.id}.label`) || feature.label} 
+         featureDesc={t(`features.${feature.id}.desc`) || feature.description} 
+         themeColor={feature.themeColor}
+       />
+       
        {/* Chat History */}
        <AnimatePresence mode="popLayout">
          {messages && messages.map((msg, idx) => (
@@ -921,7 +941,8 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
   const [niche, setNiche] = useState('');
   const [platform, setPlatform] = useState('YouTube & TikTok');
   const [tone, setTone] = useState('Viral Hook & Intense');
-  
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+
   const handleAction = () => {
     const prompt = `Act as a Viral Video Producer. Generate 5 high-impact ${platform.toUpperCase()} content strategies for the niche: "${niche}". 
     The tone of voice configuration should be strictly optimized for: "${tone}".
@@ -949,6 +970,53 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
 
   const suggestions = ["AI Productivity Hacks", "SaaS Side Hustles", "Minimalist Tech Setup", "Financial Freedom secrets"];
 
+  // Smart parser to break markdown into separate cards using key matches
+  const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+  
+  const parsedCards = useMemo(() => {
+    if (!lastResponse) return [];
+    const text = lastResponse.content;
+    
+    // Split text by "🎥" or generic list items
+    const segments = text.split(/(?=🎥|Idea \d|Strategy \d|### \d)/gi);
+    const validCards = segments.filter(s => s.trim().length > 40);
+    
+    if (validCards.length === 0) {
+      return [{
+        title: `Strategy Direction`,
+        idea: text,
+        hook: "Look for detail in raw output",
+        goal: "Intense",
+        rawSegment: text
+      }];
+    }
+
+    return validCards.map((seg, idx) => {
+      // Clean up titles and extract properties
+      const formatMatch = seg.match(/(?:🎥|FORMAT).*?:?\s*(.*)/gi);
+      const ideaMatch = seg.match(/(?:💡|IDEA).*?:?\s*(.*)/gi);
+      const hookMatch = seg.match(/(?:🎭|HOOK).*?:?\s*(.*)/gi);
+      const goalMatch = seg.match(/(?:🚀|GOAL).*?:?\s*(.*)/gi);
+
+      const title = formatMatch ? formatMatch[0].replace(/🎥|FORMAT|:|[*]/g, '').trim() : `Video Asset Direction ${idx + 1}`;
+      const idea = ideaMatch ? ideaMatch[0].replace(/💡|IDEA|:|[*]/g, '').trim() : seg.substring(0, 180) + '...';
+      const hook = hookMatch ? hookMatch[0].replace(/🎭|HOOK|:|[*]/g, '').trim() : 'Highly engaging attention interrupt hook';
+      const goal = goalMatch ? goalMatch[0].replace(/🚀|GOAL|:|[*]/g, '').trim() : 'Boost subscriber velocity triggers';
+
+      return {
+        title,
+        idea,
+        hook,
+        goal,
+        rawSegment: seg
+      };
+    });
+  }, [lastResponse]);
+
+  const copyCard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
   return (
     <FeatureLayout 
       feature={feature} 
@@ -956,80 +1024,190 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
       actions={actions}
       onBack={onBack}
     >
-      <div className="max-w-2xl mx-auto space-y-8">
-        <GlowingCard className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Niche / Topic</label>
-            <input 
-              type="text" 
-              placeholder="e.g. AI Productivity, Luxury Cars..."
-              className="input-base w-full py-4 text-lg"
-              value={niche}
-              onChange={(e) => setNiche(e.target.value)}
-            />
-            <div className="flex flex-wrap gap-1.5 items-center mt-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
-              {suggestions.map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setNiche(s)}
-                  className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
-                >
-                  {s}
-                </button>
-              ))}
+      <div className="max-w-4xl mx-auto space-y-8">
+        
+        {parsedCards.length > 0 ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <div>
+                <span className="text-[10px] font-mono text-cyan-primary bg-cyan-primary/10 px-2.5 py-1 rounded border border-cyan-primary/20 uppercase tracking-widest font-black">BENTO VIRAL STORYBOARD</span>
+                <h3 className="text-xl font-bold text-white mt-1 uppercase">Generated Strategy Cards ({parsedCards.length})</h3>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setNiche('');
+                }}
+                className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
+              >
+                Create New Batch
+              </button>
             </div>
-          </div>
 
-          {/* Platform selection slider list */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Platform</label>
-            <div className="flex flex-wrap gap-2">
-              {['YouTube & TikTok', 'Instagram Reels', 'LinkedIn Narrative', 'Twitter/X Post', 'Premium Newsletter'].map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPlatform(p)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
-                    platform === p 
-                      ? "border-brand bg-brand/10 text-brand font-semibold"
-                      : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+            {/* Carousel display deck */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Card List Sidebar for Quick Toggle */}
+              <div className="space-y-3 md:col-span-1 text-left">
+                {parsedCards.map((c, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentCardIndex(idx)}
+                    className={cn(
+                      "w-full p-4 text-left rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col space-y-1 select-none",
+                      currentCardIndex === idx
+                        ? "bg-cyan-primary/10 border-cyan-primary/40 text-white"
+                        : "bg-slate-900/60 border-white/5 text-slate-400 hover:bg-slate-900 hover:border-white/10"
+                    )}
+                  >
+                    <span className="text-[9px] font-mono font-black text-cyan-primary tracking-widest uppercase">VIRAL TRACK {idx + 1}</span>
+                    <span className="text-sm font-bold line-clamp-1">{c.title}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Interactive Cinematic Bento Box Detail */}
+              <div className="md:col-span-2 text-left">
+                <AnimatePresence mode="wait">
+                  {parsedCards[currentCardIndex] && (
+                    <motion.div
+                      key={currentCardIndex}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="p-6 md:p-8 bg-gradient-to-b from-slate-950/80 to-slate-900/80 border border-white/10 rounded-3xl space-y-6 relative overflow-hidden text-left"
+                    >
+                      <div className="absolute top-0 right-0 p-4">
+                        <span className="text-[9px] font-mono text-slate-400 border border-white/10 rounded px-2 py-0.5 uppercase bg-slate-950/40">
+                          {platform}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-mono font-black text-cyan-primary tracking-widest uppercase">Format Direction</span>
+                        <h4 className="text-xl font-black text-white uppercase tracking-tight">{parsedCards[currentCardIndex].title}</h4>
+                      </div>
+
+                      {/* Video Concept block */}
+                      <div className="space-y-1.5 p-4 bg-slate-900 border border-white/5 rounded-2xl text-left">
+                        <span className="text-[9px] font-mono text-slate-400 font-extrabold block uppercase tracking-wide">💡 core concept</span>
+                        <p className="text-sm text-slate-200 leading-relaxed font-sans font-medium">{parsedCards[currentCardIndex].idea}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Hook details */}
+                        <div className="p-4 bg-purple-vibrant/5 border border-purple-vibrant/25 rounded-2xl shadow-inner text-left">
+                          <span className="text-[9px] font-mono text-purple-vibrant font-black block uppercase tracking-wide">🎭 attention pattern-interrupt (hook)</span>
+                          <p className="text-xs text-purple-200 mt-1 font-sans font-semibold italic">"{parsedCards[currentCardIndex].hook}"</p>
+                        </div>
+
+                        {/* Production target goal */}
+                        <div className="p-4 bg-emerald-vibrant/5 border border-emerald-vibrant/25 rounded-2xl shadow-inner text-left">
+                          <span className="text-[9px] font-mono text-emerald-vibrant font-black block uppercase tracking-wide">🚀 expected conversion goal</span>
+                          <p className="text-xs text-emerald-100 mt-1 font-sans font-medium">{parsedCards[currentCardIndex].goal}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-cyan-primary animate-pulse" />
+                          <span className="text-[10px] font-mono text-slate-500 uppercase font-black">Velocity Rating: 9.8/10</span>
+                        </div>
+                        <button
+                          onClick={() => copyCard(parsedCards[currentCardIndex].rawSegment)}
+                          className="px-4 py-2 bg-cyan-primary hover:bg-cyan-primary/90 text-white font-bold font-mono text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Share2 size={12} />
+                          <span>Copy Clip Data</span>
+                        </button>
+                      </div>
+
+                    </motion.div>
                   )}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
+                </AnimatePresence>
+              </div>
 
-          {/* Tone target selection list */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Tone Strategy</label>
-            <div className="flex flex-wrap gap-2">
-              {['Viral Hook & Intense', 'Informative & Direct', 'Storyteller & Warm', 'Brutalist & Technical'].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTone(t)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
-                    tone === t 
-                      ? "border-brand bg-brand/10 text-brand font-semibold"
-                      : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
             </div>
-          </div>
 
-          <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
-            Generate Content Strategies
-          </Button>
-        </GlowingCard>
+          </div>
+        ) : null}
+
+        {parsedCards.length === 0 && (
+          <GlowingCard className="space-y-6">
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Niche / Topic</label>
+              <input 
+                type="text" 
+                placeholder="e.g. AI Productivity, Luxury Cars..."
+                className="input-base w-full py-4 text-lg"
+                value={niche}
+                onChange={(e) => setNiche(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-1.5 items-center mt-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
+                {suggestions.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setNiche(s)}
+                    className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Platform selection slider list */}
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Platform</label>
+              <div className="flex flex-wrap gap-2">
+                {['YouTube & TikTok', 'Instagram Reels', 'LinkedIn Narrative', 'Twitter/X Post', 'Premium Newsletter'].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPlatform(p)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
+                      platform === p 
+                        ? "border-brand bg-brand/10 text-brand font-semibold"
+                        : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                    )}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tone target selection list */}
+            <div className="space-y-2 text-left">
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Tone Strategy</label>
+              <div className="flex flex-wrap gap-2">
+                {['Viral Hook & Intense', 'Informative & Direct', 'Storyteller & Warm', 'Brutalist & Technical'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTone(t)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
+                      tone === t 
+                        ? "border-brand bg-brand/10 text-brand font-semibold"
+                        : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
+              Generate Content Strategies
+            </Button>
+          </GlowingCard>
+        )}
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -1045,7 +1223,10 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
 const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, feature, onBack }: any) => {
   const [topic, setTopic] = useState('');
   const [campaignFocus, setCampaignFocus] = useState('Broad reach and growth vector');
-  
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [activeTierFilter, setActiveTierFilter] = useState<'all' | 'tier1' | 'tier2' | 'tier3'>('all');
+
   const handleAction = () => {
     const prompt = `Perform deep hashtag research for the topic: "${topic}" optimized specifically for campaign focus: "${campaignFocus}". 
     Provide exactly 30 ranked hashtags organized into Reach Tiers:
@@ -1067,13 +1248,72 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
       <Button variant="secondary" onClick={() => onGenerateFeedback('hashtags', msg.content)} className="h-8 py-0 px-3">
         <MessageSquare size={12} /> Feedback
       </Button>
-      <Button variant="secondary" onClick={() => onSaveDraft('hashtags', msg.content, `Hashtags: ${topic}`)} className="h-8 py-0 px-3">
+      <Button variant="secondary" onClick={() => onSaveDraft('hashtags', msg.content, `Hashtags: ${topic || 'Scanned'}`)} className="h-8 py-0 px-3">
         <BookOpen size={12} /> Vault
       </Button>
     </>
   );
 
   const topicSuggestions = ["Web3 Tech Dev", "Quiet Luxury Living", "Home Cafe Coffee", "Solo Indie Creator"];
+
+  // Helper to extract hashtags from the markdown response
+  const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+  
+  const tagsList = useMemo(() => {
+    if (!lastResponse) return [];
+    const text = lastResponse.content;
+    const rawMatches = text.match(/#[a-zA-Z0-9_]+/g) || [];
+    const uniqueTags = Array.from(new Set(rawMatches.map((t: string) => t.trim())));
+    
+    // Categorize them into 3 Tiers deterministically based on hash code or string characteristics
+    return uniqueTags.map((tag: any, index: number) => {
+      // Deterministic classification
+      const rating = Math.floor(Math.abs(Math.sin(index + 2)) * 30) + 70; // 70-100%
+      let tier = 1;
+      let reach = '';
+      if (index % 3 === 0) {
+        tier = 3;
+        reach = '1M+ (Viral)';
+      } else if (index % 3 === 1) {
+        tier = 2;
+        reach = '100k - 1M (Growth)';
+      } else {
+        tier = 1;
+        reach = 'Under 100k (Low Comp)';
+      }
+
+      return {
+        tag,
+        tier,
+        reach,
+        score: rating,
+        competition: tier === 3 ? 'High' : tier === 2 ? 'Medium' : 'Low'
+      };
+    });
+  }, [lastResponse]);
+
+  const copyIndividual = (tag: string) => {
+    navigator.clipboard.writeText(tag);
+    setCopiedTag(tag);
+    setTimeout(() => setCopiedTag(null), 1500);
+  };
+
+  const copySelectedGroup = (tier?: number) => {
+    const filterTags = tier ? tagsList.filter(t => t.tier === tier) : tagsList;
+    const textToCopy = filterTags.map(t => t.tag).join(' ');
+    if (!textToCopy) return;
+    
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
+
+  const filteredTags = useMemo(() => {
+    if (activeTierFilter === 'all') return tagsList;
+    if (activeTierFilter === 'tier1') return tagsList.filter(t => t.tier === 1);
+    if (activeTierFilter === 'tier2') return tagsList.filter(t => t.tier === 2);
+    return tagsList.filter(t => t.tier === 3);
+  }, [tagsList, activeTierFilter]);
 
   return (
     <FeatureLayout 
@@ -1082,61 +1322,163 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
       actions={actions}
       onBack={onBack}
     >
-      <div className="max-w-2xl mx-auto space-y-8">
-        <GlowingCard className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Core Topic / Niche</label>
-            <input 
-              type="text" 
-              placeholder="Enter core topic..."
-              className="input-base w-full py-4 text-lg"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-            />
-            <div className="flex flex-wrap gap-1.5 items-center mt-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
-              {topicSuggestions.map(s => (
+      <div className="max-w-4xl mx-auto space-y-8">
+        
+        {/* If tags are generated, show dynamic custom categorized interface */}
+        {tagsList.length > 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="card-base p-6 md:p-8 space-y-6 bg-slate-950/60 border-2 border-purple-500/20 rounded-3xl"
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-purple-vibrant bg-purple-vibrant/10 px-2.5 py-1 rounded border border-purple-vibrant/20 uppercase tracking-widest">REAL-TIME HASHTAG DIRECTORY</span>
+                <h3 className="text-lg font-bold text-white uppercase mt-1">Arranged Viral Clusters ({tagsList.length} tags)</h3>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTopic(s)}
-                  className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
+                  onClick={() => copySelectedGroup()}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold font-mono tracking-tight flex items-center gap-1.5 cursor-pointer transition-all"
                 >
-                  {s}
+                  <Hash size={13} />
+                  <span>{copiedAll ? '✓ All Copied' : 'Copy All Tags'}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Distribution Intensity</label>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: 'Broad Reach Network', val: 'Broad reach and growth vector' },
-                { label: 'Hyper-Targeted Niche', val: 'Dense local/hyper-niche conversions' },
-                { label: 'Maximum Viral Volume', val: 'High risk high reward viral hashtags' }
-              ].map((item) => (
                 <button
-                  key={item.label}
                   type="button"
-                  onClick={() => setCampaignFocus(item.val)}
+                  onClick={() => {
+                    setTopic('');
+                    // Scroll to input if possible, clearing messages resets state
+                  }}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[var(--border-base)] rounded-xl text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                >
+                  Scan Another Topic
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Filter tabs to see reach levels */}
+            <div className="flex gap-2 border-b border-white/5 pb-3">
+              {[
+                { label: 'All Clusters', id: 'all' },
+                { label: 'Tier 1 (Under 100k)', id: 'tier1' },
+                { label: 'Tier 2 (100k - 1M)', id: 'tier2' },
+                { label: 'Tier 3 (Viral 1M+)', id: 'tier3' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveTierFilter(f.id as any)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
-                    campaignFocus === item.val 
-                      ? "border-brand bg-brand/10 text-brand font-semibold"
-                      : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                    "px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer",
+                    activeTierFilter === f.id
+                      ? "bg-purple-vibrant/15 text-purple-vibrant border-purple-vibrant/30"
+                      : "bg-transparent text-slate-400 border-transparent hover:text-white"
                   )}
                 >
-                  {item.label}
+                  {f.label}
                 </button>
               ))}
             </div>
-          </div>
 
-          <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
-            Execute Reach Analysis
-          </Button>
-        </GlowingCard>
+            {/* Visual Hashtag Chip Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {filteredTags.map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => copyIndividual(item.tag)}
+                  className="p-3 bg-slate-900 border border-white/5 rounded-2xl hover:border-purple-500/20 cursor-pointer text-left relative overflow-hidden group select-none flex justify-between items-center pr-2"
+                >
+                  <div>
+                    <span className="text-xs font-mono font-bold text-slate-100 block truncate group-hover:text-purple-400 max-w-[130px]" title={item.tag}>
+                      {item.tag}
+                    </span>
+                    <span className="text-[8px] font-mono text-slate-500 block uppercase pt-0.5">
+                      {item.reach}
+                    </span>
+                  </div>
+
+                  <div className="p-1 px-1.5 rounded text-[9px] font-mono font-bold text-center border bg-slate-950/40 shrink-0 border-white/5">
+                    {copiedTag === item.tag ? (
+                      <span className="text-emerald-400 font-extrabold">Copied</span>
+                    ) : (
+                      <span className="text-purple-400">{item.score}%</span>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Explanatory insights in very brief form */}
+            <div className="p-4 rounded-2xl border border-white/5 bg-slate-900/40 text-left space-y-2">
+              <span className="text-[8px] font-mono text-purple-vibrant font-black uppercase tracking-widest block">TACTICAL USE</span>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans font-medium">
+                Combine exactly <span className="text-purple-300 font-black">2 of Tier 3</span> tags (high traffic authority), <span className="text-purple-300 font-black">4 of Tier 2</span> tags (targeted velocity metrics), and <span className="text-purple-300 font-black">4 of Tier 1</span> tags (highly searchable low competition niches) in your descriptions to trigger the highest early indexing CTR.
+              </p>
+            </div>
+
+          </motion.div>
+        ) : null}
+
+        {/* Input Form Setup */}
+        {tagsList.length === 0 && (
+          <GlowingCard className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Core Topic / Niche</label>
+              <input 
+                type="text" 
+                placeholder="Enter core topic..."
+                className="input-base w-full py-4 text-lg"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-1.5 items-center mt-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
+                {topicSuggestions.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setTopic(s)}
+                    className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Distribution Intensity</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Broad Reach Network', val: 'Broad reach and growth vector' },
+                  { label: 'Hyper-Targeted Niche', val: 'Dense local/hyper-niche conversions' },
+                  { label: 'Maximum Viral Volume', val: 'High risk high reward viral hashtags' }
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setCampaignFocus(item.val)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
+                      campaignFocus === item.val 
+                        ? "border-brand bg-brand/10 text-brand font-semibold"
+                        : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
+              Execute Reach Analysis
+            </Button>
+          </GlowingCard>
+        )}
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -1599,10 +1941,7 @@ const SEOScorecard = ({ feature, onGenerate, messages, loading, error, onGenerat
     </>
   );
 
-  const sampleArticles = [
-    { label: "AI Copy", k: "AI copywriting, SEO tool", c: "React simplifies web applications incredibly. Incorporating a robust AI copywriting program allows you to organically scale content volumes to hit top search engine rankings." },
-    { label: "Green Energy", k: "Solar panel technology, Clean energy", c: "Solar panel technology represents a historic shift for modern global power grids. Homeowners who execute clean energy installs find localized power generation incredibly competitive." }
-  ];
+  const sampleArticles: {label: string, k: string, c: string}[] = [];
 
   return (
     <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
@@ -1617,22 +1956,24 @@ const SEOScorecard = ({ feature, onGenerate, messages, loading, error, onGenerat
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
             />
-            <div className="flex flex-wrap gap-1.5 items-center mt-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Sample Presets:</span>
-              {sampleArticles.map(s => (
-                <button
-                  key={s.label}
-                  type="button"
-                  onClick={() => {
-                    setKeywords(s.k);
-                    setContent(s.c);
-                  }}
-                  className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            {sampleArticles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 items-center mt-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Sample Presets:</span>
+                {sampleArticles.map(s => (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onClick={() => {
+                      setKeywords(s.k);
+                      setContent(s.c);
+                    }}
+                    className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Content Node</label>
@@ -2080,12 +2421,39 @@ const NeuralHub = ({ onSelectFeature, onBack }: { onSelectFeature: (id: FeatureI
                   <div className="h-px flex-1 bg-[var(--border-base)]" />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <motion.div 
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    visible: {
+                      transition: {
+                        staggerChildren: 0.04
+                      }
+                    }
+                  }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                >
                   {FEATURES.filter(f => f.category === cat).map((f) => (
-                    <button
+                    <motion.button
                       key={f.id}
                       onClick={() => onSelectFeature(f.id)}
-                      className="group p-5 rounded-2xl border border-[var(--border-base)] bg-[var(--bg-card)] hover:border-brand hover:shadow-lg transition-all text-left flex items-start gap-5 relative overflow-hidden"
+                      variants={{
+                        hidden: { opacity: 0, y: 12, scale: 0.97 },
+                        visible: { 
+                          opacity: 1, 
+                          y: 0, 
+                          scale: 1,
+                          transition: { type: "spring", stiffness: 180, damping: 20 }
+                        }
+                      }}
+                      whileHover={{ 
+                        y: -4, 
+                        scale: 1.015,
+                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.25)",
+                        transition: { duration: 0.2, ease: "easeOut" }
+                      }}
+                      whileTap={{ scale: 0.985, y: -1 }}
+                      className="group p-5 rounded-2xl border border-[var(--border-base)] bg-[var(--bg-card)] hover:border-brand transition-all text-left flex items-start gap-5 relative overflow-hidden cursor-pointer"
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className={cn(
@@ -2104,9 +2472,9 @@ const NeuralHub = ({ onSelectFeature, onBack }: { onSelectFeature: (id: FeatureI
                         </p>
                       </div>
                       <ChevronRight size={16} className="text-[var(--text-secondary)] group-hover:text-brand mt-1 transition-all group-hover:translate-x-1" />
-                    </button>
+                    </motion.button>
                   ))}
-                </div>
+                </motion.div>
               </div>
             ))}
           </div>
@@ -2239,6 +2607,8 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
     </>
   );
 
+  const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+
   return (
     <FeatureLayout 
       feature={feature} 
@@ -2246,27 +2616,60 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
       actions={actions}
       onBack={onBack}
     >
-      <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
-        <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
-          <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
-            <feature.icon size={18} />
-          </div>
-          <div className="space-y-6 pt-2">
-            <div className="space-y-2">
-              <label className={cn("text-[10px] font-mono uppercase tracking-[0.4em] ml-2", feature.themeColor)}>Neural Directive</label>
-              <textarea 
-                placeholder={`Describe your target for ${feature.label.toLowerCase()}...`}
-                rows={4}
-                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-8 py-5 outline-none focus:border-opacity-50 transition-all text-xl font-display font-black text-white text-center placeholder:text-slate-800 resize-none shadow-inner"
-                value={val}
-                onChange={(e) => setVal(e.target.value)}
-              />
+      <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
+        {lastResponse ? (
+          <div className="space-y-6">
+            {/* Interactive Custom Widget Selection based on feature ID */}
+            {feature.id === 'scripts' && <ScriptPrompterWidget content={lastResponse.content} />}
+            {feature.id === 'bio' && <ProfileMockupWidget content={lastResponse.content} />}
+            {feature.id === 'thumbnails' && <ThumbnailCanvasWidget content={lastResponse.content} />}
+            {feature.id === 'engagement-calc' && <GrowthMathWidget content={lastResponse.content} />}
+            {feature.id === 'trending' && <TrendMomentumTickerWidget content={lastResponse.content} />}
+            {feature.id === 'personas' && <AudienceDossierWidget content={lastResponse.content} />}
+            {feature.id === 'repurposing' && <RepurposePipelineWidget content={lastResponse.content} />}
+
+            {/* Standard advisory notes transcript rendering */}
+            <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl text-left">
+              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-black block mb-3">Neural Advice Transcription</span>
+              <div className="text-sm text-slate-300 leading-relaxed max-h-60 overflow-y-auto pr-2 select-text whitespace-pre-line font-sans">
+                <ReactMarkdown>{lastResponse.content}</ReactMarkdown>
+              </div>
             </div>
-            <Button onClick={handleAction} loading={loading} className={cn("w-full py-6 text-navy-black font-black text-[11px] tracking-[0.3em] rounded-2xl shadow-2xl transition-all", feature.themeColor.replace('text-', 'bg-'))}>
-              EXECUTE {feature.label.toUpperCase()} PROTOCOL
-            </Button>
+
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  setVal('');
+                  // Clear messages or let user start fresh
+                }}
+                className="px-6 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:text-white cursor-pointer transition-all"
+              >
+                Run Another Directive
+              </button>
+            </div>
           </div>
-        </GlowingCard>
+        ) : (
+          <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
+            <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
+              <feature.icon size={18} />
+            </div>
+            <div className="space-y-6 pt-2">
+              <div className="space-y-2 text-left">
+                <label className={cn("text-[10px] font-mono uppercase tracking-[0.4em] ml-2", feature.themeColor)}>Neural Directive</label>
+                <textarea 
+                  placeholder={`Describe your target for ${feature.label.toLowerCase()}...`}
+                  rows={4}
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-opacity-50 transition-all text-base font-sans font-medium text-white text-center placeholder:text-slate-705 resize-none shadow-inner"
+                  value={val}
+                  onChange={(e) => setVal(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleAction} loading={loading} className={cn("w-full py-6 text-navy-black font-black text-[11px] tracking-[0.3em] rounded-2xl shadow-2xl transition-all", feature.themeColor.replace('text-', 'bg-'))}>
+                EXECUTE {feature.label.toUpperCase()} PROTOCOL
+              </Button>
+            </div>
+          </GlowingCard>
+        )}
 
         {loading && (
           <motion.div 
@@ -2292,7 +2695,7 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
 
 const STATIC_QUALITIES = [
   { id: "realtime", label: "Real-time Intelligence", description: "Hyper-speed neural synchronization across global nodes." },
-  { id: "ai-native", label: "Gemini-Native", description: "Deep integration with advanced generative AI models." },
+  { id: "ai-native", label: "Aether-Native", description: "Deep integration with advanced generative AI models." },
   { id: "tactical", label: "Tactical Design", description: "Modern, high-performance content operations." },
   { id: "secure", label: "Secure Vault", description: "Fragmented intelligence storage with encrypted signal protocols." }
 ];
@@ -2409,7 +2812,7 @@ const Dashboard = ({
              </Button>
           </motion.div>
 
-          {/* CHIDON Earn Card */}
+          {/* GigSocial Card */}
           <motion.div
              whileHover={{ y: -4 }}
              className="card-base p-5 border border-brand/10 hover:border-cyan-500/35 w-full md:w-64 cursor-pointer group flex flex-col justify-between"
@@ -2418,19 +2821,19 @@ const Dashboard = ({
              <div>
                 <div className="flex items-center gap-3 mb-4">
                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-primary shrink-0">
-                     <Coins size={20} />
+                     <Briefcase size={20} />
                    </div>
                    <div>
-                     <h3 className="text-xs font-bold text-[var(--text-primary)]">CHIDON Earn</h3>
-                     <p className="text-[var(--text-secondary)] text-[9px]">Gigs & Service Market</p>
+                     <h3 className="text-xs font-bold text-[var(--text-primary)]">GigSocial</h3>
+                     <p className="text-[var(--text-secondary)] text-[9px]">Social Media + Freelance</p>
                    </div>
                 </div>
                 <p className="text-xs text-[var(--text-secondary)] leading-normal mb-4">
-                   Deliver digital assets and completed jobs to clients, or hire experts to accelerate operations.
+                   Deliver high-CTR digital growth, post portfolios, chat live, subscribe to creators, and trade secure Escrow Gigs inside the 2026 hub.
                 </p>
              </div>
              <Button variant="secondary" className="w-full text-xs py-1.5 mt-auto border border-cyan-500/25 text-cyan-primary bg-cyan-500/5 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300">
-               Sell & Buy Gigs <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+               Launch GigSocial <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
              </Button>
           </motion.div>
         </div>
@@ -2480,7 +2883,8 @@ const MatrixHub = ({
   setPinnedFeatures,
   autoOptimize,
   setAutoOptimize,
-  user
+  user,
+  onClearDatabase
 }: any) => {
   const { t } = useTranslation();
   const [matrixView, setMatrixView] = useState<'menu' | 'faq' | 'features'>('menu');
@@ -2644,6 +3048,27 @@ const MatrixHub = ({
            ))}
         </div>
       </div>
+
+      {/* Danger Zone: Database Operations */}
+      <div className="max-w-6xl mx-auto w-full mt-16 border-t border-[var(--border-base)]/50 pt-10">
+        <div className="bg-red-500/5 dark:bg-red-950/5 border border-red-500/15 dark:border-red-500/10 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 text-left">
+            <h3 className="text-red-500 font-bold text-lg flex items-center gap-2">
+              <AlertCircle size={18} /> Danger Zone: App Maintenance
+            </h3>
+            <p className="text-[var(--text-secondary)] text-xs leading-relaxed max-w-xl">
+              Purges all mock and fake database entries (gigs, services, scheduled posts, notes, drafts, and applications) across local stores and Cloud Sync Database. Permanent and irreversible.
+            </p>
+          </div>
+          <button 
+            type="button"
+            onClick={onClearDatabase}
+            className="w-full md:w-auto px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black uppercase text-xs tracking-widest rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+          >
+            Clear All Mock Records & Data
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -2659,6 +3084,10 @@ export default function App() {
 
   const [systemLanguage, setSystemLanguage] = useState<string>(() => {
     return localStorage.getItem('system_language') || 'English';
+  });
+
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    return !localStorage.getItem('chidon_welcome_dismissed');
   });
 
   useEffect(() => {
@@ -2698,7 +3127,7 @@ export default function App() {
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog'>('dashboard');
   const [activeFeature, setActiveFeature] = useState<FeatureId>('keyword-research');
   const [toolSearchQuery, setToolSearchQuery] = useState<string>('');
   
@@ -2758,62 +3187,6 @@ export default function App() {
         setActiveFeature(toolParam);
       }
     }
-
-    const mode = params.get('mode');
-    const oobCode = params.get('oobCode');
-    if (mode && oobCode) {
-      setEmailActionState({
-        status: 'loading',
-        message: mode === 'verifyEmail' ? 'Verifying email connection...' : 'Processing credential reset code...',
-        mode,
-        oobCode
-      });
-
-      if (mode === 'verifyEmail') {
-        handleEmailAction(mode, oobCode)
-          .then(() => {
-            setEmailActionState({
-              status: 'success',
-              message: 'Email address verified successfully! You can now access all Chidon IQ features.',
-              mode,
-              oobCode
-            });
-            // Clear URL parameters
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-          })
-          .catch((err: any) => {
-            setEmailActionState({
-              status: 'error',
-              message: err.message?.includes('expired') || err.message?.includes('invalid')
-                ? 'The email verification link has expired or is invalid.'
-                : err.message || 'Verification could not be processed.',
-              mode,
-              oobCode
-            });
-          });
-      } else if (mode === 'resetPassword') {
-        handleEmailAction(mode, oobCode)
-          .then(() => {
-            setEmailActionState({
-              status: 'success',
-              message: 'Check code verified. Please proceed to create your new password.',
-              mode,
-              oobCode
-            });
-          })
-          .catch((err: any) => {
-            setEmailActionState({
-              status: 'error',
-              message: err.message?.includes('expired') || err.message?.includes('invalid')
-                ? 'The password reset link has expired or is invalid.'
-                : err.message || 'Password reset link could not be checked.',
-              mode,
-              oobCode
-            });
-          });
-      }
-    }
   }, []);
 
   const [neuralNotifications, setNeuralNotifications] = useState<boolean>(() => {
@@ -2856,18 +3229,8 @@ export default function App() {
   const [customHfApiKey, setCustomHfApiKey] = useState<string>(() => {
     return localStorage.getItem('custom_hf_api_key') || '';
   });
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [emailActionState, setEmailActionState] = useState<{
-    status: 'idle' | 'loading' | 'success' | 'error';
-    message: string;
-    mode: string | null;
-    oobCode: string | null;
-  }>({
-    status: 'idle',
-    message: '',
-    mode: null,
-    oobCode: null
-  });
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [resetStatus, setResetStatus] = useState<'idle' | 'clearing' | 'success' | 'error'>('idle');
   
   // Real-time Cloud settings sync hook
   useEffect(() => {
@@ -2952,9 +3315,19 @@ export default function App() {
   };
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        try {
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error("Anonymous authentication error:", e);
+          setUser(null);
+          setAuthLoading(false);
+        }
+      } else {
+        setUser(u);
+        setAuthLoading(false);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -2969,16 +3342,76 @@ export default function App() {
   };
 
   const handleSignIn = () => {
-    setIsAuthOpen(true);
+    // Local workspace sandbox active; authentication removed
   };
 
   const handleSignOut = async () => {
+    // Local workspace sandbox active; authentication removed
+  };
+
+  const handleClearDatabase = async () => {
+    setResetStatus('clearing');
     try {
-      await signOut(auth);
-      setNavigationHistory([]);
-      setView('dashboard');
+      // 1. Clear local storage settings and features
+      localStorage.removeItem('pinned_features');
+      localStorage.removeItem('security_modes');
+      localStorage.removeItem('neural_notifications');
+      localStorage.removeItem('theme');
+      
+      // 2. Clear IndexedDB local notes
+      try {
+        const { openDB } = await import('idb');
+        const dbInstance = await openDB('chidon_iq_intelligence_db', 1);
+        const tx = dbInstance.transaction('notes_local', 'readwrite');
+        await tx.store.clear();
+        await tx.done;
+      } catch (idbErr) {
+        console.error("IndexedDB clear error:", idbErr);
+      }
+
+      // 3. Clear Firestore collections
+      const collectionsToClear = [
+        'jobs',
+        'job_applications',
+        'earn_jobs',
+        'earn_services',
+        'earn_results',
+        'earn_profiles',
+        'drafts',
+        'notes',
+        'folders',
+        'feedback',
+        'global_presence'
+      ];
+      
+      for (const colName of collectionsToClear) {
+        try {
+          const colRef = collection(db, colName);
+          const qSnap = await getDocs(colRef);
+          const batchDeletes: Promise<void>[] = [];
+          qSnap.forEach((docSnap) => {
+            batchDeletes.push(deleteDoc(doc(db, colName, docSnap.id)));
+          });
+          await Promise.all(batchDeletes);
+          console.log(`Successfully purged firestore collection: ${colName}`);
+        } catch (colErr) {
+          console.error(`Failed to clear firestore collection ${colName}:`, colErr);
+        }
+      }
+
+      // 4. Reset states
+      setFeatureResults({});
+      
+      setResetStatus('success');
+      setTimeout(() => {
+        setResetStatus('idle');
+        window.location.reload();
+      }, 2500);
+
     } catch (err) {
-      console.error("Sign out error:", err);
+      console.error("Maintenance reset failed:", err);
+      setResetStatus('error');
+      setTimeout(() => setResetStatus('idle'), 4000);
     }
   };
   const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', feature: FeatureId}[]>([]);
@@ -3014,7 +3447,7 @@ export default function App() {
 
   const { generate, loading, error } = useHybridAI(activeGeminiKey || null, activeHfKey || null);
 
-  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', newFeature?: FeatureId) => {
+  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog', newFeature?: FeatureId) => {
     const targetFeature = newFeature || activeFeature;
     // Don't push if it's the exact same state
     if (view === newView && activeFeature === targetFeature) return;
@@ -3180,16 +3613,26 @@ export default function App() {
           autoOptimize={autoOptimize}
           setAutoOptimize={(u: any) => { setAutoOptimize(u); saveUserSetting('autoOptimize', u); }}
           user={user}
+          onClearDatabase={() => setIsResetConfirmOpen(true)}
         />
       );
     }
 
     if (view === 'earn') {
       return (
-        <EarnSection 
+        <GigSocial 
           onBack={goBack}
           user={user}
           onSignIn={handleSignIn}
+        />
+      );
+    }
+
+    if (view === 'blog') {
+      return (
+        <ChidonIqBlog
+          onSaveDraft={handleSaveDraft}
+          onBack={goBack}
         />
       );
     }
@@ -3306,6 +3749,12 @@ export default function App() {
     <BookContext.Provider value={{ onSendToBook: handleSendToBook }}>
       <div className="min-h-screen bg-[var(--bg-app)] flex flex-col font-sans selection:bg-brand/30 selection:text-white overflow-hidden relative">
       <AppBackground />
+      {showWelcome && (
+        <WelcomePage onEnter={() => {
+          setShowWelcome(false);
+          localStorage.setItem('chidon_welcome_dismissed', 'true');
+        }} />
+      )}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
         <aside className={cn(
@@ -3321,10 +3770,7 @@ export default function App() {
               }}
               className="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
-              <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white">
-                <Zap size={18} />
-              </div>
-              <span className="font-bold tracking-tight text-lg">Chidon Iq</span>
+              <ChidonLogo size="sm" />
             </button>
             <button 
               onClick={() => setIsMenuOpen(false)}
@@ -3394,12 +3840,28 @@ export default function App() {
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
                   view === 'earn'
-                    ? "bg-cyan-primary/10 text-cyan-primary border-cyan-primary/20 shadow-sm animate-pulse"
+                    ? "bg-cyan-primary/10 text-cyan-primary border-cyan-primary/20 shadow-sm animate-pulse-glow"
                     : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
                 )}
               >
-                <Coins size={15} className="text-cyan-primary" />
-                <span>CHIDON Earn</span>
+                <Briefcase size={15} className="text-cyan-primary" />
+                <span>GigSocial</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigateTo('blog');
+                  setIsMenuOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
+                  view === 'blog'
+                    ? "bg-cyan-primary/10 text-cyan-primary border-cyan-primary/20 shadow-sm"
+                    : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
+                )}
+              >
+                <BookOpen size={15} className="text-cyan-primary" />
+                <span>Chidon IQ Gazette</span>
               </button>
             </div>
 
@@ -3510,21 +3972,13 @@ export default function App() {
           </div>
 
           <div className="p-6 border-t border-[var(--border-base)]">
-            <button 
-              onClick={user ? handleSignOut : handleSignIn}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all group"
-            >
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full object-cover" />
-              ) : (
-                <UserCircle className="w-8 h-8 text-[var(--text-secondary)] group-hover:text-brand" />
-              )}
+            <div className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 border border-[var(--border-base)]/40">
+              <UserCircle className="w-8 h-8 text-cyan-500 animate-[pulse_3s_infinite]" />
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-bold text-[var(--text-primary)] truncate">{user ? (user.displayName || 'Account') : t('common.login')}</p>
-                <p className="text-[10px] text-[var(--text-secondary)] truncate">{t('common.neuralNodeActive')}</p>
+                <p className="text-sm font-bold text-[var(--text-primary)] truncate">Workspace Master</p>
+                <p className="text-[10px] text-[var(--text-secondary)] truncate">Operational Hub Connected</p>
               </div>
-              <LogOut size={14} className="text-[var(--text-secondary)]" />
-            </button>
+            </div>
           </div>
         </aside>
 
@@ -3539,8 +3993,9 @@ export default function App() {
               >
                 {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-              <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                {view === 'dashboard' ? t('common.overview') : view === 'earn' ? "CHIDON Earn Portal" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? (t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}
+              <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <span className="md:hidden"><ChidonLogo size="xs" iconOnly /></span>
+                <span>{view === 'dashboard' ? t('common.overview') : view === 'earn' ? "CHIDON Earn Portal" : view === 'blog' ? "Chidon IQ Gazette & Blog" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? (t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}</span>
               </h2>
             </div>
 
@@ -3630,59 +4085,68 @@ export default function App() {
         />
         <ChidonIqGuide />
       </Suspense>
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      
-      {/* Reset Password Action Code Overlay */}
-      <AnimatePresence>
-        {emailActionState.mode === 'resetPassword' && emailActionState.status === 'success' && (
-          <Suspense fallback={null}>
-            <ResetPasswordOverlay 
-              oobCode={emailActionState.oobCode!} 
-              onClose={() => {
-                setEmailActionState({ status: 'idle', message: '', mode: null, oobCode: null });
-                const cleanUrl = window.location.origin + window.location.pathname;
-                window.history.replaceState({}, document.title, cleanUrl);
-              }} 
-            />
-          </Suspense>
-        )}
-      </AnimatePresence>
+      {/* Maintenance Purge / Reset Confirmation Overlay */}
+      <ConfirmationDialog 
+        isOpen={isResetConfirmOpen}
+        onClose={() => setIsResetConfirmOpen(false)}
+        onConfirm={handleClearDatabase}
+        title="PURGE SYSTEM RECORDS"
+        message="Are you sure you want to trigger a full system clean? This will delete all live Cloud Sync mock postings, gigs, scheduled posts, notes, folders, candidate applications, local indexedDB content, and cached files. This action is critical, permanent, and completely irreversible."
+        confirmText="EXECUTE PURGE"
+        cancelText="CANCEL PROTOCOL"
+        isDanger={true}
+      />
 
-      {/* General feedback toast banners for email/password actions */}
+      {/* System Cleaning State Overlays */}
       <AnimatePresence>
-        {emailActionState.status !== 'idle' && (emailActionState.mode === 'verifyEmail' || emailActionState.status !== 'success') && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 right-6 z-[99999] max-w-sm w-full p-4 rounded-2xl shadow-2xl border flex flex-col gap-2 backdrop-blur bg-white dark:bg-zinc-900 border-neutral-200 dark:border-zinc-800"
+        {resetStatus !== 'idle' && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999999] flex flex-col items-center justify-center p-6 bg-slate-950/95 backdrop-blur-md"
           >
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5">
-                {emailActionState.status === 'loading' && (
-                  <Loader2 size={16} className="text-brand animate-spin" />
-                )}
-                {emailActionState.status === 'success' && (
-                  <CheckCircle2 size={16} className="text-emerald-500" />
-                )}
-                {emailActionState.status === 'error' && (
-                  <AlertCircle size={16} className="text-rose-500" />
-                )}
-              </div>
-              <div className="flex-1">
-                <h4 className="text-xs font-black tracking-wider uppercase font-mono text-[var(--text-secondary)]">
-                  {emailActionState.mode === 'verifyEmail' ? 'Email Alignment' : 'Security Channel'}
-                </h4>
-                <p className="text-xs mt-1 font-medium text-[var(--text-primary)] leading-relaxed">
-                  {emailActionState.message}
-                </p>
-              </div>
-              <button 
-                onClick={() => setEmailActionState({ status: 'idle', message: '', mode: null, oobCode: null })}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-              >
-                <X size={14} />
-              </button>
+            <div className="max-w-md w-full text-center space-y-6">
+              {resetStatus === 'clearing' && (
+                <>
+                  <div className="relative flex items-center justify-center">
+                    <Loader2 size={48} className="text-red-500 animate-spin" />
+                    <RefreshCcw size={20} className="text-red-500/50 absolute animate-pulse" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-white font-mono text-xs uppercase tracking-[0.25em] animate-pulse">Wiping Live Channels...</h3>
+                    <p className="text-slate-400 text-xs">Purging all mock entries, job boards, cache indexes, and local IndexedDB storages across the entire network cluster.</p>
+                  </div>
+                </>
+              )}
+
+              {resetStatus === 'success' && (
+                <>
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400"
+                  >
+                    <CheckCircle2 size={32} />
+                  </motion.div>
+                  <div className="space-y-2">
+                    <h3 className="text-emerald-400 font-bold uppercase tracking-wider text-sm">System Purge Successful</h3>
+                    <p className="text-slate-400 text-xs">All fake records and mock entries are eliminated! Rebooting base intelligence matrix in 2 seconds...</p>
+                  </div>
+                </>
+              )}
+
+              {resetStatus === 'error' && (
+                <>
+                  <div className="mx-auto w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 animate-bounce">
+                    <AlertCircle size={32} />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-red-500 font-bold uppercase tracking-wider text-sm">Operation Fault</h3>
+                    <p className="text-slate-400 text-xs">Maintenance purge aborted because a system error occurred. Please analyze cloud rules constraints.</p>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

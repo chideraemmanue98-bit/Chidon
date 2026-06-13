@@ -46,6 +46,7 @@ import { GoogleGenAI } from "@google/genai";
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { exportToJSON, exportToCSV } from '../lib/exportUtils';
+import emptySchedulerImg from '../assets/images/empty_scheduler_1781319203016.jpg';
 import { Zap, Wand2, Loader2 } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
@@ -483,9 +484,22 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
                       </div>
                     ))}
                     {posts.filter(p => isSameDay(p.scheduledAt, selectedDate)).length === 0 && (
-                      <div className="text-center py-10 opacity-30">
-                        <AlertCircle className="mx-auto mb-2" size={24} />
-                        <p className="text-[10px] uppercase tracking-widest italic">No deployments found</p>
+                      <div className="text-center py-4 px-3 bg-white/[0.01] border border-white/[0.05] rounded-2xl space-y-3 flex flex-col items-center justify-center">
+                        <div className="relative w-24 h-24 rounded-xl overflow-hidden shadow-md border border-white/5 bg-slate-950/20">
+                          <img 
+                            src={emptySchedulerImg} 
+                            alt="No deployments" 
+                            className="w-full h-full object-cover select-none pointer-events-none"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 font-mono">No Deployments</p>
+                          <p className="text-[9px] text-slate-500 max-w-[180px] leading-relaxed mx-auto">
+                            Design or compose a creative social release on this slot.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

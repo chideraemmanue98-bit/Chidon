@@ -36,6 +36,7 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import emptyVaultImg from '../assets/images/empty_vault_1781319190599.jpg';
 
 interface SavedDraft {
   id: string;
@@ -319,30 +320,6 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
           </p>
         </div>
 
-        {/* Authenticate Suggestion Indicator */}
-        {!auth.currentUser && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="p-4 rounded-2xl border border-brand/20 bg-brand/5 max-w-md flex items-center gap-4 shadow-sm"
-          >
-            <div className="p-2.5 bg-brand/15 rounded-xl text-brand">
-              <Lock size={18} />
-            </div>
-            <div className="text-left space-y-1">
-              <p className="text-xs font-bold text-[var(--text-primary)]">Sync Cloud Cryptography</p>
-              <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">Sign in to sync your saved items securely across mobile and web.</p>
-              {onSignIn && (
-                <button 
-                  onClick={onSignIn} 
-                  className="mt-1 text-[10px] font-bold uppercase tracking-wider text-brand hover:underline"
-                >
-                  Authorize Node &rarr;
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
       </div>
 
       {/* Categories Horizontal Tabs */}
@@ -531,14 +508,20 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
               ))}
             </div>
           ) : filteredDrafts.length === 0 ? (
-            <div className="text-center py-20 bg-[var(--card-bg)] border border-[var(--border-base)] rounded-3xl space-y-4 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-brand/5 text-brand flex items-center justify-center shadow-inner">
-                <BookOpen size={28} />
+            <div className="text-center py-12 px-6 bg-[var(--card-bg)] border border-[var(--border-base)] rounded-3xl space-y-5 flex flex-col items-center justify-center overflow-hidden">
+              <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-[var(--border-base)]/50 bg-slate-900/40">
+                <img 
+                  src={emptyVaultImg} 
+                  alt="Empty Vault State" 
+                  className="w-full h-full object-cover select-none pointer-events-none" 
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
               </div>
-              <div className="max-w-md space-y-1">
-                <p className="text-sm font-bold text-[var(--text-primary)]">Your CHIDON Vault is offline</p>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                  Generate resources (such as video tags, social optimization scripts, competitor intelligence reports) & click the <strong className="font-bold text-brand">Vault</strong> button to collect them here.
+              <div className="max-w-md space-y-2">
+                <p className="text-sm font-bold text-[var(--text-primary)] font-mono uppercase tracking-widest">Vault Pipeline Empty</p>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans max-w-sm">
+                  Generate resources (such as video tags, social optimization scripts, competitor intelligence reports) and click the <strong className="font-bold text-brand">Save to Vault</strong> button to collect them in your intelligence base.
                 </p>
               </div>
             </div>

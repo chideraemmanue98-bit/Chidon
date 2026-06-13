@@ -19,6 +19,10 @@ service cloud.firestore {
       return request.resource.data;
     }
 
+    function existing() {
+      return resource.data;
+    }
+
     // Feedback Validation
     function isValidFeedback(data) {
       return data.keys().hasAll(['featureId', 'rating', 'timestamp', 'generatedContent']) &&
@@ -41,7 +45,7 @@ service cloud.firestore {
              data.status in ['scheduled', 'published', 'failed'] &&
              data.createdAt == request.time &&
              (!('mediaUrl' in data) || (data.mediaUrl is string && data.mediaUrl.size() <= 2000)) &&
-             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+             (!('userId' in data) || (isSignedIn() && data.userId == request.auth.uid));
     }
 
     // Draft Validation
@@ -52,7 +56,7 @@ service cloud.firestore {
              data.content is string && data.content.size() <= 10000 &&
              data.createdAt == request.time &&
              (!('title' in data) || (data.title is string && data.title.size() <= 200)) &&
-             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+             (!('userId' in data) || (isSignedIn() && data.userId == request.auth.uid));
     }
 
     // Note Validation
@@ -65,7 +69,7 @@ service cloud.firestore {
              (data.createdAt == request.time || data.createdAt is timestamp) &&
              (!('tags' in data) || (data.tags is list)) &&
              (!('folderId' in data) || (data.folderId is string)) &&
-             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+             (!('userId' in data) || (isSignedIn() && data.userId == request.auth.uid));
     }
 
     // Folder Validation
@@ -74,7 +78,7 @@ service cloud.firestore {
              data.keys().size() <= 3 &&
              data.name is string && data.name.size() <= 100 &&
              data.createdAt == request.time &&
-             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+             (!('userId' in data) || (isSignedIn() && data.userId == request.auth.uid));
     }
 
     // Presence Validation
@@ -109,17 +113,83 @@ service cloud.firestore {
              (!('userAvatar' in data) || (data.userAvatar is string && data.userAvatar.size() <= 2000));
     }
 
-    // User Validation
+    // User Validation for GigSocial & Chidon IQ
     function isValidUser(data) {
       return data.keys().hasAll(['email', 'createdAt']) &&
-             data.keys().size() <= 9 &&
+             data.keys().size() <= 11 &&
              data.email is string && data.email.size() <= 150 &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('username' in data) || (data.username is string && data.username.size() <= 100)) &&
+             (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 150)) &&
+             (!('avatarURL' in data) || (data.avatarURL is string && data.avatarURL.size() <= 2000)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 2000)) &&
+             (!('skills' in data) || (data.skills is list)) &&
+             (!('country' in data) || (data.country is string && data.country.size() <= 100)) &&
+             (!('rating' in data) || (data.rating is number)) &&
              (!('creatorRole' in data) || (data.creatorRole is string && data.creatorRole.size() <= 100)) &&
              (!('experienceLevel' in data) || (data.experienceLevel is string && data.experienceLevel.size() <= 50)) &&
              (!('systemLanguage' in data) || (data.systemLanguage is string && data.systemLanguage.size() <= 50)) &&
              (!('generationTone' in data) || (data.generationTone is string && data.generationTone.size() <= 50)) &&
              (!('apiKeys' in data) || (data.apiKeys is map)) &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    // Portfolio Validation
+    function isValidPortfolio(data) {
+      return data.keys().hasAll(['userId', 'title', 'description', 'images', 'category', 'price', 'deliveryDays']) &&
+             data.keys().size() <= 8 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 3000 &&
+             data.images is list &&
+             data.category is string &&
+             data.price is number && data.price >= 0 &&
+             data.deliveryDays is number && data.deliveryDays >= 0;
+    }
+
+    // Gig Validation
+    function isValidGig(data) {
+      return data.keys().hasAll(['userId', 'title', 'description', 'category', 'tags', 'priceFrom', 'portfolioId', 'createdAt']) &&
+             data.keys().size() <= 9 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 3000 &&
+             data.category is string &&
+             data.tags is list &&
+             data.priceFrom is number && data.priceFrom >= 0 &&
+             data.portfolioId is string &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    // Message Validation
+    function isValidMessage(data) {
+      return data.keys().hasAll(['senderId', 'receiverId', 'content', 'read', 'type', 'createdAt']) &&
+             data.keys().size() <= 7 &&
+             data.senderId is string && data.senderId.size() <= 128 &&
+             data.receiverId is string && data.receiverId.size() <= 128 &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.read is bool &&
+             data.type is string &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    // Order Validation
+    function isValidOrder(data) {
+      return data.keys().hasAll(['buyerId', 'sellerId', 'gigId', 'status', 'amount', 'createdAt']) &&
+             data.keys().size() <= 7 &&
+             data.buyerId is string && data.buyerId.size() <= 128 &&
+             data.sellerId is string && data.sellerId.size() <= 128 &&
+             data.gigId is string && data.gigId.size() <= 128 &&
+             data.status is string &&
+             data.amount is number && data.amount >= 0 &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
+    // Follow Validation
+    function isValidFollow(data) {
+      return data.keys().hasAll(['followerId', 'followingId', 'createdAt']) &&
+             data.keys().size() <= 4 &&
+             data.followerId is string && data.followerId.size() <= 128 &&
+             data.followingId is string && data.followingId.size() <= 128 &&
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
@@ -149,8 +219,9 @@ service cloud.firestore {
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
+    // Rules Definitions
     match /users/{userId} {
-      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow get, list: if isSignedIn();
       allow create, update: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming());
       allow delete: if false;
     }
@@ -235,6 +306,43 @@ service cloud.firestore {
       allow read, list: if isSignedIn();
       allow create, update: if isSignedIn() && userId == request.auth.uid && isValidGlobalPresence(incoming());
       allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    // GigSocial Security Rules
+    match /portfolios/{portfolioId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(portfolioId) && incoming().userId == request.auth.uid && isValidPortfolio(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /gigs/{gigId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(gigId) && incoming().userId == request.auth.uid && isValidGig(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /messages/{chatId} {
+      allow read, list, get: if isSignedIn();
+      allow create, update: if isSignedIn();
+      
+      match /messages/{messageId} {
+        allow read, list, get: if isSignedIn();
+        allow create: if isSignedIn() && incoming().senderId == request.auth.uid && isValidMessage(incoming());
+        allow update, delete: if isSignedIn() && existing().senderId == request.auth.uid;
+      }
+    }
+
+    match /orders/{orderId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().buyerId == request.auth.uid && isValidOrder(incoming());
+      allow update: if isSignedIn() && (existing().buyerId == request.auth.uid || existing().sellerId == request.auth.uid) && isValidOrder(incoming());
+      allow delete: if false;
+    }
+
+    match /follows/{followId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && incoming().followerId == request.auth.uid && isValidFollow(incoming());
+      allow delete: if isSignedIn() && existing().followerId == request.auth.uid;
     }
   }
 }
