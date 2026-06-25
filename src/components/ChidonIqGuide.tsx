@@ -56,7 +56,13 @@ You are the "CHIDON IQ Intelligence Guide," the supreme AI navigator for CHIDON 
 - If they ask about "Notepad", explain it's the supreme refinery where they can edit and download their work.
 `;
 
-export const ChidonIqGuide = () => {
+export const ChidonIqGuide = ({ 
+  credits, 
+  onDeductCredits 
+}: { 
+  credits?: number | null; 
+  onDeductCredits?: (amount: number) => Promise<boolean>;
+}) => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -93,6 +99,12 @@ export const ChidonIqGuide = () => {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Check & Deduct Credits if callback is present
+    if (onDeductCredits) {
+      const canProceed = await onDeductCredits(1);
+      if (!canProceed) return;
+    }
 
     const userMessage = input.trim();
     setInput('');

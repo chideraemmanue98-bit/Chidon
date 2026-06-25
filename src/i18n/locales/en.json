@@ -29,8 +29,8 @@
     "minutes": "minutes",
     "minute": "minute",
     "neverUsed": "Never used",
-    "back": "__NOT_TRANSLATED__",
-    "launchHub": "__NOT_TRANSLATED__"
+    "back": "Back",
+    "launchHub": "Launch Hub"
   },
   "categories": {
     "Core": "Core Protocols",
@@ -122,7 +122,7 @@
       "desc": "Global posting windows optimized by local data."
     },
     "youtube-seo": {
-      "label": "YouTube SEO",
+      "label": "Organic Video Feed Strategizer",
       "desc": "Viral metadata optimization and ranking strategy."
     },
     "seo-scorecard": {
@@ -171,6 +171,6 @@
     }
   },
   "buttons": {
-    "back": "__NOT_TRANSLATED__"
+    "back": "Back"
   }
 }

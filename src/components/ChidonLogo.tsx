@@ -144,9 +144,9 @@ export const ChidonLogo: React.FC<ChidonLogoProps> = ({
 
       {/* Brand Typography */}
       {!iconOnly && (
-        <span className={cn("font-bold tracking-tight select-none flex items-center leading-none", textClass)}>
-          <span className="text-slate-900 dark:text-white transition-colors duration-200">Chidon</span>
-          <span className="text-cyan-500 dark:text-cyan-primary ml-1.5 font-extrabold tracking-normal">IQ</span>
+        <span className={cn("font-black tracking-tight select-none flex items-center leading-none uppercase", textClass)}>
+          <span className="text-slate-950 dark:text-white transition-colors duration-200">Chidon</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 ml-2 font-black tracking-widest drop-shadow-[0_2px_10px_rgba(34,211,238,0.4)]">IQ</span>
         </span>
       )}
     </div>

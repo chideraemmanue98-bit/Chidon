@@ -29,8 +29,8 @@
     "minutes": "分钟",
     "minute": "分钟",
     "neverUsed": "未使用过",
-    "back": "__NOT_TRANSLATED__",
-    "launchHub": "__NOT_TRANSLATED__"
+    "back": "返回",
+    "launchHub": "启动中心"
   },
   "categories": {
     "Core": "核心协议",
@@ -126,7 +126,7 @@
       "desc": "基于区域数据的全球最佳发布窗口。"
     },
     "youtube-seo": {
-      "label": "YouTube SEO",
+      "label": "Organic Video Feed Strategizer",
       "desc": "爆款元数据优化与排名策略。"
     },
     "seo-scorecard": {
@@ -175,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "__NOT_TRANSLATED__"
+    "back": "返回"
   }
 }

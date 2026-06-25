@@ -51,7 +51,7 @@ Chidon IQ does not play the saturation game. It actively intervenes in **Phase 2
 *   **Standard Hook**: "Here is how I grew my retail store..." (Fails Phase 2)
 *   **Chidon IQ Neuro Hook**: "I watched 400 retailers burn $10,000 before discovering this singular, 12-word bio layout modification..." (Succeeds Phase 2)
 
-By injecting strategic contrast ratios, exact typography guides, and tailored niche briefs immediately based on Google Gemini intelligence, Chidon IQ stabilizes early retention curves, allowing creators to consistently bypass standard algorithmic throttles.`
+By injecting strategic contrast ratios, exact typography guides, and tailored niche briefs immediately based on Advanced AI intelligence, Chidon IQ stabilizes early retention curves, allowing creators to consistently bypass standard algorithmic throttles.`
   },
   {
     id: 'intel-2',
@@ -188,7 +188,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         setGeneratedTitle(titleLine);
         setGeneratedBlog(blogBody);
       } else {
-        throw new Error("Empty token response synthesized by Gemini core.");
+        throw new Error("Empty token response synthesized by Linguistic Optimizer Core.");
       }
     } catch (err: any) {
       setErrorStatus(err.message || "Failed to align synthesis grid. Check your connection.");
@@ -299,7 +299,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 : 'border-transparent text-slate-400 hover:text-[var(--text-primary)]'
             }`}
           >
-            🧠 AI Blog Synthesizer (Gemini Core)
+            🧠 Linguistic Optimizer Core Synthesizer
           </button>
         </div>
       )}
@@ -363,7 +363,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   </div>
                   
                   <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
-                    Ask Google Gemini to translate this article's raw facts into your immediate niche goals.
+                    Ask our AI Assistant to translate this article's raw facts into your immediate niche goals.
                   </p>
 
                   <div className="space-y-2.5">
@@ -534,7 +534,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 {generating ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Engaging Gemini Core Models...</span>
+                    <span>Engaging chidoniq core...</span>
                   </>
                 ) : (
                   <>
@@ -616,7 +616,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono tracking-widest text-cyan-500 uppercase font-black">ALIGNING PARAMETERS</span>
                         <p className="text-xs font-sans text-slate-500 max-w-xs mx-auto">
-                          Asking Google Gemini to research organic benchmarks, psychological retainers, and comparative matrices.
+                          Asking our AI Engine to research organic benchmarks, psychological retainers, and comparative matrices.
                         </p>
                       </div>
                     </div>

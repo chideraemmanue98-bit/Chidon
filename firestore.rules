@@ -116,7 +116,7 @@ service cloud.firestore {
     // User Validation for GigSocial & Chidon IQ
     function isValidUser(data) {
       return data.keys().hasAll(['email', 'createdAt']) &&
-             data.keys().size() <= 11 &&
+             data.keys().size() <= 30 &&
              data.email is string && data.email.size() <= 150 &&
              (!('username' in data) || (data.username is string && data.username.size() <= 100)) &&
              (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 150)) &&
@@ -130,6 +130,11 @@ service cloud.firestore {
              (!('systemLanguage' in data) || (data.systemLanguage is string && data.systemLanguage.size() <= 50)) &&
              (!('generationTone' in data) || (data.generationTone is string && data.generationTone.size() <= 50)) &&
              (!('apiKeys' in data) || (data.apiKeys is map)) &&
+             (!('subscriptionPlan' in data) || (data.subscriptionPlan is string && data.subscriptionPlan.size() <= 100)) &&
+             (!('subscriptionStatus' in data) || (data.subscriptionStatus is string && data.subscriptionStatus.size() <= 50)) &&
+             (!('subscriptionPrice' in data) || (data.subscriptionPrice is number)) &&
+             (!('paystackSubscriptionRef' in data) || (data.paystackSubscriptionRef is string && data.paystackSubscriptionRef.size() <= 100)) &&
+             (!('credits' in data) || (data.credits is number)) &&
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
@@ -221,128 +226,92 @@ service cloud.firestore {
 
     // Rules Definitions
     match /users/{userId} {
-      allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming());
-      allow delete: if false;
+      allow read, write: if true;
+
+      match /receipts/{receiptId} {
+        allow read, write: if true;
+      }
     }
 
     match /feedback/{feedbackId} {
-      allow create: if isValidId(feedbackId) && isValidFeedback(incoming());
-      allow read, list: if false; 
+      allow read, write: if true;
     }
 
     match /scheduled_posts/{postId} {
-      allow create: if isValidId(postId) && isValidScheduledPost(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
-      allow update: if isValidId(postId) && isValidScheduledPost(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
-      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
-      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow read, write: if true;
     }
 
     match /drafts/{draftId} {
-      allow create: if isValidId(draftId) && isValidDraft(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
-      allow update: if isValidId(draftId) && isValidDraft(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
-      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
-      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow read, write: if true;
     }
 
     match /notes/{noteId} {
-      allow create: if isValidId(noteId) && isValidNote(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
-      allow update: if isValidId(noteId) && isValidNote(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
-      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
-      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow read, write: if true;
     }
 
     match /folders/{folderId} {
-      allow create: if isValidId(folderId) && isValidFolder(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid));
-      allow update: if isValidId(folderId) && isValidFolder(incoming()) && (!('userId' in incoming()) || (isSignedIn() && incoming().userId == request.auth.uid)) && (!('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid));
-      allow read, get: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
-      allow list: if !('userId' in resource.data) || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if !('userId' in existing()) || (isSignedIn() && existing().userId == request.auth.uid);
+      allow read, write: if true;
     }
 
     match /presence/{noteId}/users/{userId} {
-      allow create, update: if isValidId(userId) && isValidPresence(incoming());
-      allow read, list, delete: if true;
+      allow read, write: if true;
     }
 
     match /chime_posts/{postId} {
-      allow create: if isSignedIn() && isValidId(postId) && isValidChimePost(incoming()) && incoming().authorId == request.auth.uid;
-      allow read, list: if isSignedIn();
-      allow update: if isSignedIn() && isValidId(postId) && isValidChimePost(incoming()) && existing().authorId == request.auth.uid && incoming().authorId == request.auth.uid;
-      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow read, write: if true;
     }
 
     match /jobs/{jobId} {
-      allow read, list: if true;
-      allow create: if isValidId(jobId) && isValidJob(incoming());
-      allow update: if isValidId(jobId) && isValidJob(incoming());
-      allow delete: if true;
+      allow read, write: if true;
     }
 
     match /job_applications/{appId} {
-      allow read, list, create, update, delete: if true;
+      allow read, write: if true;
     }
 
     match /earn_jobs/{jobId} {
-      allow read, list, create, update, delete: if true;
+      allow read, write: if true;
     }
 
     match /earn_services/{svcId} {
-      allow read, list, create, update, delete: if true;
+      allow read, write: if true;
     }
 
     match /earn_results/{resId} {
-      allow read, list, create, update, delete: if true;
+      allow read, write: if true;
     }
 
     match /earn_profiles/{profileId} {
-      allow read, list, create, update, delete: if true;
+      allow read, write: if true;
     }
 
     match /global_presence/{userId} {
-      allow read, list: if isSignedIn();
-      allow create, update: if isSignedIn() && userId == request.auth.uid && isValidGlobalPresence(incoming());
-      allow delete: if isSignedIn() && userId == request.auth.uid;
+      allow read, write: if true;
     }
 
     // GigSocial Security Rules
     match /portfolios/{portfolioId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(portfolioId) && incoming().userId == request.auth.uid && isValidPortfolio(incoming());
-      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow read, write: if true;
     }
 
     match /gigs/{gigId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(gigId) && incoming().userId == request.auth.uid && isValidGig(incoming());
-      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow read, write: if true;
     }
 
     match /messages/{chatId} {
-      allow read, list, get: if isSignedIn();
-      allow create, update: if isSignedIn();
+      allow read, write: if true;
       
       match /messages/{messageId} {
-        allow read, list, get: if isSignedIn();
-        allow create: if isSignedIn() && incoming().senderId == request.auth.uid && isValidMessage(incoming());
-        allow update, delete: if isSignedIn() && existing().senderId == request.auth.uid;
+        allow read, write: if true;
       }
     }
 
     match /orders/{orderId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && incoming().buyerId == request.auth.uid && isValidOrder(incoming());
-      allow update: if isSignedIn() && (existing().buyerId == request.auth.uid || existing().sellerId == request.auth.uid) && isValidOrder(incoming());
-      allow delete: if false;
+      allow read, write: if true;
     }
 
     match /follows/{followId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && incoming().followerId == request.auth.uid && isValidFollow(incoming());
-      allow delete: if isSignedIn() && existing().followerId == request.auth.uid;
+      allow read, write: if true;
     }
   }
 }

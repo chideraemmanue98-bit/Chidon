@@ -29,8 +29,8 @@
     "minutes": "minutes",
     "minute": "minute",
     "neverUsed": "Jamais utilisé",
-    "back": "__NOT_TRANSLATED__",
-    "launchHub": "__NOT_TRANSLATED__"
+    "back": "Retour",
+    "launchHub": "Lancer le Hub"
   },
   "categories": {
     "Core": "Protocoles de base",
@@ -175,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "__NOT_TRANSLATED__"
+    "back": "Retour"
   }
 }

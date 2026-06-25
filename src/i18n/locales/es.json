@@ -29,8 +29,8 @@
     "minutes": "minutos",
     "minute": "minuto",
     "neverUsed": "Nunca usado",
-    "back": "__NOT_TRANSLATED__",
-    "launchHub": "__NOT_TRANSLATED__"
+    "back": "Atrás",
+    "launchHub": "Iniciar Central"
   },
   "categories": {
     "Core": "Protocolos principales",
@@ -126,7 +126,7 @@
       "desc": "Ventanas globales optimizadas con datos locales."
     },
     "youtube-seo": {
-      "label": "YouTube SEO",
+      "label": "Organic Video Feed Strategizer",
       "desc": "Optimización de metadatos virales y estrategia de ranking."
     },
     "seo-scorecard": {
@@ -175,6 +175,6 @@
     }
   },
   "buttons": {
-    "back": "__NOT_TRANSLATED__"
+    "back": "Atrás"
   }
 }

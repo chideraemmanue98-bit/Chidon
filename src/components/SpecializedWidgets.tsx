@@ -164,7 +164,7 @@ export const ScriptPrompterWidget = ({ content }: { content: string }) => {
 
 
 // --- WIDGET 2: HIGH-FIDELITY SMARTPHONE PREVIEW (For Social Bios) ---
-export const ProfileMockupWidget = ({ content }: { content: string }) => {
+export const ProfilePreviewWidget = ({ content }: { content: string }) => {
   const [activeBioIndex, setActiveBioIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -666,6 +666,324 @@ export const TrendMomentumTickerWidget = ({ content }: { content: string }) => {
             </button>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+
+// --- CRAWLER WEB BROWSER WIDGET (Web search grounded high-speed browser) ---
+export const GoogleBrowserEngineWidget = () => {
+  const [platform, setPlatform] = useState<'all' | 'youtube' | 'tiktok' | 'facebook'>('all');
+  const [category, setCategory] = useState<string>('general');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [videos, setVideos] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
+  const [errorCount, setErrorCount] = useState<number>(0);
+  const [logsHeightRef, setLogsHeightRef] = useState<boolean>(false);
+
+  // Initial load
+  useEffect(() => {
+    handleCrawl(true);
+  }, []);
+
+  const handleCrawl = async (initialRun = false) => {
+    setLoading(true);
+    setTerminalLogs([]);
+    const logs = [
+      "[SYS] Initializing Headless Chromium sandbox...",
+      "[SYS] Configured user headers for secure sandboxed environment...",
+      "[SYS] Loading search crawler database via real-time grounding...",
+    ];
+    
+    // Simulate web browser terminal diagnostics
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < logs.length) {
+        setTerminalLogs(prev => [...prev, logs[i]]);
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 300);
+
+    try {
+      const response = await fetch("/api/trends/videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          category,
+          searchQuery,
+          bypassCache: !initialRun
+        })
+      });
+
+      const data = await response.json();
+      
+      setTimeout(() => {
+        if (data.success && data.videos) {
+          setVideos(data.videos);
+          setTerminalLogs(prev => [
+            ...prev,
+            `[SYS] Navigation success: Found ${data.videos.length} breakout assets.`,
+            `[SYS] Parsed viewport successfully. Pipeline Synchronized.`
+          ]);
+        } else {
+          throw new Error(data.error || "Failed to crawl target social API indices");
+        }
+        setLoading(false);
+      }, 1200);
+
+    } catch (err: any) {
+      console.error(err);
+      setTimeout(() => {
+        setTerminalLogs(prev => [
+          ...prev,
+          `[FAIL] Browser engine exception: ${err.message}`,
+          `[SYS] Triggering failover offline replica index...`
+        ]);
+        setLoading(false);
+      }, 1200);
+    }
+  };
+
+  const categories = [
+    { id: 'general', label: 'General Trends' },
+    { id: 'tech', label: 'Tech & Digital' },
+    { id: 'productivity', label: 'Productivity & SaaS' },
+    { id: 'entertainment', label: 'Entertainment' },
+    { id: 'lifestyle', label: 'Lifestyle & Hot ASMR' },
+    { id: 'finance', label: 'Creator Finance & Wealth' }
+  ];
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-cyan-500/10 rounded-3xl space-y-6 text-left">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-5">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-mono font-black text-cyan-primary bg-cyan-primary/10 px-2.5 py-1 rounded border border-cyan-primary/20 uppercase tracking-widest animate-pulse">CRAWLER ONLINE</span>
+            <span className="text-[9px] font-mono text-slate-500 font-bold">PORT 3000 / LIVE WEB GROUNDED</span>
+          </div>
+          <h3 className="text-xl font-display font-black text-white mt-1 uppercase tracking-tight">Universal Crawl Indexer</h3>
+          <p className="text-slate-400 text-xs mt-1">Real-time head-scanning system querying YouTube, TikTok, and Facebook Reels daily trending matrices.</p>
+        </div>
+        
+        <button
+          onClick={() => handleCrawl(false)}
+          disabled={loading}
+          className="px-5 py-2.5 bg-cyan-primary text-black hover:bg-cyan-primary/90 disabled:opacity-50 font-mono font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+        >
+          {loading ? (
+            <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin duration-1000"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          )}
+          <span>{loading ? "Crawling Web..." : "Refresh Live Index"}</span>
+        </button>
+      </div>
+
+      {/* SECURE BROWSER ADDRESS CONTAINER */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="bg-slate-900 border-b border-slate-800/80 px-4 py-2.5 flex items-center gap-4">
+          {/* Browser Controls */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="w-3 h-3 rounded-full bg-red-500/80" />
+            <div className="w-3 h-3 rounded-full bg-yellow-505/80" />
+            <div className="w-3 h-3 rounded-full bg-green-500/80" />
+          </div>
+
+          {/* Browser Path Bar */}
+          <div className="flex-1 bg-slate-950 border border-slate-800 px-4 py-1.5 rounded-lg flex items-center gap-2 text-xs font-mono text-slate-400 select-all font-medium relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span className="text-cyan-primary">https://</span>
+            <span>chidon-crawler.agency.engine/trending-crawl/{platform}?cat={category}</span>
+          </div>
+        </div>
+
+        {/* BROWSER SETTINGS & PARAMETERS BAR */}
+        <div className="p-4 bg-slate-950 border-b border-white/[0.03] grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+          {/* Platforms Tabs */}
+          <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-white/5">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'youtube', label: 'YouTube' },
+              { id: 'tiktok', label: 'TikTok' },
+              { id: 'facebook', label: 'Facebook' }
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPlatform(p.id as any)}
+                className={cn(
+                  "flex-1 py-1.5 px-3 font-mono font-bold text-[10px] uppercase rounded-lg transition-colors cursor-pointer text-center",
+                  platform === p.id 
+                    ? "bg-slate-800 text-white border border-white/10" 
+                    : "text-slate-500 hover:text-slate-350"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Dropdown for Category */}
+          <div className="relative">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-slate-900 text-xs font-mono text-slate-300 font-bold border border-white/5 px-4 py-2.5 rounded-xl focus:border-cyan-primary outline-none cursor-pointer appearance-none"
+            >
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.label.toUpperCase()}</option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+              <span className="text-[8px] font-mono">▼</span>
+            </div>
+          </div>
+
+          {/* Manual Query Input */}
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              placeholder="Search specific topic keywords..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCrawl(false)}
+              className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-white/5 rounded-xl text-xs font-mono text-slate-300 outline-none focus:border-cyan-primary placeholder:text-slate-705"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 text-slate-555"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+        </div>
+
+        {/* SIMULATED WEB BROWSER TERMINAL DIAGNOSTICS SCREEN */}
+        <div className="bg-slate-950 p-4 font-mono text-[10px] leading-relaxed border-b border-white/[0.03]">
+          <div className="flex justify-between text-slate-555 mb-2 font-black tracking-wider uppercase">
+            <span>Terminal Sandbox Diagnostics Launcher</span>
+            <span>OS Console</span>
+          </div>
+          <div className="bg-slate-900/40 p-3 rounded-lg border border-white/[0.02] max-h-24 overflow-y-auto space-y-1 text-left text-cyan-primary/70">
+            {terminalLogs.length === 0 && (
+              <span className="text-slate-700 font-extrabold">[INFO] Standing by. Ready to execute real-time social crawler.</span>
+            )}
+            {terminalLogs.map((log, idx) => (
+              <div key={idx} className={cn(
+                "font-bold",
+                log.includes("[FAIL]") ? "text-red-400" : log.includes("[SUCCESS]") || log.includes("success") ? "text-emerald-400" : ""
+              )}>
+                {log}
+              </div>
+            ))}
+            {loading && (
+              <div className="flex items-center gap-1.5 text-cyan-400 font-black animate-pulse">
+                <span>[INFO] Executing live Universal Crawl Indexer query indexing...</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* VIDEOS RESULTS DISPLAY CONTAINER */}
+        <div className="p-4 bg-slate-950 min-h-64">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <div className="w-10 h-10 border-4 border-cyan-primary border-t-transparent rounded-full animate-spin" />
+              <div className="text-center space-y-1">
+                <p className="text-xs font-mono font-bold text-cyan-primary">CRAWLER RUNNING ACTIVE WINDOWS</p>
+                <p className="text-[10px] text-slate-500 font-medium">Scraping daily hot breakout metrics across the web engine...</p>
+              </div>
+            </div>
+          ) : videos.length === 0 ? (
+            <div className="text-center py-16 space-y-2">
+              <span className="text-2xl">🔍</span>
+              <p className="text-xs font-mono text-slate-500 font-bold uppercase">No database metrics scanned</p>
+              <p className="text-slate-600 text-[10px] max-w-sm mx-auto">Please select your configurations and tap the launch protocol above.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {videos.map((vid, idx) => {
+                const isYT = vid.platform === 'youtube';
+                const isTK = vid.platform === 'tiktok';
+                const isFB = vid.platform === 'facebook';
+                
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.08 }}
+                    className="p-5 bg-slate-900 border border-white/5 hover:border-cyan-primary/25 rounded-2xl flex flex-col justify-between gap-5 text-left group transition-all hover:-translate-y-0.5"
+                  >
+                    <div className="space-y-3.5">
+                      {/* Technical Platform Header */}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "px-2.5 py-0.5 rounded text-[8px] font-mono font-black border uppercase tracking-wider",
+                            isYT ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                            isTK ? "bg-pink-505/10 text-pink-400 border-pink-500/20" :
+                            "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                          )}>
+                            {vid.platform}
+                          </span>
+                          <span className="text-[9px] font-mono text-slate-500 font-bold">{vid.publishedTime}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-[9px] font-mono text-slate-400 font-black">{vid.viralityScore}% VIRAL</span>
+                        </div>
+                      </div>
+
+                      {/* Video Title */}
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-extrabold text-slate-100 group-hover:text-cyan-primary transition-colors line-clamp-2 leading-snug">
+                          {vid.title}
+                        </h4>
+                        <p className="text-xs font-mono text-indigo-400 font-bold">{vid.creator}</p>
+                      </div>
+
+                      {/* Video Summary */}
+                      <p className="text-xs text-slate-400 font-medium leading-relaxed leading-snug">
+                        {vid.summary}
+                      </p>
+
+                      {/* Replicating Tactics Area */}
+                      <div className="space-y-1.5 pt-1.5 border-t border-white/[0.04]">
+                        <span className="text-[8px] font-mono uppercase tracking-widest text-slate-500 font-extrabold">Chidon IQ Replicating Strategy</span>
+                        <ul className="space-y-1">
+                          {vid.tactics?.map((tac: string, tIdx: number) => (
+                            <li key={tIdx} className="flex items-start gap-1.5 text-[11px] text-slate-300 font-medium">
+                              <span className="text-cyan-primary text-xs select-none">✓</span>
+                              <span className="leading-tight">{tac}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Footer engagement metric & action button */}
+                    <div className="flex justify-between items-center pt-2.5 border-t border-white/[0.04]">
+                      <div>
+                        <span className="text-[8px] font-mono text-slate-500 uppercase block leading-none">Scanned Engagement</span>
+                        <span className="text-xs font-mono font-black text-slate-200">{vid.views}</span>
+                      </div>
+
+                      <a
+                        href={vid.url}
+                        target="_blank"
+                        referrerPolicy="no-referrer"
+                        className="py-1.5 px-3 bg-slate-950 border border-slate-800 hover:border-cyan-primary/30 text-white font-mono font-bold text-[9px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Open Original Context</span>
+                        <ExternalLink size={10} className="text-slate-400 group-hover:text-cyan-primary" />
+                      </a>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

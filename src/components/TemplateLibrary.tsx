@@ -26,9 +26,16 @@ interface CategoryTemplates {
 interface TemplateLibraryProps {
   onBack: () => void;
   onSaveDraft?: (featureId: string, content: string, title: string) => Promise<void>;
+  credits?: number | null;
+  onDeductCredits?: (amount: number) => Promise<boolean>;
 }
 
-export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ onBack, onSaveDraft }) => {
+export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ 
+  onBack, 
+  onSaveDraft,
+  credits,
+  onDeductCredits
+}) => {
   const { t, i18n } = useTranslation();
   
   // Selection States
@@ -136,7 +143,7 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ onBack, onSave
           label: 'High-Intensity SWOT Matrix',
           description: 'A rigorous four-quadrant analysis identifying structural competitor elements to exploit.',
           structure: `# STRATEGIC INTEL REPORT: [COMPETITOR NAME]\n\n## 1. STRENGTHS (Competitor Leverage)\n- (Leverage A: High brand loyalty, distribution speed, etc.)\n- (Leverage B: Proprietary tooling or deep funds)\n\n## 2. WEAKNESSES (Competitor Exposures)\n- (Exposure A: Gaps in custom service, slow support, high cost, etc.)\n- (Exposure B: Outdated legacy structure, poor localization, etc.)\n\n## 3. OPPORTUNITIES (Exploitable Market Gaps)\n- (Gap A: Target audience cohorts excluded due to pricing/complexity)\n- (Gap B: High demand for lightweight, automated mobile workflows)\n\n## 4. THREATS & COUNTER-ATTACK CAMPAIGN\n- (Our direct offensive content campaign to hijack interest and highlight these exposures)`,
-          previewExample: `# STRATEGIC INTEL REPORT: SCRIBEFLOW CORP\n\n## 1. STRENGTHS (Competitor Leverage)\n- Dominant organic rankings for "no-code transcription tools".\n- Massive existing partner ecosystem in Slack and Microsoft Teams.\n\n## 2. WEAKNESSES (Competitor Exposures)\n- Customers report catastrophic latency on audio loads over 10 minutes.\n- Lack of support for multi-language context cache translation.\n- Steep $299 upfront licensing fee constraints small creators.\n\n## 3. OPPORTUNITIES (Exploitable Market Gaps)\n- Target self-funded digital creators seeking lightweight pay-as-you-go setups.\n- Position our tool as the high-speed, military-grade localized alternate.\n\n## 4. THREATS & COUNTER-ATTACK CAMPAIGN\n- Deploy educational videos contrasting ScribeFlow lag with our instant, serverless results.\n- Use search key terms to capture people complaining about licensing costs.`
+          previewExample: `# STRATEGIC INTEL REPORT: SCRIBEFLOW CORP\n\n## 1. STRENGTHS (Competitor Leverage)\n- Dominant organic rankings for "no-code transcription tools".\n- Massive existing partner ecosystem in Unified Team Channels Hub.\n\n## 2. WEAKNESSES (Competitor Exposures)\n- Customers report catastrophic latency on audio loads over 10 minutes.\n- Lack of support for multi-language context cache translation.\n- Steep $299 upfront licensing fee constraints small creators.\n\n## 3. OPPORTUNITIES (Exploitable Market Gaps)\n- Target self-funded digital creators seeking lightweight pay-as-you-go setups.\n- Position our tool as the high-speed, military-grade localized alternate.\n\n## 4. THREATS & COUNTER-ATTACK CAMPAIGN\n- Deploy educational videos contrasting ScribeFlow lag with our instant, serverless results.\n- Use search key terms to capture people complaining about licensing costs.`
         },
         {
           id: 'differentiation-blueprint',
@@ -224,6 +231,11 @@ ${paramsSummary}
 5. Translate and output the entire block natively in: ${currentLang === 'es' ? 'Spanish' : currentLang === 'zh' ? 'Chinese' : currentLang === 'hi' ? 'Hindi' : currentLang === 'ar' ? 'Arabic' : currentLang === 'fr' ? 'French' : currentLang === 'pt' ? 'Portuguese' : currentLang === 'de' ? 'German' : currentLang === 'ja' ? 'Japanese' : currentLang === 'ru' ? 'Russian' : 'English'}.
 6. Do NOT include any introductory chit-chat, notes, or concluding pleasantries. Begin generating the populated template content immediately.
 `;
+
+    if (onDeductCredits) {
+      const canProceed = await onDeductCredits(1);
+      if (!canProceed) return;
+    }
 
     try {
       const res = await fetch("/api/gemini/generate", {

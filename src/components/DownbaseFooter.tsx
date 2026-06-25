@@ -6,8 +6,9 @@ import {
   ChevronRight, Download, Send, AlertCircle, Briefcase, FileCheck, CheckCircle2,
   Calendar, MapPin, Users, HeartHandshake, HelpCircle, Laptop, Share2, Zap, Trash2, Plus
 } from 'lucide-react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface DownbaseFooterProps {}
 
@@ -62,19 +63,31 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
   const [newJobSuccess, setNewJobSuccess] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: JobOpening[] = [];
-      snapshot.forEach((docSnapshot) => {
-        list.push({ id: docSnapshot.id, ...docSnapshot.data() } as any);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setLoadingJobs(true);
+        return;
+      }
+
+      const q = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
+      const unsubscribeJobs = onSnapshot(q, (snapshot) => {
+        const list: JobOpening[] = [];
+        snapshot.forEach((docSnapshot) => {
+          list.push({ id: docSnapshot.id, ...docSnapshot.data() } as any);
+        });
+        setJobOpenings(list);
+        setLoadingJobs(false);
+      }, (error) => {
+        console.error("Error loading jobs:", error);
+        setLoadingJobs(false);
       });
-      setJobOpenings(list);
-      setLoadingJobs(false);
-    }, (error) => {
-      console.error("Error loading jobs:", error);
-      setLoadingJobs(false);
+
+      return () => {
+        unsubscribeJobs();
+      };
     });
-    return () => unsubscribe();
+
+    return () => unsubscribeAuth();
   }, []);
 
   const handleApplyJob = (job: JobOpening) => {
@@ -347,13 +360,13 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       <h4 className="font-bold text-xs font-mono text-brand mb-2 tracking-widest uppercase">System Core Specifications:</h4>
                       <ul className="space-y-2 text-xs font-mono text-[var(--text-secondary)]">
                         <li className="flex items-center gap-2">
-                          <Cpu size={12} className="text-brand" /> Engine Model: Aether Intelligence Core Integration
+                           <Cpu size={12} className="text-brand" /> Engine Model: Linguistic Optimizer Core (chidoniq core)
                         </li>
                         <li className="flex items-center gap-2">
-                          <Sparkles size={12} className="text-brand" /> State Cache: Chidon Cloud Database Sync Streams
+                           <Sparkles size={12} className="text-brand" /> Delivery State: Organic Video Feed Strategizer Optimization
                         </li>
                         <li className="flex items-center gap-2">
-                          <Users size={12} className="text-brand" /> User Target: Creators, Media Broadcasters, SEO Architects
+                           <Users size={12} className="text-brand" /> User Target: High-impact Creators & SEO Strategists
                         </li>
                       </ul>
                     </div>
@@ -400,18 +413,18 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
                           >
                             <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                              <span className="text-brand">●</span> Shadowban Alignment Matrix
+                              <span className="text-brand">●</span> Organic Video Feed Strategizer (Shadowban Alignment)
                             </span>
                             <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'social1' ? 'Collapse ▲' : 'Expand ▼'}</span>
                           </button>
                           {activeSolutionId === 'social1' && (
                             <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                              <p className="font-bold text-[var(--text-primary)]">Symptoms: Sudden drops in non-follower reach, tag exclusion.</p>
+                              <p className="font-bold text-[var(--text-primary)]">Symptoms: Sudden drops in non-follower reach, content recommendation cooling.</p>
                               <p><strong>Step-by-Step Resolution:</strong></p>
                               <ol className="list-decimal list-inside space-y-1 pl-1">
-                                <li><strong>Purge Systemic Metadata:</strong> Delete non-original audio tags and excessive copy-paste links from your previous 5 descriptions.</li>
-                                <li><strong>Cooling Protocol:</strong> Deactivate all automation plugins and limit outgoing interactions for exactly 36 hours.</li>
-                                <li><strong>Native Seed Feeding:</strong> Post a single high-engagement native text thread without links on day 3. Use search-grounded topics.</li>
+                                <li><strong>Purge Systemic Metadata:</strong> Delete non-original tags and repetitive descriptions.</li>
+                                <li><strong>Organic Video Feed Strategizer Protocol:</strong> Use the strategizer to create alternative scripts and original SEO keywords.</li>
+                                <li><strong>Bypass Filters:</strong> Shift content away from borderline topics toward high-relevance themes.</li>
                               </ol>
                             </div>
                           )}
@@ -424,18 +437,18 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
                           >
                             <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                              <span className="text-brand">●</span> Algorithmic Retention Hook collapse
+                              <span className="text-brand">●</span> Algorithmic Retention Hook Optimizations
                             </span>
                             <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'social2' ? 'Collapse ▲' : 'Expand ▼'}</span>
                           </button>
                           {activeSolutionId === 'social2' && (
                             <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                              <p className="font-bold text-[var(--text-primary)]">Symptoms: High initial impressions but catastrophic drop-offs in under 3 seconds.</p>
+                              <p className="font-bold text-[var(--text-primary)]">Symptoms: Low CTR and retention in the first 30 seconds.</p>
                               <p><strong>Retention Engineering Hacks:</strong></p>
                               <ul className="list-disc list-inside space-y-1 pl-1">
-                                <li><strong>Phase Shift Frame:</strong> Inject a dual-sentence paradox hook within the very first 1.5 seconds. Do not intro yourself.</li>
-                                <li><strong>Visual Micro-Stimulation:</strong> Ensure dynamic secondary overlays of B-roll or typography appear at precisely a 2.1-second frequency.</li>
-                                <li><strong>Reverse Climax Hook:</strong> Show the final synthesis outcome first in the dynamic thumbnail layout.</li>
+                                <li><strong>Linguistic Optimizer Core Core Hooks:</strong> Inject high-CTR hooks crafted by our optimizer core.</li>
+                                <li><strong>Universal Crawl Indexer Optimization:</strong> Optimize description headings for crawl readability.</li>
+                                <li><strong>Unified Team Channels Hub:</strong> Distribute drafts to team reviewers before scheduling.</li>
                               </ul>
                             </div>
                           )}
@@ -450,14 +463,14 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
                           >
                             <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                              <span className="text-zinc-500">■</span> Slow Generator / Intelligence Engine Timeouts
+                              <span className="text-zinc-500">■</span> Slow Generator / Linguistic Optimizer Core Lag
                             </span>
                             <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app1' ? 'Collapse ▲' : 'Expand ▼'}</span>
                           </button>
                           {activeSolutionId === 'app1' && (
                             <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
-                              <p><strong>App Platform Resolution:</strong></p>
-                              <p>When high load stresses the server-side proxy pipeline, response generation might stall. Toggle your system local cache or reduce the scope of prompt instruction modifiers in the Settings menu. Ensure you do not submit multiple quick identical triggers while a generation block is locked green.</p>
+                              <p><strong>System Core Resolution:</strong></p>
+                              <p>When high load stresses the server-side proxy queue, the Linguistic Optimizer Core might delay responses. Toggle the cache refresh or try smaller prompt instructions.</p>
                             </div>
                           )}
                         </div>
@@ -469,14 +482,14 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             className="w-full text-left p-3 flex items-center justify-between hover:bg-brand/5 transition-colors cursor-pointer"
                           >
                             <span className="font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-2">
-                              <span className="text-zinc-500">■</span> Cloud Sync & Vault Offline status
+                              <span className="text-zinc-500">■</span> Workspace Productivity Vault Offline / Sync Error
                             </span>
                             <span className="text-xs text-[var(--text-secondary)]">{activeSolutionId === 'app2' ? 'Collapse ▲' : 'Expand ▼'}</span>
                           </button>
                           {activeSolutionId === 'app2' && (
                             <div className="p-4 border-t border-[var(--border-base)]/60 bg-neutral-100 dark:bg-zinc-900/30 text-xs text-[var(--text-secondary)] leading-relaxed space-y-2">
                               <p><strong>Synchronization Solutions:</strong></p>
-                              <p>CHIDON IQ writes draft blueprints securely to cloud-provisioned Chidon Sync Database. If you encounter any status sync issue in the vault, check your network and internet connectivity, or clear the storage state once via the language reload link.</p>
+                              <p>CHIDON IQ writes draft blueprints securely to the Workspace Productivity Vault database. If you encounter status sync issues, refresh the vault connection or reset the database streams in the Settings menu.</p>
                             </div>
                           )}
                         </div>
@@ -498,12 +511,12 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             <FileText size={18} className="text-brand" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">CHIDON IQ Prompt Book (v2.4)</h4>
-                            <p className="text-[10px] text-[var(--text-secondary)]">240 structured templates to boost AI copywriting precision.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">Linguistic Optimizer Core Handbook (v2.4)</h4>
+                            <p className="text-[10px] text-[var(--text-secondary)]">240 structured templates to boost high-converting copywriting and content models precision.</p>
                           </div>
                         </div>
                         <button
-                          onClick={() => handleDownloadResource('res-1', 'CHIDON_IQ_Prompt_Book_v2.4')}
+                          onClick={() => handleDownloadResource('res-1', 'Linguistic_Optimizer_Core_Handbook_v2.4')}
                           className="px-3 py-1.5 rounded-lg bg-brand text-xs font-bold text-white hover:bg-brand/90 transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           {downloadingResourceId === 'res-1' ? `Downloading ${downloadProgress}%` : <><Download size={13} /> Get</>}
@@ -517,12 +530,12 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             <BookOpen size={18} className="text-brand" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">CTR Psychology Blueprint</h4>
-                            <p className="text-[10px] text-[var(--text-secondary)]">Frame matrices to hack viewer gaze and click patterns on modern feeds.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">Organic Video Feed Strategizer Playbook</h4>
+                            <p className="text-[10px] text-[var(--text-secondary)]">Framework matrices to improve organic retention and bypass recommendation filters.</p>
                           </div>
                         </div>
                         <button
-                          onClick={() => handleDownloadResource('res-2', 'CTR_Psychology_Blueprint')}
+                          onClick={() => handleDownloadResource('res-2', 'Organic_Video_Feed_Strategizer_Playbook')}
                           className="px-3 py-1.5 rounded-lg bg-brand text-xs font-bold text-white hover:bg-brand/90 transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           {downloadingResourceId === 'res-2' ? `Downloading ${downloadProgress}%` : <><Download size={13} /> Get</>}
@@ -536,12 +549,12 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             <Cpu size={18} className="text-brand" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">Algorithmic Scheduling Maps (2026)</h4>
-                            <p className="text-[10px] text-[var(--text-secondary)]">High-resolution schedule windows suited for global multi-regional distribution.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">Universal Crawl Indexer & Unified Team Channels Hub Spec</h4>
+                            <p className="text-[10px] text-[var(--text-secondary)]">Technical documentation for configuring live stream outputs and hub publishing.</p>
                           </div>
                         </div>
                         <button
-                          onClick={() => handleDownloadResource('res-3', 'Algorithmic_Scheduling_Maps_2026')}
+                          onClick={() => handleDownloadResource('res-3', 'Universal_Crawl_Indexer_Unified_Team_Channels_Hub_Spec')}
                           className="px-3 py-1.5 rounded-lg bg-brand text-xs font-bold text-white hover:bg-brand/90 transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           {downloadingResourceId === 'res-3' ? `Downloading ${downloadProgress}%` : <><Download size={13} /> Get</>}

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@supabase/supabase-js": "^2.108.1",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/query-core": "^5.100.14",
     "@vitejs/plugin-react": "^5.0.4",
@@ -29,6 +30,7 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "pg": "^8.21.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
@@ -43,6 +45,7 @@
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
+    "@types/pg": "^8.20.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.0",
     "i18next-scanner": "^4.6.0",

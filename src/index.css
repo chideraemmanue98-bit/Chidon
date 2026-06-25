@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@450;500;650;700;800&family=Plus+Jakarta+Sans:wght@400;500;650;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@450;500;650;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -6,61 +6,62 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-brand: #0891b2;
+  --color-brand: #4f46e5;
   --color-success: #10b981;
-  --color-danger: #f43f5e;
+  --color-danger: #ef4444;
   --color-warning: #f59e0b;
 
-  --color-cyan-primary: #22d3ee;
-  --color-purple-vibrant: #c084fc;
-  --color-emerald-vibrant: #34d399;
-  --color-pink-vibrant: #f472b6;
-  --color-amber-vibrant: #fbbf24;
+  --color-cyan-primary: #0ea5e9;
+  --color-purple-vibrant: #8b5cf6;
+  --color-emerald-vibrant: #10b981;
+  --color-pink-vibrant: #ec4899;
+  --color-amber-vibrant: #f59e0b;
+  --color-navy-black: #090d16;
 }
 
 @layer base {
   :root {
-    --bg-app: #f1f5f9;
+    --bg-app: #f8fafc;
     --bg-card: #ffffff;
     --text-primary: #0f172a;
     --text-secondary: #475569;
-    --border-base: #94a3b8;
-    --accent-glow: rgba(8, 145, 178, 0.2);
+    --border-base: #e2e8f0;
+    --accent-glow: rgba(79, 70, 229, 0.1);
   }
 
   .dark {
-    --bg-app: #030712;
-    --bg-card: #0b0f19;
+    --bg-app: #090d16;
+    --bg-card: #0f172a;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --border-base: #1e293b;
-    --accent-glow: rgba(34, 211, 238, 0.12);
+    --accent-glow: rgba(139, 92, 246, 0.15);
   }
 
   body {
-    @apply bg-[var(--bg-app)] text-[var(--text-primary)] font-sans selection:bg-cyan-500/30 transition-colors duration-200;
+    @apply bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased selection:bg-brand/20 selection:text-brand transition-colors duration-200 font-normal;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight font-bold;
+    @apply font-display tracking-tight font-extrabold text-[var(--text-primary)];
   }
 }
 
 @layer components {
   .card-base {
-    @apply bg-[var(--bg-card)] border-2 border-[var(--border-base)] rounded-2xl shadow-md hover:shadow-lg transition-all duration-300;
+    @apply bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300;
   }
 
   .input-base {
-    @apply bg-[var(--bg-card)] border-2 border-[var(--border-base)] rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500/80 transition-all text-sm font-sans font-medium;
+    @apply bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm font-sans font-medium text-[var(--text-primary)] placeholder:text-slate-400 transition-all duration-200;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-bold font-sans hover:shadow-[0_0_15px_rgba(6,182,212,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer;
+    @apply bg-brand hover:bg-brand/95 text-white px-5 py-3 rounded-xl font-bold font-sans shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer;
   }
 
   .btn-secondary {
-    @apply bg-[var(--bg-card)] border-2 border-[var(--border-base)] text-[var(--text-primary)] px-5 py-3 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-zinc-900 transition-all cursor-pointer;
+    @apply bg-[var(--bg-card)] border border-[var(--border-base)] text-[var(--text-primary)] px-5 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-900/50 shadow-sm transition-all duration-200 cursor-pointer;
   }
 }
 
@@ -74,7 +75,7 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-400 dark:bg-zinc-700 rounded-full;
+  @apply bg-gray-300 dark:bg-zinc-800 rounded-full;
 }
 
 .markdown-body h1, .markdown-body h2 {
@@ -97,15 +98,15 @@
 }
 
 .markdown-body table {
-  @apply w-full border-collapse my-6 bg-[var(--bg-card)] rounded-xl overflow-hidden border-2 border-[var(--border-base)];
+  @apply w-full border-collapse my-6 bg-[var(--bg-card)] rounded-xl overflow-hidden border border-[var(--border-base)];
 }
 
 .markdown-body th {
-  @apply bg-slate-100 dark:bg-zinc-900/60 text-[var(--text-primary)] font-display font-bold text-xs text-left px-4 py-3.5 border-b-2 border-[var(--border-base)];
+  @apply bg-slate-50 dark:bg-zinc-900/40 text-[var(--text-primary)] font-display font-bold text-xs text-left px-4 py-3.5 border-b border-[var(--border-base)];
 }
 
 .markdown-body td {
-  @apply px-4 py-3 border-b border-[var(--border-base)]/60 text-sm text-[var(--text-secondary)];
+  @apply px-4 py-3 border-b border-[var(--border-base)] text-sm text-[var(--text-secondary)];
 }
 
 .tiptap {
@@ -114,12 +115,12 @@
 
 @keyframes activePulseGlow {
   0%, 100% {
-    box-shadow: 0 0 6px rgba(6, 182, 212, 0.15), inset 0 0 1px rgba(6, 182, 212, 0.1);
-    border-color: rgba(6, 182, 212, 0.25);
+    box-shadow: 0 0 4px rgba(79, 70, 229, 0.1), inset 0 0 1px rgba(79, 70, 229, 0.05);
+    border-color: rgba(79, 70, 229, 0.15);
   }
   50% {
-    box-shadow: 0 0 14px rgba(6, 182, 212, 0.45), inset 0 0 3px rgba(6, 182, 212, 0.2);
-    border-color: rgba(6, 182, 212, 0.6);
+    box-shadow: 0 0 10px rgba(79, 70, 229, 0.25), inset 0 0 2px rgba(79, 70, 229, 0.1);
+    border-color: rgba(79, 70, 229, 0.4);
   }
 }
 

@@ -260,21 +260,42 @@ const mergeLocale = (base: any, extensions: any) => {
   };
 };
 
+const cleanResources = (obj: any, fallback: any): any => {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  const cleaned: any = Array.isArray(obj) ? [] : {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const val = obj[key];
+      const fallbackVal = fallback ? fallback[key] : undefined;
+      if (typeof val === 'string' && val === '__NOT_TRANSLATED__') {
+        cleaned[key] = typeof fallbackVal === 'string' ? fallbackVal : '';
+      } else if (typeof val === 'object' && val !== null) {
+        cleaned[key] = cleanResources(val, fallbackVal);
+      } else {
+        cleaned[key] = val;
+      }
+    }
+  }
+  return cleaned;
+};
+
+const mergedEn = mergeLocale(en, extensionResources.en);
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
-      en: { translation: mergeLocale(en, extensionResources.en) },
-      es: { translation: mergeLocale(es, extensionResources.es) },
-      zh: { translation: mergeLocale(zh, extensionResources.zh) },
-      hi: { translation: mergeLocale(hi, extensionResources.hi) },
-      ar: { translation: mergeLocale(ar, extensionResources.ar) },
-      pt: { translation: mergeLocale(pt, extensionResources.pt) },
-      fr: { translation: mergeLocale(fr, extensionResources.fr) },
-      ru: { translation: mergeLocale(ru, extensionResources.ru) },
-      de: { translation: mergeLocale(de, extensionResources.de) },
-      ja: { translation: mergeLocale(ja, extensionResources.ja) }
+      en: { translation: cleanResources(mergedEn, mergedEn) },
+      es: { translation: cleanResources(mergeLocale(es, extensionResources.es), mergedEn) },
+      zh: { translation: cleanResources(mergeLocale(zh, extensionResources.zh), mergedEn) },
+      hi: { translation: cleanResources(mergeLocale(hi, extensionResources.hi), mergedEn) },
+      ar: { translation: cleanResources(mergeLocale(ar, extensionResources.ar), mergedEn) },
+      pt: { translation: cleanResources(mergeLocale(pt, extensionResources.pt), mergedEn) },
+      fr: { translation: cleanResources(mergeLocale(fr, extensionResources.fr), mergedEn) },
+      ru: { translation: cleanResources(mergeLocale(ru, extensionResources.ru), mergedEn) },
+      de: { translation: cleanResources(mergeLocale(de, extensionResources.de), mergedEn) },
+      ja: { translation: cleanResources(mergeLocale(ja, extensionResources.ja), mergedEn) }
     },
     fallbackLng: 'en',
     interpolation: {

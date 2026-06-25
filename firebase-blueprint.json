@@ -134,6 +134,11 @@
         "skills": { "type": "array", "items": { "type": "string" } },
         "country": { "type": "string" },
         "rating": { "type": "number" },
+        "subscriptionPlan": { "type": "string" },
+        "subscriptionStatus": { "type": "string" },
+        "subscriptionPrice": { "type": "number" },
+        "paystackSubscriptionRef": { "type": "string" },
+        "credits": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "createdAt"]
@@ -207,6 +212,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["followerId", "followingId", "createdAt"]
+    },
+    "Receipt": {
+      "title": "Receipt",
+      "description": "User credit purchase receipt generated via Paystack payment verification",
+      "type": "object",
+      "properties": {
+        "amountUsd": { "type": "number" },
+        "amountNgn": { "type": "number" },
+        "creditsAmount": { "type": "number" },
+        "reference": { "type": "string" },
+        "payerEmail": { "type": "string" },
+        "bundleName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["amountUsd", "amountNgn", "creditsAmount", "reference", "payerEmail", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -217,6 +238,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "Secure user details and settings synced across sessions"
+    },
+    "/users/{userId}/receipts/{receiptId}": {
+      "schema": "Receipt",
+      "description": "Collection of subscription or credit purchase receipts"
     },
     "/scheduled_posts/{postId}": {
       "schema": "ScheduledPost",

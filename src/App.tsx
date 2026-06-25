@@ -68,7 +68,10 @@ import {
   Copy,
   Check,
   Coins,
-  Briefcase
+  Briefcase,
+  Database,
+  Crown,
+  CreditCard
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -91,7 +94,7 @@ import { Tooltip } from './components/Tooltip';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { ChidonLogo } from './components/ChidonLogo';
 import { WelcomePage } from './components/WelcomePage';
-import { GeminiFeatureAnalyzer } from './components/GeminiFeatureAnalyzer';
+import { ChidonAuth, getSupabaseAuthClient } from './components/ChidonAuth';
 
 // PERF: Lazy load heavy overlays and non-critical modular sub-components to reduce initial load times and optimize bundle sizing
 const FeedbackModal = lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -102,14 +105,19 @@ const RuledBook = lazy(() => import('./components/RuledBook').then(m => ({ defau
 const DownbaseFooter = lazy(() => import('./components/DownbaseFooter').then(m => ({ default: m.DownbaseFooter })));
 const TemplateLibrary = lazy(() => import('./components/TemplateLibrary').then(m => ({ default: m.TemplateLibrary })));
 
+import { ShadowbanSolutions } from './components/ShadowbanSolutions';
+import AdvancedNeuralTool from './components/AdvancedNeuralTool';
+import ChidonPricing from './components/ChidonPricing';
+
 import { 
   ScriptPrompterWidget, 
-  ProfileMockupWidget, 
+  ProfilePreviewWidget, 
   ThumbnailCanvasWidget, 
   GrowthMathWidget, 
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
-  RepurposePipelineWidget 
+  RepurposePipelineWidget,
+  GoogleBrowserEngineWidget
 } from './components/SpecializedWidgets';
 
 export const BookContext = createContext<{ onSendToBook?: (content: string, title?: string) => void }>({});
@@ -194,6 +202,7 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   language?: string;
+  originalPrompt?: string;
 }
 
 type FeatureId = 
@@ -228,7 +237,8 @@ type FeatureId =
   | 'daily-ideas'
   | 'trend-alerts'
   // Pro Layer
-  | 'ai-script-outline';
+  | 'ai-script-outline'
+  | 'shadowban-solutions';
 
 interface Feature {
   id: FeatureId;
@@ -431,13 +441,13 @@ const FEATURES: Feature[] = [
   },
   { 
     id: 'youtube-seo', 
-    label: 'YouTube SEO', 
+    label: 'Organic Video Feed Strategizer', 
     icon: Trophy, 
     description: 'Viral metadata optimization and ranking strategy.', 
     category: 'Core',
     themeColor: 'text-red-500',
     glowColor: 'bg-red-500/20',
-    persona: 'YouTube Authority AI'
+    persona: 'Organic Quality Architect AI'
   },
   { 
     id: 'seo-scorecard', 
@@ -555,6 +565,16 @@ const FEATURES: Feature[] = [
     glowColor: 'bg-purple-vibrant/20',
     persona: 'Narrative Architect AI'
   },
+  { 
+    id: 'shadowban-solutions', 
+    label: 'Shadowban Solutions', 
+    icon: AlertCircle, 
+    description: 'Audit channel health, check sensitive policy risk indicators and trace 30-day view recovery action steps.', 
+    category: 'Core',
+    themeColor: 'text-red-500',
+    glowColor: 'bg-red-500/20',
+    persona: 'YouTube Policy Expert AI'
+  },
 ];
 
 // PERF: Elegant micro-skeleton loader to improve core web vitals and provide beautiful instant feedback during lazy-loading component resolution
@@ -567,7 +587,7 @@ const ComponentLoader = () => (
 
 // --- HYBRID AI SERVICE ---
 
-const useHybridAI = (geminiKey: string | null, hfKey: string | null) => {
+const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel?: string) => {
   const { i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -582,7 +602,7 @@ const useHybridAI = (geminiKey: string | null, hfKey: string | null) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt, language: i18n.language }),
+        body: JSON.stringify({ prompt, language: i18n.language, model: geminiModel }),
       });
 
       if (!res.ok) {
@@ -793,7 +813,205 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-const FeatureLayout = ({ feature, children, messages, actions, onBack }: { feature: Feature, children: React.ReactNode, messages?: ChatMessage[], actions?: (msg: ChatMessage) => React.ReactNode, onBack?: () => void }) => {
+function ShareButton({ text, title }: { text: string; title: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const tempTextArea = document.createElement("textarea");
+        tempTextArea.value = text;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempTextArea);
+      }
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setIsOpen(false);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDownloadMarkdown = () => {
+    const element = document.createElement("a");
+    const file = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    element.href = URL.createObjectURL(file);
+    element.download = `${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-insight.md`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    setIsOpen(false);
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Chidon IQ - ${title}`,
+          text: text.substring(0, 500) + '...',
+        });
+        setIsOpen(false);
+      } catch (err) {
+        console.warn("Native share failed:", err);
+      }
+    }
+  };
+
+  return (
+    <div className="relative inline-block text-left" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="btn-secondary h-8 py-0 px-3 rounded-lg font-medium text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-[var(--text-secondary)] hover:text-brand"
+      >
+        <Share2 size={12} />
+        <span>Share</span>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 5 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 mt-1.5 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-base)] shadow-lg overflow-hidden z-55 p-1 space-y-0.5"
+          >
+            <button
+              onClick={handleCopy}
+              className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
+            >
+              {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} className="text-[var(--text-secondary)]" />}
+              <span>{copied ? 'Copied to Clipboard' : 'Copy Full Insight'}</span>
+            </button>
+            <button
+              onClick={handleDownloadMarkdown}
+              className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
+            >
+              <Download size={12} className="text-[var(--text-secondary)]" />
+              <span>Download Markdown</span>
+            </button>
+            {navigator.share && (
+              <button
+                onClick={handleNativeShare}
+                className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
+              >
+                <Share2 size={12} className="text-[var(--text-secondary)]" />
+                <span>Share Externally</span>
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+const GeminiLiveEngineHub = () => {
+  const [stage, setStage] = useState(0);
+  const activeModel = localStorage.getItem('active_gemini_model') || 'gemini-3.5-flash';
+  const modelLabel = activeModel.includes('1.5') ? "1.5-FLASH" : "3.5-FLASH";
+
+  const stages = [
+    `Establishing dynamic connection with ChidonIQ Core ${modelLabel.replace('-FLASH', '')} Deep Pipeline...`,
+    "Retrieving neural search markers & digital audience vectors...",
+    "Running real-time structural code compliance check...",
+    "Optimizing vocabulary formulas for high-retention performance...",
+    "Parsing output text blocks into aligned workspace layouts..."
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStage((prev) => (prev + 1) % stages.length);
+    }, 1800);
+    return () => clearInterval(timer);
+  }, [stages.length]);
+
+  return (
+    <div className="w-full flex flex-col space-y-4 p-6 border border-slate-200/80 dark:border-indigo-500/10 rounded-2xl bg-slate-50/50 dark:bg-[#07080F]/90 shadow-2xl text-left theme-transition">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative w-8 h-8 flex items-center justify-center">
+            <span className="absolute inset-0 rounded-full bg-indigo-500/10 animate-ping" />
+            <span className="absolute inset-1.5 rounded-full bg-purple-500/20" />
+            <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#22D3EE] via-[#6366F1] to-[#A78BFA] flex items-center justify-center text-white text-[9px] font-black">
+              ✦
+            </div>
+          </div>
+          <div>
+            <span className="text-[9px] font-mono font-black text-[#6366F1] tracking-widest block uppercase">NEURAL PIPELINE ACTIVE</span>
+            <span className="text-[11px] font-serif font-bold text-slate-800 dark:text-zinc-200 block">
+              ChidonIQ Core is distilling high-fidelity intelligence...
+            </span>
+          </div>
+        </div>
+        
+        {/* Real-time sound wave thinking simulator */}
+        <div className="flex items-end gap-1.5 h-6">
+          <span className="w-1 h-3 rounded-full bg-[#22D3EE] animate-bounce animate-duration-1000" style={{ animationDelay: '0.1s' }} />
+          <span className="w-1 h-5 rounded-full bg-[#6366F1] animate-bounce animate-duration-800" style={{ animationDelay: '0.2s' }} />
+          <span className="w-1 h-4 rounded-full bg-[#A78BFA] animate-bounce animate-duration-1200" style={{ animationDelay: '0.35s' }} />
+          <span className="w-1 h-6 rounded-full bg-[#EC4899] animate-bounce animate-duration-900" style={{ animationDelay: '0.15s' }} />
+          <span className="w-1 h-3.5 rounded-full bg-[#F59E0B] animate-bounce animate-duration-1300" style={{ animationDelay: '0.25s' }} />
+        </div>
+      </div>
+
+      {/* Modern thin timeline loader */}
+      <div className="w-full bg-slate-200 dark:bg-zinc-800/50 h-1 rounded-full overflow-hidden">
+        <div 
+          className="bg-gradient-to-r from-[#22D3EE] via-[#6366F1] to-[#EC4899] h-full rounded-full"
+          style={{
+            width: "85%",
+            backgroundSize: "200% 100%",
+          }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-400">
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>{stages[stage]}</span>
+        </span>
+        <span className="text-[9px] uppercase font-black text-slate-400 select-none">{modelLabel}</span>
+      </div>
+    </div>
+  );
+};
+
+const FeatureLayout = ({ 
+  feature, 
+  children, 
+  messages, 
+  actions, 
+  onBack,
+  onGenerate,
+  loading
+}: { 
+  feature: Feature, 
+  children: React.ReactNode, 
+  messages?: ChatMessage[], 
+  actions?: (msg: ChatMessage) => React.ReactNode, 
+  onBack?: () => void,
+  onGenerate?: (prompt: string, displayPrompt?: string) => void,
+  loading?: boolean
+}) => {
   const { t } = useTranslation();
   const { onSendToBook } = useContext(BookContext);
   return (
@@ -803,7 +1021,7 @@ const FeatureLayout = ({ feature, children, messages, actions, onBack }: { featu
         {onBack && (
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-brand transition-all group"
+            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-brand transition-all group pointer-events-auto cursor-pointer"
           >
             <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-xs font-bold uppercase tracking-widest">{t('common.back') || t('buttons.back') || 'Back'}</span>
@@ -823,69 +1041,142 @@ const FeatureLayout = ({ feature, children, messages, actions, onBack }: { featu
       </div>
 
     <div className="space-y-8 pb-32">
-       {/* Animated Gemini Strategic Feature Analyzer */}
-       <GeminiFeatureAnalyzer 
-         featureId={feature.id} 
-         featureLabel={t(`features.${feature.id}.label`) || feature.label} 
-         featureDesc={t(`features.${feature.id}.desc`) || feature.description} 
-         themeColor={feature.themeColor}
-       />
-       
-       {/* Chat History */}
-       <AnimatePresence mode="popLayout">
-         {messages && messages.map((msg, idx) => (
-           <motion.div
-             key={msg.id}
-             initial={{ opacity: 0, y: 10 }}
-             animate={{ opacity: 1, y: 0 }}
-             className={cn(
-               "flex flex-col space-y-4",
-               msg.role === 'user' ? "items-end" : "items-start"
-             )}
-           >
-             <div className={cn(
-                "max-w-[90%] sm:max-w-[80%] p-6 rounded-2xl border",
-                msg.role === 'user' 
-                  ? "bg-brand text-white border-brand shadow-lg" 
-                  : "card-base"
-             )}>
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <div className={cn(
-                    "markdown-body leading-relaxed text-sm",
-                    msg.role === 'user' ? "text-white" : "text-[var(--text-primary)]"
-                  )}>
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+        {/* Tool Interface (Inputs) - Rendered at the Top */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="pt-2"
+        >
+          {children}
+        </motion.div>
+
+        {/* Chat History & AI Results - Rendered beautifully underneath at the Bottom in Gemini AI style */}
+        <span className="block border-t border-slate-200 dark:border-white/5 my-8 h-px" />
+        
+        <div className="space-y-6">
+          <AnimatePresence mode="popLayout">
+            {messages && messages.map((msg, idx) => {
+              const findPrecedingUserMsg = () => {
+                for (let i = idx - 1; i >= 0; i--) {
+                  if (messages[i].role === 'user') {
+                    return messages[i];
+                  }
+                }
+                return null;
+              };
+              const userMsg = findPrecedingUserMsg();
+              const originalPrompt = userMsg?.originalPrompt || userMsg?.content;
+              const isUser = msg.role === 'user';
+
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 40, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 110, 
+                    damping: 16,
+                    delay: Math.min(idx * 0.08, 0.45)
+                  }}
+                  className="w-full flex flex-col space-y-3 p-5 rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50/40 dark:bg-[#08080C]/75 text-left shadow-md hover:border-slate-300 dark:hover:border-white/10 transition-colors"
+                  id={`chat-board-row-${msg.id}`}
+                >
+                  {/* Google AI Studio Code/System Header Interface */}
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      {isUser ? (
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-slate-300 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center text-[9px] font-mono leading-none tracking-tight font-black">U</span>
+                          <span className="text-[10px] font-mono font-black text-slate-500 dark:text-zinc-400 uppercase tracking-widest">USER PROMPT WORKSPACE</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-gradient-to-tr from-[#22D3EE] via-[#6366F1] to-[#A78BFA] text-white flex items-center justify-center text-[10px] leading-none font-sans font-black">✦</span>
+                          <span className="text-[10px] font-mono font-black tracking-widest text-[#6366F1] bg-gradient-to-r from-[#22D3EE] via-[#6366F1] to-[#A78BFA] bg-clip-text text-transparent uppercase">MODEL COMPREHENSIVE OUTPUT</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-[8px] font-mono text-slate-400 dark:text-zinc-500 uppercase font-black font-semibold">
+                      {isUser ? (
+                        <span>PAYLOAD SIZE: {msg.content.length}b</span>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <span>TEMP: 0.35</span>
+                          <span>•</span>
+                          <span>FILTER: AUTO_VEIL</span>
+                        </span>
+                      )}
+                      <span>•</span>
+                      <span>TIME: {new Date().toUTCString().slice(17, 25)} UTC</span>
+                    </div>
                   </div>
-                </div>
-             </div>
 
-              {msg.role === 'assistant' && (
-                <div className="flex flex-wrap gap-2 px-1">
-                   {actions && actions(msg)}
-                   <CopyButton text={msg.content} />
-                   {onSendToBook && (
-                     <button 
-                       onClick={() => onSendToBook(msg.content, t(`features.${feature.id}.label`) || feature.label)}
-                       className="btn-primary h-8 py-0 px-3 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-white"
-                     >
-                       <Book size={12} />
-                       <span>Send to Book with Lines</span>
-                     </button>
-                   )}
-                </div>
-              )}
-           </motion.div>
-         ))}
-       </AnimatePresence>
+                  {/* Body Content Container */}
+                  <div className="py-1">
+                    {isUser ? (
+                      <div className="text-xs text-slate-705 dark:text-zinc-300 bg-slate-100 dark:bg-[#030305]/80 p-4 rounded-xl border border-slate-205 dark:border-white/5 font-mono select-all whitespace-pre-line leading-relaxed">
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <div className="markdown-body leading-relaxed text-sm text-[var(--text-primary)]">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-       {/* Tool Interface (Inputs) */}
-       <motion.div 
-         initial={{ opacity: 0, y: 20 }}
-         animate={{ opacity: 1, y: 0 }}
-         className="pt-4"
-       >
-         {children}
-       </motion.div>
+                  {/* Actions Area */}
+                  {!isUser && (
+                    <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-slate-200 dark:border-white/5">
+                      {actions && actions(msg)}
+                      <CopyButton text={msg.content} />
+                      <ShareButton text={msg.content} title={t(`features.${feature.id}.label`) || feature.label} />
+                      
+                      {onGenerate && originalPrompt && (
+                        <button
+                          onClick={() => onGenerate(originalPrompt, userMsg?.content !== originalPrompt ? userMsg?.content : undefined)}
+                          disabled={loading}
+                          className="btn-secondary h-8 py-0 px-3 rounded-lg font-mono text-[10px] uppercase font-black tracking-widest transition-colors flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-[var(--text-secondary)] hover:text-brand disabled:opacity-50 border border-slate-200 dark:border-white/5"
+                          title="Regenerate this direction response"
+                        >
+                          <RefreshCcw size={12} className={cn(loading ? "animate-spin text-brand" : "")} />
+                          <span>Retry</span>
+                        </button>
+                      )}
+
+                      {onSendToBook && (
+                        <button 
+                          onClick={() => onSendToBook(msg.content, t(`features.${feature.id}.label`) || feature.label)}
+                          className="btn-primary h-8 py-0 px-3 rounded-lg font-mono text-[10px] uppercase font-black tracking-widest transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-white"
+                        >
+                          <Book size={12} />
+                          <span>Send to Book with Lines</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+
+            {loading && (
+              <motion.div
+                key="gemini-live-loading"
+                initial={{ opacity: 0, y: 35, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -25, scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 120, damping: 16 }}
+                className="w-full pt-4"
+              >
+                <GeminiLiveEngineHub />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
     </div>
   </div>
   );
@@ -1023,11 +1314,87 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
       messages={messages}
       actions={actions}
       onBack={onBack}
+      onGenerate={onGenerate}
+      loading={loading}
     >
       <div className="max-w-4xl mx-auto space-y-8">
         
+        <GlowingCard className="space-y-6">
+          <div className="space-y-2 text-left">
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Niche / Topic</label>
+            <textarea 
+              placeholder="e.g. AI Productivity, Luxury Cars..."
+              className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+              rows={2}
+              value={niche}
+              onChange={(e) => setNiche(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-1.5 items-center mt-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
+              {suggestions.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setNiche(s)}
+                  className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Platform selection slider list */}
+          <div className="space-y-2 text-left">
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Platform</label>
+            <div className="flex flex-wrap gap-2">
+              {['YouTube & TikTok', 'Instagram Reels', 'LinkedIn Narrative', 'Twitter/X Post', 'Premium Newsletter'].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPlatform(p)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
+                    platform === p 
+                      ? "border-brand bg-brand/10 text-brand font-semibold"
+                      : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tone target selection list */}
+          <div className="space-y-2 text-left">
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Tone Strategy</label>
+            <div className="flex flex-wrap gap-2">
+              {['Viral Hook & Intense', 'Informative & Direct', 'Storyteller & Warm', 'Brutalist & Technical'].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTone(t)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
+                    tone === t 
+                      ? "border-brand bg-brand/10 text-brand font-semibold"
+                      : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
+            Generate Content Strategies
+          </Button>
+        </GlowingCard>
+
         {parsedCards.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-6 pt-6 border-t border-[var(--border-base)]/25">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <div>
                 <span className="text-[10px] font-mono text-cyan-primary bg-cyan-primary/10 px-2.5 py-1 rounded border border-cyan-primary/20 uppercase tracking-widest font-black">BENTO VIRAL STORYBOARD</span>
@@ -1041,7 +1408,7 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
                 }}
                 className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
               >
-                Create New Batch
+                Clear Topic
               </button>
             </div>
 
@@ -1049,23 +1416,33 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* Card List Sidebar for Quick Toggle */}
-              <div className="space-y-3 md:col-span-1 text-left">
+              <motion.div layout className="space-y-3 md:col-span-1 text-left">
                 {parsedCards.map((c, idx) => (
-                  <button
+                  <motion.button
                     key={idx}
+                    layout
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                     onClick={() => setCurrentCardIndex(idx)}
                     className={cn(
-                      "w-full p-4 text-left rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col space-y-1 select-none",
+                      "w-full p-4 text-left rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col space-y-1 select-none relative overflow-hidden",
                       currentCardIndex === idx
-                        ? "bg-cyan-primary/10 border-cyan-primary/40 text-white"
+                        ? "border-cyan-primary/30 text-white"
                         : "bg-slate-900/60 border-white/5 text-slate-400 hover:bg-slate-900 hover:border-white/10"
                     )}
                   >
-                    <span className="text-[9px] font-mono font-black text-cyan-primary tracking-widest uppercase">VIRAL TRACK {idx + 1}</span>
-                    <span className="text-sm font-bold line-clamp-1">{c.title}</span>
-                  </button>
+                    {currentCardIndex === idx && (
+                      <motion.div
+                        layoutId="activeBentoCard"
+                        className="absolute inset-0 bg-cyan-primary/10 border border-cyan-primary/30 rounded-2xl -z-10"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 text-[9px] font-mono font-black text-cyan-primary tracking-widest uppercase">VIRAL TRACK {idx + 1}</span>
+                    <span className="relative z-10 text-sm font-bold line-clamp-1">{c.title}</span>
+                  </motion.button>
                 ))}
-              </div>
+              </motion.div>
 
               {/* Interactive Cinematic Bento Box Detail */}
               <div className="md:col-span-2 text-left">
@@ -1132,82 +1509,6 @@ const ContentGenerator = ({ onGenerate, messages, loading, error, onGenerateFeed
 
           </div>
         ) : null}
-
-        {parsedCards.length === 0 && (
-          <GlowingCard className="space-y-6">
-            <div className="space-y-2 text-left">
-              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Niche / Topic</label>
-              <input 
-                type="text" 
-                placeholder="e.g. AI Productivity, Luxury Cars..."
-                className="input-base w-full py-4 text-lg"
-                value={niche}
-                onChange={(e) => setNiche(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-1.5 items-center mt-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
-                {suggestions.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setNiche(s)}
-                    className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Platform selection slider list */}
-            <div className="space-y-2 text-left">
-              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Platform</label>
-              <div className="flex flex-wrap gap-2">
-                {['YouTube & TikTok', 'Instagram Reels', 'LinkedIn Narrative', 'Twitter/X Post', 'Premium Newsletter'].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPlatform(p)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
-                      platform === p 
-                        ? "border-brand bg-brand/10 text-brand font-semibold"
-                        : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
-                    )}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tone target selection list */}
-            <div className="space-y-2 text-left">
-              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Tone Strategy</label>
-              <div className="flex flex-wrap gap-2">
-                {['Viral Hook & Intense', 'Informative & Direct', 'Storyteller & Warm', 'Brutalist & Technical'].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTone(t)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
-                      tone === t 
-                        ? "border-brand bg-brand/10 text-brand font-semibold"
-                        : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
-              Generate Content Strategies
-            </Button>
-          </GlowingCard>
-        )}
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -1321,9 +1622,66 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
       messages={messages}
       actions={actions}
       onBack={onBack}
+      onGenerate={onGenerate}
+      loading={loading}
     >
       <div className="max-w-4xl mx-auto space-y-8">
         
+        <GlowingCard className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Core Topic / Niche</label>
+            <textarea 
+              placeholder="Enter core topic..."
+              className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+              rows={2}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-1.5 items-center mt-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
+              {topicSuggestions.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setTopic(s)}
+                  className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Distribution Intensity</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'Broad Reach Network', val: 'Broad reach and growth vector' },
+                { label: 'Hyper-Targeted Niche', val: 'Dense local/hyper-niche conversions' },
+                { label: 'Maximum Viral Volume', val: 'High risk high reward viral hashtags' }
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setCampaignFocus(item.val)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
+                    campaignFocus === item.val 
+                      ? "border-brand bg-brand/10 text-brand font-semibold"
+                      : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
+            Execute Reach Analysis
+          </Button>
+        </GlowingCard>
+
         {/* If tags are generated, show dynamic custom categorized interface */}
         {tagsList.length > 0 ? (
           <motion.div 
@@ -1349,11 +1707,10 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
                   type="button"
                   onClick={() => {
                     setTopic('');
-                    // Scroll to input if possible, clearing messages resets state
                   }}
                   className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[var(--border-base)] rounded-xl text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
                 >
-                  Scan Another Topic
+                  Reset List
                 </button>
               </div>
             </div>
@@ -1382,10 +1739,13 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
             </div>
 
             {/* Visual Hashtag Chip Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {filteredTags.map((item, idx) => (
+            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {filteredTags.map((item) => (
                 <motion.div
-                  key={idx}
+                  key={item.tag}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => copyIndividual(item.tag)}
@@ -1409,7 +1769,7 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
                   </div>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
 
             {/* Explanatory insights in very brief form */}
             <div className="p-4 rounded-2xl border border-white/5 bg-slate-900/40 text-left space-y-2">
@@ -1421,64 +1781,6 @@ const HashtagEngine = ({ onGenerate, messages, loading, error, onGenerateFeedbac
 
           </motion.div>
         ) : null}
-
-        {/* Input Form Setup */}
-        {tagsList.length === 0 && (
-          <GlowingCard className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Core Topic / Niche</label>
-              <input 
-                type="text" 
-                placeholder="Enter core topic..."
-                className="input-base w-full py-4 text-lg"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-1.5 items-center mt-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)] mr-1">Examples:</span>
-                {topicSuggestions.map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setTopic(s)}
-                    className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-[var(--text-secondary)] hover:text-brand hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors border border-[var(--border-base)]/30 cursor-pointer"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Distribution Intensity</label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { label: 'Broad Reach Network', val: 'Broad reach and growth vector' },
-                  { label: 'Hyper-Targeted Niche', val: 'Dense local/hyper-niche conversions' },
-                  { label: 'Maximum Viral Volume', val: 'High risk high reward viral hashtags' }
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => setCampaignFocus(item.val)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 cursor-pointer",
-                      campaignFocus === item.val 
-                        ? "border-brand bg-brand/10 text-brand font-semibold"
-                        : "border-[var(--border-base)] bg-transparent text-[var(--text-secondary)] hover:border-brand/40"
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <Button onClick={handleAction} loading={loading} className="w-full py-6 text-base font-bold">
-              Execute Reach Analysis
-            </Button>
-          </GlowingCard>
-        )}
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -1520,7 +1822,7 @@ const CompetitorLab = ({ feature, onGenerate, messages, loading, error, onGenera
   const competitorSuggestions = ["@mrbeast", "@naval", "@hubermanlab", "@garyvee"];
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="space-y-2">
@@ -1615,15 +1917,15 @@ const ScheduleLab = ({ feature, onGenerate, messages, loading, error, onGenerate
   const nicheSuggestions = ["SaaS Coding Tutorials", "Organic cooking & meal prepping", "Minimalist Sustainable architecture", "Fintech & personal investing hacks"];
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Environment</label>
-            <input 
-              type="text" 
+            <textarea 
               placeholder="Market niche..."
-              className="input-base w-full py-4 text-lg"
+              className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+              rows={2}
               value={niche}
               onChange={(e) => setNiche(e.target.value)}
             />
@@ -1714,7 +2016,7 @@ const YouTubeSEO = ({ feature, onGenerate, messages, loading, error, onGenerateF
   ];
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="space-y-4">
@@ -1827,26 +2129,26 @@ const PostOptimizer = ({ feature, onGenerate, messages, loading, error, onGenera
   ];
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Niche</label>
-              <input 
-                type="text" 
+              <textarea 
                 placeholder="e.g. Gaming, Beauty..."
-                className="input-base w-full py-4 text-lg"
+                className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+                rows={2}
                 value={niche}
                 onChange={(e) => setNiche(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Region Node</label>
-              <input 
-                type="text" 
+              <textarea 
                 placeholder="e.g. USA, UK, Global..."
-                className="input-base w-full py-4 text-lg"
+                className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+                rows={2}
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
               />
@@ -1944,15 +2246,15 @@ const SEOScorecard = ({ feature, onGenerate, messages, loading, error, onGenerat
   const sampleArticles: {label: string, k: string, c: string}[] = [];
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Target Keywords</label>
-            <input 
-              type="text" 
+            <textarea 
               placeholder="e.g. AI SEO, Digital Marketing..."
-              className="input-base w-full py-4 text-lg"
+              className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+              rows={2}
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
             />
@@ -2112,15 +2414,15 @@ const KeywordResearcher = ({ feature, onGenerate, messages, loading, error, onGe
   const keywordSuggestions = ["Minimalist workspaces", "Kubernetes cluster setups", "Organic coffee subscriptions", "Zero waste packing tips"];
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Seed Keyword</label>
-            <input 
-              type="text" 
+            <textarea 
               placeholder="e.g. AI Content Marketing..."
-              className="input-base w-full py-4 text-lg"
+              className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+              rows={2}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
@@ -2176,7 +2478,7 @@ const KeywordResearcher = ({ feature, onGenerate, messages, loading, error, onGe
   );
 };
 
-const AdvancedNeuralTool = ({ feature, onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, onBack }: any) => {
+const LegacyAdvancedNeuralTool = ({ feature, onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, onBack }: any) => {
   const [input1, setInput1] = useState('');
   const [input2, setInput2] = useState('');
  
@@ -2306,7 +2608,7 @@ const AdvancedNeuralTool = ({ feature, onGenerate, messages, loading, error, onG
         ];
       case 'daily-ideas':
         return [
-          { label: 'Productivity Niche', p1: 'Productivity workflows, calendar guides, Notion templates', p2: 'Target maximum subscriber retention & click CTR' },
+          { label: 'Productivity Niche', p1: 'Productivity workflows, calendar guides, Workspace Productivity Vault templates', p2: 'Target maximum subscriber retention & click CTR' },
           { label: 'Minimal Lifestyle', p1: 'Quiet luxury desk setups, mechanical keyboards, audio gear', p2: 'Target hyper-engaged high-retention views' }
         ];
       case 'ai-script-outline':
@@ -2322,15 +2624,15 @@ const AdvancedNeuralTool = ({ feature, onGenerate, messages, loading, error, onG
   const currentSuggestions = getSuggestions();
 
   return (
-    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack}>
+    <FeatureLayout feature={feature} messages={messages} actions={actions} onBack={onBack} onGenerate={onGenerate} loading={loading}>
       <div className="max-w-2xl mx-auto space-y-8">
         <GlowingCard className="space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">{placeholders.p1}</label>
-            <input 
-              type="text" 
+            <textarea 
               placeholder={`Enter ${placeholders.p1.toLowerCase()}...`}
-              className="input-base w-full py-4 text-lg"
+              className="input-base w-full py-4 text-lg min-h-[100px] resize-y leading-relaxed font-black"
+              rows={2}
               value={input1}
               onChange={(e) => setInput1(e.target.value)}
             />
@@ -2615,13 +2917,37 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
       messages={messages}
       actions={actions}
       onBack={onBack}
+      onGenerate={onGenerate}
+      loading={loading}
     >
       <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
-        {lastResponse ? (
+        {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
+        <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
+          <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
+            <feature.icon size={18} />
+          </div>
+          <div className="space-y-6 pt-2">
+            <div className="space-y-2 text-left">
+              <label className={cn("text-[10px] font-mono uppercase tracking-[0.4em] ml-2", feature.themeColor)}>Neural Directive</label>
+              <textarea 
+                placeholder={`Describe your target for ${feature.label.toLowerCase()}...`}
+                rows={4}
+                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-opacity-50 transition-all text-base font-sans font-medium text-white text-center placeholder:text-slate-700 resize-none shadow-inner"
+                value={val}
+                onChange={(e) => setVal(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleAction} loading={loading} className={cn("w-full py-6 text-navy-black font-black text-[11px] tracking-[0.3em] rounded-2xl shadow-2xl transition-all", feature.themeColor.replace('text-', 'bg-'))}>
+              EXECUTE {feature.label.toUpperCase()} PROTOCOL
+            </Button>
+          </div>
+        </GlowingCard>
+
+        {lastResponse && (
           <div className="space-y-6">
             {/* Interactive Custom Widget Selection based on feature ID */}
             {feature.id === 'scripts' && <ScriptPrompterWidget content={lastResponse.content} />}
-            {feature.id === 'bio' && <ProfileMockupWidget content={lastResponse.content} />}
+            {feature.id === 'bio' && <ProfilePreviewWidget content={lastResponse.content} />}
             {feature.id === 'thumbnails' && <ThumbnailCanvasWidget content={lastResponse.content} />}
             {feature.id === 'engagement-calc' && <GrowthMathWidget content={lastResponse.content} />}
             {feature.id === 'trending' && <TrendMomentumTickerWidget content={lastResponse.content} />}
@@ -2631,7 +2957,7 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
             {/* Standard advisory notes transcript rendering */}
             <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl text-left">
               <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-black block mb-3">Neural Advice Transcription</span>
-              <div className="text-sm text-slate-300 leading-relaxed max-h-60 overflow-y-auto pr-2 select-text whitespace-pre-line font-sans">
+              <div className="text-sm text-slate-300 leading-relaxed max-h-96 overflow-y-auto pr-2 select-text whitespace-pre-line font-sans">
                 <ReactMarkdown>{lastResponse.content}</ReactMarkdown>
               </div>
             </div>
@@ -2640,35 +2966,13 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
               <button
                 onClick={() => {
                   setVal('');
-                  // Clear messages or let user start fresh
                 }}
                 className="px-6 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-white/10 rounded-xl text-xs font-bold text-slate-300 hover:text-white cursor-pointer transition-all"
               >
-                Run Another Directive
+                Reset Directive
               </button>
             </div>
           </div>
-        ) : (
-          <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
-            <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
-              <feature.icon size={18} />
-            </div>
-            <div className="space-y-6 pt-2">
-              <div className="space-y-2 text-left">
-                <label className={cn("text-[10px] font-mono uppercase tracking-[0.4em] ml-2", feature.themeColor)}>Neural Directive</label>
-                <textarea 
-                  placeholder={`Describe your target for ${feature.label.toLowerCase()}...`}
-                  rows={4}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-opacity-50 transition-all text-base font-sans font-medium text-white text-center placeholder:text-slate-705 resize-none shadow-inner"
-                  value={val}
-                  onChange={(e) => setVal(e.target.value)}
-                />
-              </div>
-              <Button onClick={handleAction} loading={loading} className={cn("w-full py-6 text-navy-black font-black text-[11px] tracking-[0.3em] rounded-2xl shadow-2xl transition-all", feature.themeColor.replace('text-', 'bg-'))}>
-                EXECUTE {feature.label.toUpperCase()} PROTOCOL
-              </Button>
-            </div>
-          </GlowingCard>
         )}
 
         {loading && (
@@ -2883,6 +3187,8 @@ const MatrixHub = ({
   setPinnedFeatures,
   autoOptimize,
   setAutoOptimize,
+  activeGeminiModel,
+  setActiveGeminiModel,
   user,
   onClearDatabase
 }: any) => {
@@ -3049,6 +3355,50 @@ const MatrixHub = ({
         </div>
       </div>
 
+      {/* Model Selector Config panel */}
+      <div className="max-w-6xl mx-auto w-full mt-12 border-t border-[var(--border-base)]/50 pt-10 text-left">
+        <div className="bg-slate-50/50 dark:bg-zinc-900/40 border border-[var(--border-base)]/60 rounded-3xl p-6 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <span className="text-brand font-mono text-[9px] uppercase tracking-[0.4em] font-black">NEURAL COGNITION PROTOCOL</span>
+              <h3 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
+                Active ChidonIQ Core Model
+              </h3>
+              <p className="text-[var(--text-secondary)] text-xs leading-relaxed">
+                Configure the primary natural language synthesizer and social media optimizing engine utilized by CHIDON IQ. ChidonIQ Advanced is recommended for extreme reasoning; ChidonIQ Turbo provides military-grade hyper-speed.
+              </p>
+            </div>
+            
+            <div className="flex gap-2 bg-[var(--bg-card)] p-1.5 rounded-2xl border border-[var(--border-base)] self-start md:self-auto shrink-0 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setActiveGeminiModel('gemini-3.5-flash')}
+                className={cn(
+                  "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer",
+                  activeGeminiModel === 'gemini-3.5-flash'
+                    ? "bg-brand text-white shadow-md shadow-brand/10"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                ChidonIQ Advanced
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveGeminiModel('gemini-flash-latest')}
+                className={cn(
+                  "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer",
+                  activeGeminiModel === 'gemini-flash-latest'
+                    ? "bg-brand text-white shadow-md shadow-brand/10"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                ChidonIQ Turbo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Danger Zone: Database Operations */}
       <div className="max-w-6xl mx-auto w-full mt-16 border-t border-[var(--border-base)]/50 pt-10">
         <div className="bg-red-500/5 dark:bg-red-950/5 border border-red-500/15 dark:border-red-500/10 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -3085,6 +3435,15 @@ export default function App() {
   const [systemLanguage, setSystemLanguage] = useState<string>(() => {
     return localStorage.getItem('system_language') || 'English';
   });
+
+  const [activeGeminiModel, setActiveGeminiModel] = useState<string>(() => {
+    return localStorage.getItem('active_gemini_model') || 'gemini-3.5-flash';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('active_gemini_model', activeGeminiModel);
+    document.cookie = `active_gemini_model=${activeGeminiModel};path=/;max-age=31536000;samesite=lax`;
+  }, [activeGeminiModel]);
 
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     return !localStorage.getItem('chidon_welcome_dismissed');
@@ -3125,9 +3484,9 @@ export default function App() {
     }
   }, [systemLanguage]);
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing'>('dashboard');
   const [activeFeature, setActiveFeature] = useState<FeatureId>('keyword-research');
   const [toolSearchQuery, setToolSearchQuery] = useState<string>('');
   
@@ -3231,6 +3590,10 @@ export default function App() {
   });
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [resetStatus, setResetStatus] = useState<'idle' | 'clearing' | 'success' | 'error'>('idle');
+
+  // Credit system states
+  const [credits, setCredits] = useState<number | null>(null);
+  const [isOutofCreditsModalOpen, setIsOutofCreditsModalOpen] = useState<boolean>(false);
   
   // Real-time Cloud settings sync hook
   useEffect(() => {
@@ -3275,10 +3638,50 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
+        if (data.credits !== undefined) {
+          setCredits(data.credits);
+        } else {
+          // Default: Give 5 Free Credits To every Users Who sign Up with a New email
+          const initialCredits = 5;
+          setCredits(initialCredits);
+          setDoc(userDocRef, { credits: initialCredits }, { merge: true })
+            .catch(err => console.error("Failed to initialize free trial credits:", err));
+        }
+      } else {
+        // Document does not exist: initialize with 5 credits for email signup
+        const initialCredits = 5;
+        setCredits(initialCredits);
+        setDoc(userDocRef, {
+          credits: initialCredits,
+          email: user.email || '',
+          displayName: user.displayName || '',
+          createdAt: serverTimestamp()
+        }, { merge: true })
+          .catch(err => console.error("Failed to initialize user document:", err));
       }
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user?.uid]);
+
+  // Credit Deduction System Helper
+  const deductCredits = async (amount: number): Promise<boolean> => {
+    if (!user) return false;
+    const currentCredits = credits ?? 0;
+    if (currentCredits < amount) {
+      setIsOutofCreditsModalOpen(true);
+      return false;
+    }
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        credits: currentCredits - amount
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to deduct credits:", err);
+      return false;
+    }
+  };
 
   // Sync state helpers
   const saveUserSetting = async (key: string, value: any) => {
@@ -3315,21 +3718,50 @@ export default function App() {
   };
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
+    let activeUnsubscribe: (() => void) | null = null;
+
+    const runAuthSequence = async () => {
+      const supabaseClient = getSupabaseAuthClient();
+      if (supabaseClient) {
         try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.error("Anonymous authentication error:", e);
-          setUser(null);
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          if (session?.user) {
+            setUser({
+              uid: session.user.id,
+              email: session.user.email || '',
+              displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              isSupabase: true
+            });
+            setAuthLoading(false);
+            return;
+          }
+        } catch (supabaseError) {
+          console.warn("Supabase initial session check bypassed:", supabaseError);
+        }
+      }
+      
+      // Fallback: Start standard Firebase Auth for anonymous workspace sandbox
+      activeUnsubscribe = onAuthStateChanged(auth, async (u) => {
+        if (!u) {
+          try {
+            await signInAnonymously(auth);
+          } catch (e) {
+            console.error("Anonymous authentication fallback error:", e);
+            setUser(null);
+            setAuthLoading(false);
+          }
+        } else {
+          setUser(u);
           setAuthLoading(false);
         }
-      } else {
-        setUser(u);
-        setAuthLoading(false);
-      }
-    });
-    return () => unsubscribe();
+      });
+    };
+
+    runAuthSequence();
+
+    return () => {
+      if (activeUnsubscribe) activeUnsubscribe();
+    };
   }, []);
 
   const handleSendToBook = (content: string, title?: string) => {
@@ -3342,11 +3774,11 @@ export default function App() {
   };
 
   const handleSignIn = () => {
-    // Local workspace sandbox active; authentication removed
+    setView('auth');
   };
 
   const handleSignOut = async () => {
-    // Local workspace sandbox active; authentication removed
+    setUser(null);
   };
 
   const handleClearDatabase = async () => {
@@ -3414,7 +3846,7 @@ export default function App() {
       setTimeout(() => setResetStatus('idle'), 4000);
     }
   };
-  const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', feature: FeatureId}[]>([]);
+  const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing', feature: FeatureId}[]>([]);
   const [apiKey] = useState<string>(process.env.GEMINI_API_KEY || '');
   const [hfKey] = useState<string>(process.env.HUGGINGFACE_API_KEY || '');
   const activeGeminiKey = customGeminiApiKey || apiKey;
@@ -3438,16 +3870,16 @@ export default function App() {
   const [preFilledContent, setPreFilledContent] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to top on feature/view change or result update
+  // Scroll to top on feature/view change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [activeFeature, view, featureResults]);
+  }, [activeFeature, view]);
 
-  const { generate, loading, error } = useHybridAI(activeGeminiKey || null, activeHfKey || null);
+  const { generate, loading, error } = useHybridAI(activeGeminiKey || null, activeHfKey || null, activeGeminiModel);
 
-  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog', newFeature?: FeatureId) => {
+  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing', newFeature?: FeatureId) => {
     const targetFeature = newFeature || activeFeature;
     // Don't push if it's the exact same state
     if (view === newView && activeFeature === targetFeature) return;
@@ -3538,12 +3970,18 @@ export default function App() {
   };
 
   const handleGenerate = async (prompt: string, displayPrompt?: string) => {
+    // Determine the credit cost of this run
+    const cost = activeFeature === 'ai-script-outline' ? 5 : 1;
+    const canProceed = await deductCredits(cost);
+    if (!canProceed) return;
+
     const userMsg: ChatMessage = {
       id: `${Math.random().toString(36).substr(2, 9)}-${Date.now()}`,
       role: 'user',
       content: displayPrompt || prompt,
       timestamp: new Date(),
-      language: i18n.language || 'en'
+      language: i18n.language || 'en',
+      originalPrompt: prompt
     };
 
     setFeatureResults(prev => ({
@@ -3612,6 +4050,8 @@ export default function App() {
           setPinnedFeatures={(u: any) => { setPinnedFeatures(u); saveUserSetting('pinnedFeatures', u); }}
           autoOptimize={autoOptimize}
           setAutoOptimize={(u: any) => { setAutoOptimize(u); saveUserSetting('autoOptimize', u); }}
+          activeGeminiModel={activeGeminiModel}
+          setActiveGeminiModel={setActiveGeminiModel}
           user={user}
           onClearDatabase={() => setIsResetConfirmOpen(true)}
         />
@@ -3624,6 +4064,8 @@ export default function App() {
           onBack={goBack}
           user={user}
           onSignIn={handleSignIn}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
         />
       );
     }
@@ -3633,6 +4075,36 @@ export default function App() {
         <ChidonIqBlog
           onSaveDraft={handleSaveDraft}
           onBack={goBack}
+        />
+      );
+    }
+
+    if (view === 'auth') {
+      return (
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-center justify-center relative">
+          <div className="absolute top-4 left-6 z-10">
+            <button 
+              onClick={goBack}
+              className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--text-secondary)] hover:text-brand transition-colors bg-[var(--bg-card)] border border-[var(--border-base)]/60 px-4 py-2 rounded-xl shadow-sm cursor-pointer"
+            >
+              ← Back to Control Terminal
+            </button>
+          </div>
+          <ChidonAuth 
+            onAuthSuccess={(u) => setUser(u)} 
+            currentUser={user}
+            onClose={goBack}
+          />
+        </div>
+      );
+    }
+
+    if (view === 'pricing') {
+      return (
+        <ChidonPricing 
+          user={user}
+          onBack={goBack}
+          db={db}
         />
       );
     }
@@ -3651,16 +4123,14 @@ export default function App() {
 
     const renderFeature = () => {
       switch (activeFeature) {
-        case 'content-ideas': return <ContentGenerator {...commonProps} />;
-        case 'hashtags': return <HashtagEngine {...commonProps} />;
-        case 'competitor-analysis': return <CompetitorLab {...commonProps} feature={commonProps.feature} />;
-        case 'posting-schedule': return <ScheduleLab {...commonProps} feature={commonProps.feature} />;
-        case 'youtube-seo': return <YouTubeSEO {...commonProps} feature={commonProps.feature} />;
-        case 'seo-scorecard': return <SEOScorecard {...commonProps} feature={commonProps.feature} />;
-        case 'keyword-research': return <KeywordResearcher {...commonProps} feature={commonProps.feature} />;
-        case 'post-optimizer': return <PostOptimizer {...commonProps} feature={commonProps.feature} />;
-        
-        // New Features
+        case 'content-ideas':
+        case 'hashtags':
+        case 'competitor-analysis':
+        case 'posting-schedule':
+        case 'youtube-seo':
+        case 'seo-scorecard':
+        case 'keyword-research':
+        case 'post-optimizer':
         case 'vseo-title-desc':
         case 'vseo-tags':
         case 'vseo-scorecard':
@@ -3670,6 +4140,7 @@ export default function App() {
         case 'daily-ideas':
         case 'trend-alerts':
         case 'ai-script-outline':
+        case 'shadowban-solutions':
           return <AdvancedNeuralTool {...commonProps} />;
           
         case 'post-scheduler': return (
@@ -3680,6 +4151,8 @@ export default function App() {
               feature={commonProps.feature} 
               onBack={commonProps.onBack} 
               user={user}
+              credits={credits}
+              onDeductCredits={deductCredits}
             />
           </Suspense>
         );
@@ -3706,11 +4179,13 @@ export default function App() {
             <TemplateLibrary 
               onBack={commonProps.onBack} 
               onSaveDraft={commonProps.onSaveDraft}
+              credits={credits}
+              onDeductCredits={deductCredits}
             />
           </Suspense>
         );
         default: 
-          return <GenericFeature {...commonProps} />;
+          return <AdvancedNeuralTool {...commonProps} />;
       }
     };
 
@@ -3839,7 +4314,7 @@ export default function App() {
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
-                  view === 'earn'
+                  (view as string) === 'earn'
                     ? "bg-cyan-primary/10 text-cyan-primary border-cyan-primary/20 shadow-sm animate-pulse-glow"
                     : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
                 )}
@@ -3862,6 +4337,22 @@ export default function App() {
               >
                 <BookOpen size={15} className="text-cyan-primary" />
                 <span>Chidon IQ Gazette</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigateTo('pricing');
+                  setIsMenuOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
+                  view === 'pricing'
+                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-sm animate-pulse-glow"
+                    : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
+                )}
+              >
+                <Crown size={15} className="text-amber-500" />
+                <span>Chidon Pricing</span>
               </button>
             </div>
 
@@ -3972,13 +4463,23 @@ export default function App() {
           </div>
 
           <div className="p-6 border-t border-[var(--border-base)]">
-            <div className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 border border-[var(--border-base)]/40">
-              <UserCircle className="w-8 h-8 text-cyan-500 animate-[pulse_3s_infinite]" />
+            <button 
+              onClick={() => {
+                setView('auth');
+                setIsMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 hover:bg-gray-100 dark:hover:bg-gray-800/60 border border-[var(--border-base)]/40 transition-all text-left cursor-pointer group"
+            >
+              <UserCircle className="w-8 h-8 text-cyan-500 group-hover:scale-105 transition-transform shrink-0" />
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-bold text-[var(--text-primary)] truncate">Workspace Master</p>
-                <p className="text-[10px] text-[var(--text-secondary)] truncate">Operational Hub Connected</p>
+                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                  {user?.isSupabase ? (user.displayName || 'Authorized Agent') : 'Workspace Master'}
+                </p>
+                <p className="text-[9px] font-mono text-[var(--text-secondary)] truncate">
+                  {user?.isSupabase ? user.email : 'Tap to sync credentials'}
+                </p>
               </div>
-            </div>
+            </button>
           </div>
         </aside>
 
@@ -3995,7 +4496,7 @@ export default function App() {
               </button>
               <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                 <span className="md:hidden"><ChidonLogo size="xs" iconOnly /></span>
-                <span>{view === 'dashboard' ? t('common.overview') : view === 'earn' ? "CHIDON Earn Portal" : view === 'blog' ? "Chidon IQ Gazette & Blog" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? (t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}</span>
+                <span>{view === 'dashboard' ? t('common.overview') : (view as string) === 'earn' ? "CHIDON Earn Portal" : view === 'blog' ? "Chidon IQ Gazette & Blog" : view === 'pricing' ? "Chidon Pricing Matrix" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? (t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}</span>
               </h2>
             </div>
 
@@ -4083,8 +4584,71 @@ export default function App() {
           featureId={feedbackFeatureId} 
           generatedContent={feedbackContent}
         />
-        <ChidonIqGuide />
+        <ChidonIqGuide credits={credits} onDeductCredits={deductCredits} />
       </Suspense>
+
+      {/* OUT OF CREDITS DYNAMIC DIALOG */}
+      <AnimatePresence>
+        {isOutofCreditsModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 z-[999] flex items-center justify-center p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="w-full max-w-md bg-[#0D0D11] border border-white/10 rounded-3xl p-6 relative overflow-hidden text-center"
+            >
+              {/* Top Accent Strip */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 via-amber-500 to-brand" />
+
+              {/* Icon */}
+              <div className="mx-auto w-16 h-16 bg-brand/10 border border-brand/20 rounded-2xl flex items-center justify-center text-brand mb-5 animate-bounce">
+                <Coins size={32} />
+              </div>
+
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                WORKSPACE ENGINE EMPTY
+              </h3>
+              <p className="text-xs text-slate-400 font-mono mt-1 uppercase tracking-wider">
+                Credits replenishment protocol required
+              </p>
+
+              <div className="my-6 p-4 bg-black/40 border border-white/5 rounded-2xl text-left space-y-2.5">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Your active Chidon IQ workspace is currently out of credits. Every standard analysis run consumes **1 credit**, and premium script outlines consume **5 credits**.
+                </p>
+                <div className="flex justify-between items-center text-[10px] font-mono border-t border-white/5 pt-2 text-slate-500">
+                  <span>CURRENT REPLENISH RATE:</span>
+                  <span className="text-amber-400 font-bold">1 USD = 10-16 Credits</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setIsOutofCreditsModalOpen(false);
+                    navigateTo('pricing');
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-[#22D3EE] to-[#6366F1] text-black font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                >
+                  Purchase Credit Bundles
+                </button>
+                <button
+                  onClick={() => setIsOutofCreditsModalOpen(false)}
+                  className="w-full py-2.5 border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Maintenance Purge / Reset Confirmation Overlay */}
       <ConfirmationDialog 
         isOpen={isResetConfirmOpen}

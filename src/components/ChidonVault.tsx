@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BookOpen, 
   Search, 
@@ -71,6 +71,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
   const [selectedFeatureTag, setSelectedFeatureTag] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [customDateStr, setCustomDateStr] = useState('');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'type-asc' | 'type-desc'>('date-desc');
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{
     title: string;
@@ -147,36 +148,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
         setLoading(false);
       });
     } else {
-      // Unauthenticated: load public drafts or local ones
-      const q = query(
-        collection(db, 'drafts'),
-        orderBy('createdAt', 'desc')
-      );
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const list: SavedDraft[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          if (!data.userId) {
-            list.push({ id: doc.id, ...data } as SavedDraft);
-          }
-        });
-
-        // Deduplicate guest list by id
-        const uniqueList: SavedDraft[] = [];
-        const seenIds = new Set<string>();
-        for (const item of list) {
-          if (!seenIds.has(item.id)) {
-            seenIds.add(item.id);
-            uniqueList.push(item);
-          }
-        }
-
-        setDrafts(uniqueList);
-        setLoading(false);
-      }, (error) => {
-        console.error("Firestore loading error:", error);
-        setLoading(false);
-      });
+      setLoading(true);
     }
 
     return () => unsubscribe();
@@ -239,59 +211,83 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
     return null;
   };
 
-  // Filter Logic
-  const filteredDrafts = drafts.filter((d) => {
-    // 1. Search Query
-    const matchesSearch = 
-      (d.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (d.content || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
-
-    // 2. Hub Category Tag filter
-    if (selectedCategory !== 'all') {
-      const catObj = CATEGORIES.find(c => c.id === selectedCategory);
-      const isFeatureInCat = catObj && catObj.features ? catObj.features.includes(d.featureId) : true;
-      if (!isFeatureInCat) return false;
-    }
-
-    // 3. Specific Feature Tag filter dropdown
-    if (selectedFeatureTag !== 'all' && d.featureId !== selectedFeatureTag) {
-      return false;
-    }
-
-    // 4. Creation Date filtering
-    if (dateFilter !== 'all') {
-      const draftDate = getDraftDate(d);
-      if (!draftDate) return false;
-
-      const now = new Date();
+  // Filter and Sort Logic
+  const filteredDrafts = useMemo(() => {
+    const rawFiltered = drafts.filter((d) => {
+      // 1. Search Query
+      const matchesSearch = 
+        (d.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (d.content || '').toLowerCase().includes(searchQuery.toLowerCase());
       
-      if (dateFilter === 'today') {
-        if (draftDate.toDateString() !== now.toDateString()) return false;
-      } else if (dateFilter === 'week') {
-        const diffTime = now.getTime() - draftDate.getTime();
-        const diffDays = diffTime / (1000 * 60 * 60 * 24);
-        if (diffDays > 7) return false;
-      } else if (dateFilter === 'month') {
-        const diffTime = now.getTime() - draftDate.getTime();
-        const diffDays = diffTime / (1000 * 60 * 60 * 24);
-        if (diffDays > 30) return false;
-      } else if (dateFilter === 'custom' && customDateStr) {
-        // customDateStr is in "YYYY-MM-DD" style
-        const targetDate = new Date(customDateStr);
-        if (
-          draftDate.getFullYear() !== targetDate.getFullYear() ||
-          draftDate.getMonth() !== targetDate.getMonth() ||
-          draftDate.getDate() !== targetDate.getDate()
-        ) {
-          return false;
+      if (!matchesSearch) return false;
+
+      // 2. Hub Category Tag filter
+      if (selectedCategory !== 'all') {
+        const catObj = CATEGORIES.find(c => c.id === selectedCategory);
+        const isFeatureInCat = catObj && catObj.features ? catObj.features.includes(d.featureId) : true;
+        if (!isFeatureInCat) return false;
+      }
+
+      // 3. Specific Feature Tag filter dropdown
+      if (selectedFeatureTag !== 'all' && d.featureId !== selectedFeatureTag) {
+        return false;
+      }
+
+      // 4. Creation Date filtering
+      if (dateFilter !== 'all') {
+        const draftDate = getDraftDate(d);
+        if (!draftDate) return false;
+
+        const now = new Date();
+        
+        if (dateFilter === 'today') {
+          if (draftDate.toDateString() !== now.toDateString()) return false;
+        } else if (dateFilter === 'week') {
+          const diffTime = now.getTime() - draftDate.getTime();
+          const diffDays = diffTime / (1000 * 60 * 60 * 24);
+          if (diffDays > 7) return false;
+        } else if (dateFilter === 'month') {
+          const diffTime = now.getTime() - draftDate.getTime();
+          const diffDays = diffTime / (1000 * 60 * 60 * 24);
+          if (diffDays > 30) return false;
+        } else if (dateFilter === 'custom' && customDateStr) {
+          // customDateStr is in "YYYY-MM-DD" style
+          const targetDate = new Date(customDateStr);
+          if (
+            draftDate.getFullYear() !== targetDate.getFullYear() ||
+            draftDate.getMonth() !== targetDate.getMonth() ||
+            draftDate.getDate() !== targetDate.getDate()
+          ) {
+            return false;
+          }
         }
       }
-    }
 
-    return true;
-  });
+      return true;
+    });
+
+    // Quick Sort based on sortBy
+    return rawFiltered.sort((a, b) => {
+      if (sortBy === 'date-desc') {
+        const timeA = getDraftDate(a)?.getTime() || 0;
+        const timeB = getDraftDate(b)?.getTime() || 0;
+        return timeB - timeA;
+      } else if (sortBy === 'date-asc') {
+        const timeA = getDraftDate(a)?.getTime() || 0;
+        const timeB = getDraftDate(b)?.getTime() || 0;
+        return timeA - timeB;
+      } else if (sortBy === 'type-asc') {
+        const labelA = getFeatureLabel(a.featureId).toLowerCase();
+        const labelB = getFeatureLabel(b.featureId).toLowerCase();
+        return labelA.localeCompare(labelB);
+      } else if (sortBy === 'type-desc') {
+        const labelA = getFeatureLabel(a.featureId).toLowerCase();
+        const labelB = getFeatureLabel(b.featureId).toLowerCase();
+        return labelB.localeCompare(labelA);
+      }
+      return 0;
+    });
+  }, [drafts, searchQuery, selectedCategory, selectedFeatureTag, dateFilter, customDateStr, sortBy]);
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto min-h-screen pb-24">
@@ -349,12 +345,12 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
       <div className="flex flex-col gap-4 bg-[var(--card-bg)]/40 p-5 rounded-2xl border border-[var(--border-base)]">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 w-full">
           {/* Search Query Input */}
-          <div className="relative w-full md:col-span-6">
+          <div className="relative w-full md:col-span-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={14} />
             <input 
               type="text"
               placeholder="Search saved content by name, metadata, or keywords..."
-              className="w-full bg-[var(--card-bg)]/50 border border-[var(--border-base)] rounded-xl py-2 pl-9 pr-4 text-xs outline-none focus:border-brand transition-all text-[var(--text-primary)]"
+              className="w-full bg-[var(--card-bg)]/50 border border-[var(--border-base)] rounded-xl py-2.5 pl-9 pr-4 text-xs outline-none focus:border-brand transition-all text-[var(--text-primary)]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -380,7 +376,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
           </div>
 
           {/* Creation Date Dropdown */}
-          <div className="relative w-full md:col-span-3">
+          <div className="relative w-full md:col-span-2">
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
@@ -391,6 +387,23 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
               <option value="week">Past 7 Days</option>
               <option value="month">Past 30 Days</option>
               <option value="custom">📅 Custom Date...</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--text-secondary)]">
+              <span className="text-[8px]">▼</span>
+            </div>
+          </div>
+
+          {/* Quick Sort Dropdown */}
+          <div className="relative w-full md:col-span-3">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full bg-[var(--card-bg)]/50 border border-[var(--border-base)] rounded-xl py-2.5 pl-3 pr-8 text-xs outline-none focus:border-brand transition-all text-[var(--text-primary)] appearance-none cursor-pointer font-bold"
+            >
+              <option value="date-desc">⚡ Newest Saved First</option>
+              <option value="date-asc">⏳ Oldest Saved First</option>
+              <option value="type-asc">🏷️ Type (A - Z)</option>
+              <option value="type-desc">🏷️ Type (Z - A)</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--text-secondary)]">
               <span className="text-[8px]">▼</span>
@@ -446,6 +459,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
                 setSelectedFeatureTag('all');
                 setDateFilter('all');
                 setCustomDateStr('');
+                setSortBy('date-desc');
               }}
               className="text-[10px] text-brand hover:underline font-bold uppercase cursor-pointer"
             >
@@ -526,13 +540,14 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
               </div>
             </div>
           ) : (
-            <div className={cn("grid gap-3", selectedDraft ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3")}>
+            <motion.div layout className={cn("grid gap-3", selectedDraft ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3")}>
               {filteredDrafts.map((draft) => {
                 const isSelected = selectedDraft?.id === draft.id;
                 const isSelectedInBulk = selectedIds.includes(draft.id);
                 return (
                   <motion.div
                     key={draft.id}
+                    layout
                     layoutId={`draft-${draft.id}`}
                     onClick={() => setSelectedDraft(draft)}
                     className={cn(
@@ -620,7 +635,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
                   </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
           )}
         </div>
 

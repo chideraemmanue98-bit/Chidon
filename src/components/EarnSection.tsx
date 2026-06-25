@@ -120,6 +120,7 @@ export const EarnSection: React.FC<EarnSectionProps> = ({ onBack, user, onSignIn
 
   // Load Real-time Data from firestore
   useEffect(() => {
+    if (!user) return;
     setLoading(true);
     // Subscribe to Jobs
     const qJobs = query(collection(db, 'earn_jobs'), orderBy('createdAt', 'desc'));

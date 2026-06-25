@@ -42,7 +42,6 @@ import {
   doc,
   where
 } from 'firebase/firestore';
-import { GoogleGenAI } from "@google/genai";
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { exportToJSON, exportToCSV } from '../lib/exportUtils';
@@ -59,7 +58,23 @@ interface ScheduledPost {
   status: 'scheduled' | 'published' | 'failed';
 }
 
-export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack, user }: { initialCaption?: string, onClearPreFill?: () => void, feature?: any, onBack?: () => void, user?: any }) => {
+export const PostScheduler = ({ 
+  initialCaption, 
+  onClearPreFill, 
+  feature, 
+  onBack, 
+  user,
+  credits,
+  onDeductCredits
+}: { 
+  initialCaption?: string, 
+  onClearPreFill?: () => void, 
+  feature?: any, 
+  onBack?: () => void, 
+  user?: any,
+  credits?: number | null,
+  onDeductCredits?: (amount: number) => Promise<boolean>
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
@@ -91,12 +106,16 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
 
   const handleGenerateAICaption = async () => {
     if (!aiTopic) return;
+
+    if (onDeductCredits) {
+      const canProceed = await onDeductCredits(1);
+      if (!canProceed) return;
+    }
+
     setIsGeneratingAI(true);
     setAiError(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
       const prompt = `Act as a Viral Social Media Strategist. Generate a high-performance caption for ${platform} about the topic: "${aiTopic}".
       
       Requirements:
@@ -108,12 +127,24 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
       
       Return ONLY the caption text, no prefixes, no surrounding quotes, and no commentary.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt
+      const response = await fetch("/api/gemini/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          model: "gemini-3.5-flash"
+        })
       });
-      
-      const text = response.text;
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const text = data.text;
       if (text) {
         setCaption(text);
         setAiTopic('');
@@ -122,22 +153,18 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
       }
     } catch (err: any) {
       console.error("AI Generation Error:", err);
-      setAiError("Neural link failed. Verify connectivity.");
+      setAiError(err.message || "Neural link failed. Verify connectivity.");
     } finally {
       setIsGeneratingAI(false);
     }
   };
 
   useEffect(() => {
-    let q;
-    if (user) {
-      q = query(
-        collection(db, 'scheduled_posts'),
-        where('userId', '==', user.uid)
-      );
-    } else {
-      q = query(collection(db, 'scheduled_posts'));
-    }
+    if (!user) return;
+    const q = query(
+      collection(db, 'scheduled_posts'),
+      where('userId', '==', user.uid)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let postsData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -160,10 +187,6 @@ export const PostScheduler = ({ initialCaption, onClearPreFill, feature, onBack,
 
       postsData = uniquePosts;
       postsData.sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
-
-      if (!user) {
-        postsData = postsData.filter(post => !('userId' in post) || !post.userId);
-      }
 
       setPosts(postsData);
     }, (error) => {

@@ -137,7 +137,7 @@ export const RuledBook: React.FC<RuledBookProps> = ({
     }
 
     return () => unsubscribe();
-  }, []);
+  }, [auth.currentUser]);
 
   // Handle pre-fill injection when sent from other feature tools
   useEffect(() => {
