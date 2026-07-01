@@ -127,9 +127,15 @@ export default function ChidonPricing({ user, onBack, db }: ChidonPricingProps) 
   useEffect(() => {
     // Fetch Paystack configuration and live exchange rate
     fetch('/api/paystack/config')
-      .then(res => res.json())
+      .then(async res => {
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return res.json();
+        }
+        throw new Error(`Expected JSON response, but received content-type: ${contentType}`);
+      })
       .then(data => {
-        if (data.success) {
+        if (data && data.success) {
           setPaystackConfigured(data.configured);
           if (data.exchangeRate) {
             setExchangeRate(data.exchangeRate);
@@ -139,6 +145,7 @@ export default function ChidonPricing({ user, onBack, db }: ChidonPricingProps) 
       })
       .catch(err => {
         console.error('[Pricing Gateway] Config check error:', err);
+        setPaystackConfigured(false);
         setCheckingConfig(false);
       });
   }, []);

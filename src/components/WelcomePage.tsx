@@ -148,6 +148,21 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
 
         {/* Action and Disclaimer block */}
         <div className="flex flex-col items-center gap-4 w-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="bg-cyan-500/10 border-2 border-cyan-500/30 rounded-2xl px-5 py-3 text-center max-w-sm w-full shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+          >
+            <div className="flex items-center justify-center gap-2 text-cyan-400 font-extrabold text-[11px] font-mono tracking-wider">
+              <Sparkles size={14} className="animate-pulse" />
+              <span>+3 FREE TRIAL CREDITS ACTIVATED INSTANTLY</span>
+            </div>
+            <p className="text-[9px] text-slate-400 font-mono mt-1 uppercase tracking-tight">
+              Always receive 3 daily credits to power your workspace
+            </p>
+          </motion.div>
+
           <motion.button
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98, y: 0 }}

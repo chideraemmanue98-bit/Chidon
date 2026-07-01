@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
@@ -147,12 +146,11 @@ async function generateContentWithRetryAndFallback(
   throw lastError || new Error("Failed to generate content with all available models.");
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
-  // Middleware for parsing JSON requests
-  app.use(express.json());
+// Middleware for parsing JSON requests
+app.use(express.json());
 
   // =========================================================================
   // SECURE OS V4 ENGINE: GOOGLE AI STUDIO STANDARDS DEFENSE-IN-DEPTH SYSTEM
@@ -236,55 +234,58 @@ async function startServer() {
   console.log("[Security OS] Active defense-in-depth shield loaded: CORS-blocking, Custom CSP, In-memory Rate-limiter (60req/min), and Prompt Injection Guard.");
 
   // Database Initialization & Automatic Migrations at Backend Engine
-  const host = process.env.SQL_HOST;
-  const database = process.env.SQL_DB_NAME;
-  const user = process.env.SQL_USER;
-  const password = process.env.SQL_PASSWORD;
-  const port = parseInt(process.env.SQL_PORT || "5432", 10);
+  async function initDatabase() {
+    const host = process.env.SQL_HOST;
+    const database = process.env.SQL_DB_NAME;
+    const user = process.env.SQL_USER;
+    const password = process.env.SQL_PASSWORD;
+    const port = parseInt(process.env.SQL_PORT || "5432", 10);
 
-  if (host && database && user) {
-    console.log(`[Database Engine] PostgreSQL/Google Cloud SQL detected. Initializing connection pool to ${host}:${port}/${database}...`);
-    const pool = new pg.Pool({ host, database, user, password, port, connectionTimeoutMillis: 5000 });
-    try {
-      const client = await pool.connect();
-      console.log("[Database Engine] Connected to PostgreSQL successfully! Initiating auto-schema migrations...");
-      
-      // Execute migrations
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS drafts (
-          id VARCHAR(255) PRIMARY KEY,
-          title TEXT NOT NULL,
-          content TEXT NOT NULL,
-          feature_id VARCHAR(100),
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
+    if (host && database && user) {
+      console.log(`[Database Engine] PostgreSQL/Google Cloud SQL detected. Initializing connection pool to ${host}:${port}/${database}...`);
+      const pool = new pg.Pool({ host, database, user, password, port, connectionTimeoutMillis: 5000 });
+      try {
+        const client = await pool.connect();
+        console.log("[Database Engine] Connected to PostgreSQL successfully! Initiating auto-schema migrations...");
         
-        CREATE TABLE IF NOT EXISTS gigs (
-          id VARCHAR(255) PRIMARY KEY,
-          title TEXT NOT NULL,
-          description TEXT,
-          price_from NUMERIC DEFAULT 0,
-          category VARCHAR(100),
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-        
-        CREATE TABLE IF NOT EXISTS portfolios (
-          id VARCHAR(255) PRIMARY KEY,
-          title TEXT NOT NULL,
-          description TEXT,
-          media_url TEXT,
-          category VARCHAR(100),
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-      `);
-      console.log("[Database Engine] PostgreSQL auto-migrations completed successfully!");
-      client.release();
-    } catch (err: any) {
-      console.error("[Database Engine] PostgreSQL auto-migration or connection failed:", err.message || err);
+        // Execute migrations
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS drafts (
+            id VARCHAR(255) PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            feature_id VARCHAR(100),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          
+          CREATE TABLE IF NOT EXISTS gigs (
+            id VARCHAR(255) PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            price_from NUMERIC DEFAULT 0,
+            category VARCHAR(100),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          
+          CREATE TABLE IF NOT EXISTS portfolios (
+            id VARCHAR(255) PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            media_url TEXT,
+            category VARCHAR(100),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
+        console.log("[Database Engine] PostgreSQL auto-migrations completed successfully!");
+        client.release();
+      } catch (err: any) {
+        console.error("[Database Engine] PostgreSQL auto-migration or connection failed:", err.message || err);
+      }
+    } else {
+      console.log("[Database Engine] No custom SQL_HOST environment variables injected. Running with local memory fallback.");
     }
-  } else {
-    console.log("[Database Engine] No custom SQL_HOST environment variables injected. Running with local memory fallback.");
   }
+  initDatabase();
 
   // Supabase Server-Side Initialization Check
   const sUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -905,27 +906,41 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+  // Handle static serving and Vite dev server depending on environment
+  async function setupFrontendRouting() {
+    // If we are running in Vercel serverless context, do not attach Vite middleware or static serving
+    if (process.env.VERCEL) {
+      return;
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Server] Mounting Vite developer middleware for local hot-reloading...");
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } else {
+      console.log("[Server] Standalone production container mode. Serving pre-compiled static assets...");
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
+  }
+
+  setupFrontendRouting();
+
+  // Only listen to port if not in Vercel serverless function context
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`CHIDON IQ Neural Backend listening on http://0.0.0.0:${PORT}`);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`CHIDON IQ Neural Backend listening on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
+export default app;
 
 function generateMockTrends(platform: string, category: string, searchQuery: string) {
   const platforms = ["youtube", "tiktok", "facebook"];

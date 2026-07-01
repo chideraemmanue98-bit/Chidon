@@ -3640,19 +3640,37 @@ export default function App() {
         }
         if (data.credits !== undefined) {
           setCredits(data.credits);
+          
+          // Check for daily 3 credits grant!
+          const todayStr = new Date().toISOString().split('T')[0];
+          if (!data.lastDailyCreditReset || data.lastDailyCreditReset !== todayStr) {
+            const updatedCredits = (data.credits || 0) + 3;
+            setCredits(updatedCredits);
+            updateDoc(userDocRef, {
+              credits: updatedCredits,
+              lastDailyCreditReset: todayStr,
+              updatedAt: serverTimestamp()
+            }).catch(err => console.error("Failed to grant daily credits:", err));
+          }
         } else {
-          // Default: Give 5 Free Credits To every Users Who sign Up with a New email
-          const initialCredits = 5;
+          // Default: Give 3 Free Credits To every User Who signs Up with a New email
+          const initialCredits = 3;
+          const todayStr = new Date().toISOString().split('T')[0];
           setCredits(initialCredits);
-          setDoc(userDocRef, { credits: initialCredits }, { merge: true })
+          setDoc(userDocRef, { 
+            credits: initialCredits,
+            lastDailyCreditReset: todayStr
+          }, { merge: true })
             .catch(err => console.error("Failed to initialize free trial credits:", err));
         }
       } else {
-        // Document does not exist: initialize with 5 credits for email signup
-        const initialCredits = 5;
+        // Document does not exist: initialize with 3 credits for email signup
+        const initialCredits = 3;
+        const todayStr = new Date().toISOString().split('T')[0];
         setCredits(initialCredits);
         setDoc(userDocRef, {
           credits: initialCredits,
+          lastDailyCreditReset: todayStr,
           email: user.email || '',
           displayName: user.displayName || '',
           createdAt: serverTimestamp()
