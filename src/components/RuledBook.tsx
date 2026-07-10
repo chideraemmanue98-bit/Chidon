@@ -8,7 +8,6 @@ import {
   ChevronRight, 
   Save, 
   Download, 
-  Sparkles, 
   Check, 
   FileDown, 
   Loader2, 
@@ -34,7 +33,7 @@ import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
-import emptyRuledBookImg from '../assets/images/empty_ruled_book_1781319215699.jpg';
+import emptyRuledBookImg from '../assets/images/journal_ruled_cover_1783488617827.jpg';
 
 interface NotePage {
   id: string;

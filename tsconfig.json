@@ -27,6 +27,7 @@
     "node_modules",
     "dist",
     "app",
-    "lib"
+    "lib",
+    "standalone-refactor"
   ]
 }

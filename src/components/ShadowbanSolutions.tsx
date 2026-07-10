@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { 
   Shield, ShieldAlert, AlertCircle, CheckCircle2, Copy, BookOpen, 
   ArrowLeft, RefreshCcw, FileText, BarChart, HardDrive, 
-  HelpCircle, Sparkles, Upload, Play, Heart, Trash2, Plus, 
+  HelpCircle, Zap, Upload, Play, Heart, Trash2, Plus, 
   ExternalLink, ChevronRight, Check, AlertTriangle, MessageSquare, Info
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -223,6 +224,7 @@ export const ShadowbanSolutions = ({
   feature,
   onBack
 }: ShadowbanSolutionsProps) => {
+  const { i18n } = useTranslation();
   const [channelUrl, setChannelUrl] = useState('');
   const [impressions, setImpressions] = useState('');
   const [ctr, setCtr] = useState('');
@@ -261,6 +263,86 @@ export const ShadowbanSolutions = ({
   useEffect(() => {
     localStorage.setItem('chidon_shadowban_checklist', JSON.stringify(checklist));
   }, [checklist]);
+
+  // Proactive Mitigation States
+  const [isMitigationOpen, setIsMitigationOpen] = useState(false);
+  const [mitigationContent, setMitigationContent] = useState<string | null>(null);
+  const [mitigationLoading, setMitigationLoading] = useState(false);
+  const [mitigationError, setMitigationError] = useState<string | null>(null);
+
+  // Risk level badge info helper
+  const getRiskLevelBadge = (score: number | null) => {
+    if (score === null) return null;
+    if (score > 60) {
+      return {
+        label: 'High Risk',
+        className: 'bg-red-500/10 text-red-500 border border-red-500/20 dark:border-red-500/30',
+        dotColor: 'bg-red-500'
+      };
+    } else if (score > 30) {
+      return {
+        label: 'Medium Risk',
+        className: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30',
+        dotColor: 'bg-amber-500'
+      };
+    } else {
+      return {
+        label: 'Low Risk',
+        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30',
+        dotColor: 'bg-emerald-500'
+      };
+    }
+  };
+
+  const handleTriggerMitigation = async () => {
+    if (isMitigationOpen) {
+      setIsMitigationOpen(false);
+      return;
+    }
+
+    if (mitigationContent) {
+      setIsMitigationOpen(true);
+      return;
+    }
+
+    setMitigationLoading(true);
+    setMitigationError(null);
+    setIsMitigationOpen(true); // Open the panel while loading to show progress
+
+    try {
+      const riskRating = riskScore !== null ? `${riskScore}%` : "Calculating";
+      const riskText = riskScore !== null && riskScore > 60 ? "High Risk" : riskScore !== null && riskScore > 30 ? "Medium Risk" : "Low Risk";
+      
+      const prompt = `Formulate a highly professional, tactical set of proactive best practices to mitigate future search suppression, CTR bottlenecks, and shadowban risk.
+This is for a creator whose current YouTube Channel Audit results show:
+- Compliance Risk Rating: ${riskRating} (${riskText})
+- 28 Days Net Impressions Volume: ${impressions || "14.5K"}
+- Impression Click-Through Rate: ${ctr || "2.1"}%
+
+Provide exactly 5 highly specific, actionable mitigation strategies tailored for these metrics. Each strategy should have a strong, bold title followed by a 2-3 sentence tactical instruction. Ensure you use direct, action-oriented growth coaching language with subtle motivating slang (e.g., "no cap", "dey play", "vibe check", "no dulling"). Keep the output compact, organized with bullet points, and styled nicely for markdown rendering.`;
+
+      const res = await fetch("/api/gemini/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt, language: i18n.language }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Mitigation generation failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      const aiResponse = data.text || "Could not retrieve mitigation advice. Please try again.";
+      setMitigationContent(aiResponse);
+    } catch (err: any) {
+      console.error("Failed to generate proactive mitigation:", err);
+      setMitigationError(err.message || "An error occurred while generating best practices.");
+    } finally {
+      setMitigationLoading(false);
+    }
+  };
 
   // Handle Preset selection
   const selectPreset = (idx: number) => {
@@ -326,6 +408,10 @@ export const ShadowbanSolutions = ({
     setUploadedFileName('');
     setActivePresetIndex(-1);
     setVideosList(Array.from({ length: 10 }, (_, i) => ({ title: '', thumbnail: '', description: '' })));
+    setIsMitigationOpen(false);
+    setMitigationContent(null);
+    setMitigationLoading(false);
+    setMitigationError(null);
   };
 
   // Generate Audit
@@ -391,6 +477,12 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
   };
 
   const riskScore = lastResponse ? parseRiskScore(lastResponse.content) : null;
+
+  useEffect(() => {
+    if (riskScore !== null) {
+      localStorage.setItem('chidon_shadowban_risk_score', riskScore.toString());
+    }
+  }, [riskScore]);
 
   // Extract table rows dynamically for a custom table view!
   const parseTableRows = (text: string) => {
@@ -545,7 +637,7 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
 
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-white/[0.04] pb-4">
               <h3 className="text-sm font-mono font-black text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <Sparkles size={14} className="text-red-400" />
+                <Zap size={14} className="text-red-400" />
                 <span>Diagnostic Configuration Console</span>
               </h3>
               <p className="text-[10px] text-slate-600 dark:text-slate-500 font-mono">STEP 1 OF 2</p>
@@ -823,6 +915,24 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
 
           {/* POLICY NOTES RETAILER (4 cols) */}
           <div className="space-y-6 lg:col-span-4">
+            {/* Professional Diagnostic Graphic Banner */}
+            <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-900 aspect-[4/3] relative group">
+              <img 
+                src="/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg" 
+                alt="Shadowban Diagnostic System Core" 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-mono font-bold text-red-400 bg-red-950/80 px-2 py-0.5 rounded border border-red-500/25 uppercase tracking-wider">
+                    Shield Diagnostics Active
+                  </span>
+                  <p className="text-[10px] text-slate-300 font-medium">Compliance Scan Visualizer Node</p>
+                </div>
+              </div>
+            </div>
+
             <div className="card-base p-5 rounded-2xl space-y-4">
               <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
                 <ShieldAlert size={16} />
@@ -860,19 +970,117 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
         /* AUDIT REPORT VIEW ACTIVE */
         <div className="space-y-6">
           {/* TOP SUMMARY OVERVIEW CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
             {/* Risk Gauge */}
-            <div className="card-base p-5 flex items-center justify-between relative overflow-hidden">
-              <div className="space-y-1 z-10 text-left">
-                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-bold">Compliance Risk Rating</span>
-                <span className="text-3xl font-display font-black text-red-500 tracking-tight block">
-                  {riskScore !== null ? `${riskScore}%` : "CALCULATING"}
-                </span>
-                <span className="text-[10px] font-bold text-red-400/90 block font-mono">
-                  {riskScore !== null && riskScore > 60 ? "CRITICAL POLICY ALERT" : riskScore !== null && riskScore > 30 ? "MODERATE ENGAGEMENT FLAG" : "OPTIMAL HEALTH"}
-                </span>
-              </div>
-              <div className="absolute right-3 bottom-0 top-0 flex items-center justify-center opacity-10">
+            <div className={cn(
+              "card-base p-5 relative overflow-hidden transition-all duration-300 flex flex-col justify-between",
+              isMitigationOpen ? "md:col-span-4" : "md:col-span-1"
+            )}>
+              {/* Animated Risk Level badge on the top right */}
+              {(() => {
+                const badgeInfo = getRiskLevelBadge(riskScore);
+                if (!badgeInfo) return null;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.6, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
+                    className={cn(
+                      "absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[8px] font-black uppercase tracking-widest border bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm z-20 shadow-sm",
+                      badgeInfo.className
+                    )}
+                  >
+                    <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", badgeInfo.dotColor)} />
+                    <span>{badgeInfo.label}</span>
+                  </motion.div>
+                );
+              })()}
+
+              {isMitigationOpen ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-10">
+                    <div className="space-y-1 text-left">
+                      <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-bold">Compliance Risk Rating</span>
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-3xl font-display font-black text-red-500 tracking-tight block">
+                          {riskScore !== null ? `${riskScore}%` : "CALCULATING"}
+                        </span>
+                        <span className="text-[10px] font-bold text-red-400/90 block font-mono uppercase">
+                          {riskScore !== null && riskScore > 60 ? "CRITICAL POLICY ALERT" : riskScore !== null && riskScore > 30 ? "MODERATE ENGAGEMENT FLAG" : "OPTIMAL HEALTH"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleTriggerMitigation}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 font-mono text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-red-500/20 flex items-center gap-1.5 cursor-pointer z-30"
+                      >
+                        {mitigationLoading ? (
+                          <RefreshCcw className="animate-spin" size={12} />
+                        ) : (
+                          <Zap size={12} />
+                        )}
+                        <span>Collapse Mitigation</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Collapsible panel with animate-presence */}
+                  <AnimatePresence>
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="border-t border-slate-200 dark:border-white/[0.04] pt-4 mt-1 overflow-hidden text-left"
+                    >
+                      {mitigationLoading ? (
+                        <div className="py-6 flex flex-col items-center justify-center gap-3 text-slate-500 font-mono text-xs">
+                          <RefreshCcw className="animate-spin text-red-500" size={24} />
+                          <span className="animate-pulse font-bold text-red-500">Formulating custom proactive mitigation blueprint...</span>
+                        </div>
+                      ) : mitigationError ? (
+                        <div className="py-4 text-center text-red-500 font-mono text-xs">
+                          Error generating mitigation blueprint: {mitigationError}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
+                            <Shield className="animate-pulse" size={14} />
+                            <h4 className="text-[10px] font-mono font-black uppercase tracking-wider">AI-Generated Proactive Mitigation Blueprint</h4>
+                          </div>
+                          <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium prose prose-invert max-w-none prose-xs bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+                            <ReactMarkdown>{mitigationContent || ""}</ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <div className="flex flex-col h-full justify-between gap-4 z-10 text-left">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-bold">Compliance Risk Rating</span>
+                    <span className="text-3xl font-display font-black text-red-500 tracking-tight block">
+                      {riskScore !== null ? `${riskScore}%` : "CALCULATING"}
+                    </span>
+                    <span className="text-[10px] font-bold text-red-400/90 block font-mono">
+                      {riskScore !== null && riskScore > 60 ? "CRITICAL POLICY ALERT" : riskScore !== null && riskScore > 30 ? "MODERATE ENGAGEMENT FLAG" : "OPTIMAL HEALTH"}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={handleTriggerMitigation}
+                    className="mt-2 w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 font-mono text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border border-red-500/20 flex items-center justify-center gap-1.5 cursor-pointer z-30"
+                  >
+                    <Zap size={11} />
+                    <span>View Recovery Mitigation</span>
+                  </button>
+                </div>
+              )}
+              
+              <div className="absolute right-3 bottom-0 top-0 flex items-center justify-center opacity-5 pointer-events-none">
                 <ShieldAlert size={80} className="text-red-500" />
               </div>
             </div>

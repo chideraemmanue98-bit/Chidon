@@ -33,11 +33,12 @@
     "launchHub": "Launch Hub"
   },
   "categories": {
-    "Core": "Core Protocols",
-    "Video SEO": "Video SEO Hub",
-    "Trends": "Trends & Insights",
-    "Growth": "Growth Hacking",
-    "Pro": "Pro Suite"
+    "Content Creation": "Creative & Scripting",
+    "SEO & Optimization": "Metadata & Keywords",
+    "Branding & Strategy": "Identity & Audience",
+    "Publishing & Logistics": "Schedules & Publishing",
+    "Diagnostics & Trends": "Scorecards & Trends",
+    "SaaS Workspace": "Vault & Workspace Utilities"
   },
   "dashboard": {
     "systemLive": "System Live: ACTIVE",

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { 
-  Sparkles, FileText, UserCircle, BarChart3, ChevronRight, 
+  FileText, UserCircle, BarChart3, ChevronRight, 
   Copy, Check, Download, Send, AlertCircle, RefreshCcw, 
   ArrowLeft, FilePlus2, BookOpen, Laptop, Bookmark, Zap, HelpCircle, FileCheck
 } from 'lucide-react';
@@ -625,7 +625,7 @@ ${paramsSummary}
                 </>
               ) : (
                 <>
-                  <Sparkles size={14} className="text-black fill-current" />
+                  <Zap size={14} className="text-black fill-current" />
                   Populate Selected Blueprint
                 </>
               )}
@@ -708,7 +708,7 @@ ${paramsSummary}
               <div id="template-loading-overlay" className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center space-y-4">
                 <div className="relative">
                   <div className="w-12 h-12 rounded-full border-2 border-cyan-primary/20 border-t-cyan-primary animate-spin" />
-                  <Sparkles size={16} className="absolute inset-x-0 inset-y-0 m-auto text-cyan-primary animate-pulse" />
+                  <Zap size={16} className="absolute inset-x-0 inset-y-0 m-auto text-cyan-primary animate-pulse" />
                 </div>
                 <div className="space-y-1 max-w-sm">
                   <p className="text-xs font-mono text-cyan-primary tracking-widest uppercase">GENERATING BLUEPRINT</p>
@@ -781,9 +781,20 @@ ${paramsSummary}
                     animate={{ opacity: 1 }}
                     className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4"
                   >
-                    <div className="w-10 h-10 rounded-full border border-dashed border-slate-700 flex items-center justify-center text-slate-500">
-                      <BookOpen size={18} />
+                    <div className="w-full max-w-sm h-28 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-lg">
+                      <img 
+                        src="/src/assets/images/template_wireframe_1783490763717.jpg" 
+                        alt="Template Framework Outline" 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-2.5">
+                        <span className="text-[8px] font-mono font-bold text-yellow-400 bg-slate-950/80 px-2 py-0.5 rounded border border-yellow-500/25 uppercase tracking-wider">
+                          Interactive Blueprint Outline
+                        </span>
+                      </div>
                     </div>
+                    
                     <div className="space-y-1 max-w-sm">
                       <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-300">Selected Blueprint Skeleton</h4>
                       <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">

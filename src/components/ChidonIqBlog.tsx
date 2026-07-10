@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { 
-  BookOpen, Sparkles, Wand2, ArrowLeft, Check, Loader2, 
+  BookOpen, Wand2, ArrowLeft, Check, Loader2, 
   Share2, Copy, Save, Calendar, Clock, User, Zap, Brain, 
   Target, ChevronRight, MessageSquare, Terminal, Eye, PenTool
 } from 'lucide-react';
@@ -22,6 +23,7 @@ interface BlogPost {
   date: string;
   author: string;
   tags: string[];
+  image?: string;
 }
 
 const PRE_CURATED_BLOGS: BlogPost[] = [
@@ -34,6 +36,7 @@ const PRE_CURATED_BLOGS: BlogPost[] = [
     date: 'June 10, 2026',
     author: 'Chief Intelligence Architect',
     tags: ['Algorithms', 'Neuromorphic', 'Feeds', 'CTR'],
+    image: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
     content: `### The Collapse of the Follower Graph
 
 For over a decade, social platforms thrived on the traditional follower model. You followed a brand, and your feed displayed their content. Today, that graph is virtually dead. It has been replaced by **Interest-based Recommendation Core engines (neuromorphic sorting vectors)**.
@@ -62,8 +65,9 @@ By injecting strategic contrast ratios, exact typography guides, and tailored ni
     date: 'June 08, 2026',
     author: 'Visual Cognition Expert',
     tags: ['Psychology', 'Audience Retention', 'Visual Design'],
+    image: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
     content: `### The Neurological Gatekeepers
-
+    
 The modern human attention span does not suffer from simple exhaustion; it has evolved a highly sensitive **redundand-content filter**. The visual cortex processes visual layout cues in less than 80 milliseconds. If it recognizes a standard recycled frame pattern or overproduced corporate format, it forces the user to flick upwards instinctively.
 
 To cross this visual threshold safely, your content must leverage **tactical visual contrast and psychological tension**.
@@ -96,6 +100,7 @@ A common failure in viral growth is call-to-action dispersion. Requesting likes,
     date: 'June 02, 2026',
     author: 'Freelance Logistics Officer',
     tags: ['Gigs', 'Decentralization', 'Earn', 'Wealth'],
+    image: '/src/assets/images/empty_earned_1781319231364.jpg',
     content: `### The Creator Deliverable Redefined
 
 Over 70% of businesses actively seek custom creative positioning, yet they lack the specialized technical knowledge to execute high-retention video formats or SEO matrices themselves. Simply offering to "write captions" or "make posts" is a race to bottom-tier pricing.
@@ -115,6 +120,7 @@ By operating with professional, clinical precision rather than guesswork, freela
 ];
 
 export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack }) => {
+  const { i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<'feed' | 'synthesizer'>('feed');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
@@ -165,7 +171,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, language: i18n.language }),
       });
 
       if (!response.ok) {
@@ -213,7 +219,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, language: i18n.language }),
       });
 
       if (response.ok) {
@@ -326,6 +332,21 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
               <div className="lg:col-span-8 card-base p-6 md:p-8 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl space-y-6 text-left relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
                 
+                {/* Beautiful Banner Image */}
+                <div className="w-full h-48 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-md mb-4">
+                  <img 
+                    src={selectedPost.image || "/src/assets/images/seo_analytics_vector_1783490751280.jpg"} 
+                    alt={selectedPost.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
+                    <span className="text-[9px] font-mono font-bold text-cyan-400 bg-slate-950/80 px-2.5 py-0.5 rounded border border-cyan-500/25 uppercase tracking-wider">
+                      Neural Analytics Hub Stream
+                    </span>
+                  </div>
+                </div>
+
                 {/* Meta details */}
                 <div className="space-y-2">
                   <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-primary bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">{selectedPost.category}</span>
@@ -412,25 +433,42 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
               <motion.div
                 key={blog.id}
                 whileHover={{ y: -4 }}
-                className="card-base p-6 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl flex flex-col justify-between text-left relative overflow-hidden group cursor-pointer"
+                className="card-base border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl flex flex-col justify-between text-left relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
                 onClick={() => setSelectedPost(blog)}
               >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[9px] font-mono font-bold text-cyan-600 dark:text-cyan-primary bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">{blog.category}</span>
-                    <span className="text-[9px] font-mono text-slate-400">{blog.readTime}</span>
+                <div>
+                  {/* Card Banner Image */}
+                  <div className="w-full h-32 overflow-hidden border-b border-[var(--border-base)] relative">
+                    <img 
+                      src={blog.image || "/src/assets/images/seo_analytics_vector_1783490751280.jpg"} 
+                      alt={blog.title} 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute top-2 left-2">
+                      <span className="text-[8px] font-mono font-bold text-cyan-400 bg-slate-950/80 px-2 py-0.5 rounded border border-cyan-500/25 uppercase tracking-wider">
+                        {blog.category}
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="text-base font-display font-extrabold text-[var(--text-primary)] leading-snug tracking-tight group-hover:text-cyan-500 transition-colors">
-                    {blog.title}
-                  </h3>
-                  
-                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-3 font-sans font-medium">
-                    {blog.excerpt}
-                  </p>
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                      <span>{blog.date}</span>
+                      <span>{blog.readTime}</span>
+                    </div>
+
+                    <h3 className="text-sm font-display font-black text-[var(--text-primary)] leading-snug tracking-tight group-hover:text-cyan-500 transition-colors line-clamp-2">
+                      {blog.title}
+                    </h3>
+                    
+                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-2 font-sans font-medium">
+                      {blog.excerpt}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="pt-6 border-t border-[var(--border-base)]/40 mt-6 flex items-center justify-between">
+                <div className="px-5 pb-5 pt-3 border-t border-[var(--border-base)]/40 flex items-center justify-between">
                   <span className="text-[10px] text-slate-400 font-mono font-bold">{blog.author}</span>
                   <span className="text-xs font-mono font-black text-cyan-600 dark:text-cyan-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                     Read Intel <ChevronRight size={14} />

@@ -568,6 +568,118 @@ const KeywordTrendGraph = ({ difficulty }: { difficulty: number }) => {
   );
 };
 
+// --- FEATURE DYNAMIC IMAGES MAPPING ---
+const FEATURE_IMAGES: Record<string, { src: string, alt: string, badge: string, subtitle: string }> = {
+  'keyword-research': {
+    src: '/src/assets/images/keyword_intel_radar_1783488604768.jpg',
+    alt: 'Keyword Intel Radar Core',
+    badge: 'Radar Nodes Sync Active',
+    subtitle: 'Volumetric Keyword Vector Map'
+  },
+  'vseo-keywords': {
+    src: '/src/assets/images/keyword_intel_radar_1783488604768.jpg',
+    alt: 'Keyword Intel Radar Core',
+    badge: 'Radar Nodes Sync Active',
+    subtitle: 'Volumetric Keyword Vector Map'
+  },
+  'content-ideas': {
+    src: '/src/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg',
+    alt: 'Creative Analytics Node Map',
+    badge: 'Creative Engine Link Live',
+    subtitle: 'High-Velocity Format Synthesizer'
+  },
+  'scripts': {
+    src: '/src/assets/images/template_wireframe_1783490763717.jpg',
+    alt: 'Script Outline Matrix Block',
+    badge: 'Script Matrix Synthesizer',
+    subtitle: 'Pattern-Interrupted Script Architecture'
+  },
+  'ai-script-outline': {
+    src: '/src/assets/images/template_wireframe_1783490763717.jpg',
+    alt: 'Script Outline Matrix Block',
+    badge: 'Script Matrix Synthesizer',
+    subtitle: 'Pattern-Interrupted Script Architecture'
+  },
+  'bio': {
+    src: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
+    alt: 'Audience Psychographics Vector Map',
+    badge: 'Bio Converter Protocol',
+    subtitle: 'Identity Matrix Positioning Core'
+  },
+  'personas': {
+    src: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
+    alt: 'Audience Psychographics Vector Map',
+    badge: 'Psychographic Ingress Active',
+    subtitle: 'Fictional Persona Matrix Constructor'
+  },
+  'thumbnails': {
+    src: '/src/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
+    alt: 'High-Contrast Thumbnail Layout Preview',
+    badge: 'Visual Psychology Core',
+    subtitle: 'Click-Friction Concept Canvas'
+  },
+  'vseo-scorecard': {
+    src: '/src/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
+    alt: 'High-Contrast Thumbnail Layout Preview',
+    badge: 'Visual Psychology Core',
+    subtitle: 'Click-Friction Concept Canvas'
+  },
+  'competitor-analysis': {
+    src: '/src/assets/images/seo_analytics_vector_1783490751280.jpg',
+    alt: 'Global Node Market Matrix Analytics',
+    badge: 'Market Lab Monitor',
+    subtitle: 'Strategic Pillar Positioning Map'
+  },
+  'hashtags': {
+    src: '/src/assets/images/chidon_iq_dashboard_1783387455047.jpg',
+    alt: 'Global Hashtag Rank Tiers Scanner',
+    badge: 'Linguistic Engine Ingress',
+    subtitle: 'Reach Tiers Compression Matrix'
+  },
+  'vseo-tags': {
+    src: '/src/assets/images/chidon_iq_dashboard_1783387455047.jpg',
+    alt: 'Global Hashtag Rank Tiers Scanner',
+    badge: 'Linguistic Engine Ingress',
+    subtitle: 'Reach Tiers Compression Matrix'
+  },
+  'repurposing': {
+    src: '/src/assets/images/chidon_iq_engine_1783387464624.jpg',
+    alt: 'Multi-Platform Repurpose Signal Matrix',
+    badge: 'Signal Splitter Synced',
+    subtitle: 'Multi-Channel Narrative Transformer'
+  },
+  'posting-schedule': {
+    src: '/src/assets/images/empty_scheduler_1781319203016.jpg',
+    alt: 'Temporal Optimization Dispatch Calendar',
+    badge: 'Temporal Grid Synthesizer',
+    subtitle: 'Optimized Content Dispersion Matrix'
+  },
+  'vseo-best-time': {
+    src: '/src/assets/images/empty_scheduler_1781319203016.jpg',
+    alt: 'Temporal Optimization Dispatch Calendar',
+    badge: 'Temporal Grid Synthesizer',
+    subtitle: 'Optimized Content Dispersion Matrix'
+  },
+  'engagement-calc': {
+    src: '/src/assets/images/chidon_iq_strategy_1783387475441.jpg',
+    alt: 'Sovereign Creator Growth Calculator Map',
+    badge: 'Growth Calculus Model',
+    subtitle: '30-Day Conversion Acceleration Curve'
+  },
+  'headlines': {
+    src: '/src/assets/images/dashboard_hero_banner_1783488577319.jpg',
+    alt: 'Catchy Headlines Click Matrix',
+    badge: 'Attention Core Ingress',
+    subtitle: 'Friction-Based Click Magnet Hook Formulas'
+  },
+  'shadowban-solutions': {
+    src: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
+    alt: 'Anti-Shadowban Diagnostics Shield',
+    badge: 'Shield Diagnostics Active',
+    subtitle: 'Compliance Scan Visualizer Node'
+  }
+};
+
 // --- MAIN UNIFIED COMPONENT ---
 export default function AdvancedNeuralTool({ feature, onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, onBack }: any) {
   const { t } = useTranslation();
@@ -813,6 +925,29 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
             </button>
           </div>
 
+          {FEATURE_IMAGES[feature.id] && (
+            <div className="rounded-3xl overflow-hidden border border-[var(--border-base)] shadow-sm bg-slate-900 aspect-[4/3] relative group">
+              <img 
+                src={FEATURE_IMAGES[feature.id].src} 
+                alt={FEATURE_IMAGES[feature.id].alt} 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-5 text-left">
+                <div className="space-y-1">
+                  <span className={cn(
+                    "text-[9px] font-mono font-bold bg-slate-950/80 px-2 py-0.5 rounded border uppercase tracking-wider",
+                    feature.themeColor,
+                    feature.themeColor.replace('text-', 'border-').concat('/25')
+                  )}>
+                    {FEATURE_IMAGES[feature.id].badge}
+                  </span>
+                  <p className="text-[10px] text-slate-300 font-medium">{FEATURE_IMAGES[feature.id].subtitle}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {feature.id === 'keyword-research' && input1 && (
             <KeywordTrendGraph difficulty={55} />
           )}
@@ -829,7 +964,7 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
 
           {!loading && !lastResponse && (
             <div className="flex flex-col items-center justify-center py-24 bg-[var(--bg-card)] border border-dashed border-[var(--border-base)] rounded-3xl text-center p-6 shadow-sm">
-              <SparklesIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4 animate-pulse" />
+              <CpuIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4 animate-pulse" />
               <h4 className="text-[var(--text-primary)] font-bold text-sm mb-1 uppercase tracking-wide">Aether-Core Ready</h4>
               <p className="text-[var(--text-secondary)] text-xs max-w-sm leading-relaxed">
                 Provide directive specifications in the left controller console and select execute to trigger neural analysis stream.
@@ -954,12 +1089,19 @@ function LoaderCircleIcon(props: any) {
   );
 }
 
-function SparklesIcon(props: any) {
+function CpuIcon(props: any) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-      <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5z" />
-      <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" />
+      <rect width="16" height="16" x="4" y="4" rx="2" />
+      <rect width="6" height="6" x="9" y="9" rx="1" />
+      <path d="M9 1v3" />
+      <path d="M15 1v3" />
+      <path d="M9 20v3" />
+      <path d="M15 20v3" />
+      <path d="M20 9h3" />
+      <path d="M20 15h3" />
+      <path d="M1 9h3" />
+      <path d="M1 15h3" />
     </svg>
   );
 }

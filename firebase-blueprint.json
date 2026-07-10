@@ -228,6 +228,66 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["amountUsd", "amountNgn", "creditsAmount", "reference", "payerEmail", "status", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Freelance gig reviews",
+      "type": "object",
+      "properties": {
+        "gigId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerAvatar": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["gigId", "buyerId", "rating", "comment", "createdAt"]
+    },
+    "Dispute": {
+      "title": "Dispute",
+      "description": "Freelance order disputes",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "raisedById": { "type": "string" },
+        "raisedByName": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "raisedById", "reason", "status", "createdAt"]
+    },
+    "MilestoneUpdate": {
+      "title": "Milestone Update",
+      "description": "Freelance project milestone updates",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "milestoneIndex": { "type": "number" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorRole": { "type": "string" },
+        "statusNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "milestoneIndex", "authorId", "authorName", "authorRole", "statusNote", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Freelance and workspace notifications",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "linkId": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "isRead", "createdAt"]
     }
   },
   "firestore": {
@@ -290,6 +350,22 @@
     "/follows/{followId}": {
       "schema": "Follow",
       "description": "Collection of follower actions"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Collection of freelance gig reviews"
+    },
+    "/disputes/{disputeId}": {
+      "schema": "Dispute",
+      "description": "Collection of freelance order disputes"
+    },
+    "/milestone_updates/{updateId}": {
+      "schema": "MilestoneUpdate",
+      "description": "Collection of freelance milestone status updates"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of freelance and workspace notifications"
     }
   }
 }

@@ -313,5 +313,21 @@ service cloud.firestore {
     match /follows/{followId} {
       allow read, write: if true;
     }
+
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
+    match /disputes/{disputeId} {
+      allow read, write: if true;
+    }
+
+    match /milestone_updates/{updateId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
   }
 }

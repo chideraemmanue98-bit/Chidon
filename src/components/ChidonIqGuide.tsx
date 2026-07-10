@@ -149,11 +149,11 @@ export const ChidonIqGuide = ({
             animate={{ scale: 1, rotate: 0 }}
             exit={{ scale: 0, rotate: 45 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 lg:bottom-8 lg:right-8 w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-cyan-primary to-purple-vibrant rounded-2xl flex items-center justify-center text-navy-black shadow-[0_0_40px_rgba(34,211,238,0.4)] z-50 hover:scale-110 active:scale-95 transition-all group"
+            className="fixed bottom-6 right-6 lg:bottom-8 lg:right-8 w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-cyan-primary to-purple-vibrant rounded-2xl flex items-center justify-center text-white shadow-[0_0_40px_rgba(34,211,238,0.4)] z-50 hover:scale-110 active:scale-95 transition-all group cursor-pointer"
           >
             <Cpu size={28} className="group-hover:animate-pulse lg:hidden" />
             <Cpu size={32} className="group-hover:animate-pulse hidden lg:block" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-vibrant rounded-full border-2 border-navy-black animate-ping" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-vibrant rounded-full border-2 border-[var(--bg-app)] animate-ping" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -166,19 +166,19 @@ export const ChidonIqGuide = ({
             animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1, x: 0 }}
             exit={isMobile ? { y: '100%' } : { opacity: 0, y: 100, scale: 0.9, x: 50 }}
             className={cn(
-              "fixed bg-navy-black/95 backdrop-blur-3xl border-white/20 shadow-[0_50px_100px_rgba(0,0,0,0.8)] z-[200] overflow-hidden flex flex-col transition-all duration-500",
+              "fixed bg-[var(--bg-card)] border-[var(--border-base)] shadow-[0_50px_100px_rgba(0,0,0,0.15)] dark:shadow-[0_50px_100px_rgba(0,0,0,0.7)] z-[200] overflow-hidden flex flex-col transition-all duration-500",
               isMobile 
                 ? "inset-0 rounded-none w-full h-full" 
                 : "bottom-28 right-8 w-[420px] h-[700px] rounded-[3rem] border shadow-2xl"
             )}
           >
             {/* Header */}
-            <div className="p-6 lg:p-8 border-b border-white/10 bg-gradient-to-r from-cyan-primary/10 to-purple-vibrant/10 flex justify-between items-center shrink-0">
+            <div className="p-6 lg:p-8 border-b border-[var(--border-base)] bg-gradient-to-r from-cyan-primary/10 to-purple-vibrant/10 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
                 {isMobile && (
                   <button 
                     onClick={() => setIsOpen(false)}
-                    className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-2"
+                    className="p-2.5 bg-[var(--bg-app)] border border-[var(--border-base)] rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <ChevronLeft size={18} />
                     <span className="text-[10px] font-black uppercase tracking-widest">Back</span>
@@ -189,10 +189,10 @@ export const ChidonIqGuide = ({
                     <Cpu size={24} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-display font-black text-white uppercase tracking-widest">Chidon Iq Intelligence</h3>
+                    <h3 className="text-sm font-display font-black text-[var(--text-primary)] uppercase tracking-widest">Chidon Iq Intelligence</h3>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-vibrant animate-pulse" />
-                      <span className="text-[10px] font-mono text-slate-500 uppercase font-black">Secure Uplink Active</span>
+                      <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase font-black">Secure Uplink Active</span>
                     </div>
                   </div>
                 </div>
@@ -200,7 +200,7 @@ export const ChidonIqGuide = ({
               {!isMobile && (
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="p-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-slate-500 hover:text-white"
+                  className="p-2.5 bg-[var(--bg-app)] border border-[var(--border-base)] rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
                 >
                   <X size={20} />
                 </button>
@@ -225,15 +225,15 @@ export const ChidonIqGuide = ({
                 >
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform hover:scale-110",
-                    m.role === 'assistant' ? "bg-cyan-primary text-navy-black" : "bg-white/10 text-white"
+                    m.role === 'assistant' ? "bg-cyan-primary text-white font-bold" : "bg-slate-200 dark:bg-slate-800 text-[var(--text-primary)]"
                   )}>
                     {m.role === 'assistant' ? <Cpu size={20} /> : <User size={20} />}
                   </div>
                   <div className={cn(
-                    "max-w-[85%] p-5 rounded-3xl text-sm leading-relaxed font-sans",
+                    "max-w-[85%] p-5 rounded-3xl text-sm leading-relaxed font-sans shadow-sm",
                     m.role === 'assistant' 
-                      ? "bg-white/5 border border-white/10 text-slate-200" 
-                      : "bg-cyan-primary/10 border border-cyan-primary/30 text-white shadow-[0_0_30px_rgba(34,211,238,0.05)]"
+                      ? "bg-[var(--bg-app)] border border-[var(--border-base)] text-[var(--text-primary)]" 
+                      : "bg-cyan-primary/10 dark:bg-cyan-primary/20 border border-cyan-primary/30 text-[var(--text-primary)]"
                   )}>
                     <div className="markdown-body text-inherit">
                       <ReactMarkdown>{m.content}</ReactMarkdown>
@@ -243,24 +243,24 @@ export const ChidonIqGuide = ({
               ))}
               {isLoading && (
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-primary text-navy-black flex items-center justify-center shrink-0 animate-pulse">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-primary text-white font-bold flex items-center justify-center shrink-0 animate-pulse">
                     <Cpu size={20} />
                   </div>
-                  <div className="p-5 bg-white/5 border border-white/10 rounded-[2rem] flex items-center gap-3">
+                  <div className="p-5 bg-[var(--bg-app)] border border-[var(--border-base)] rounded-[2rem] flex items-center gap-3">
                     <Loader2 size={18} className="text-cyan-primary animate-spin" />
-                    <span className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest animate-pulse">Decrypting Signal...</span>
+                    <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-widest animate-pulse">Decrypting Signal...</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Quick Actions */}
-            <div className="px-6 lg:px-8 pb-4 flex gap-2 overflow-x-auto custom-scrollbar shrink-0 bg-navy-black/20 pt-2 lg:pt-0">
+            <div className="px-6 lg:px-8 pb-4 flex gap-2 overflow-x-auto custom-scrollbar shrink-0 bg-[var(--bg-app)]/50 pt-2 lg:pt-0">
               {['How it works?', 'Save content?', 'Notepad help', 'Strategy tips', 'Drafts Archive'].map(tip => (
                 <button
                   key={tip}
                   onClick={() => setInput(tip)}
-                  className="whitespace-nowrap px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono text-slate-500 uppercase font-black hover:text-cyan-primary hover:border-cyan-primary/30 hover:bg-cyan-primary/5 transition-all shadow-sm"
+                  className="whitespace-nowrap px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl text-[10px] font-mono text-[var(--text-secondary)] uppercase font-bold hover:text-cyan-primary hover:border-cyan-primary/30 hover:bg-cyan-primary/5 transition-all shadow-sm cursor-pointer"
                 >
                   {tip}
                 </button>
@@ -268,7 +268,7 @@ export const ChidonIqGuide = ({
             </div>
 
             {/* Input Container */}
-            <div className="p-6 lg:p-8 border-t border-white/10 bg-navy-black/60 shrink-0">
+            <div className="p-6 lg:p-8 border-t border-[var(--border-base)] bg-[var(--bg-card)] shrink-0">
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-cyan-primary to-purple-vibrant rounded-[2rem] opacity-0 group-focus-within:opacity-20 transition-opacity blur-sm" />
                 <input 
@@ -277,17 +277,17 @@ export const ChidonIqGuide = ({
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Initiate intelligence protocol..."
-                  className="w-full bg-white/5 border border-white/10 rounded-[2rem] py-5 pl-8 pr-16 text-sm lg:text-base text-white placeholder:text-slate-600 outline-none focus:border-cyan-primary/50 transition-all font-sans relative z-10"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded-[2rem] py-5 pl-8 pr-16 text-sm lg:text-base text-[var(--text-primary)] placeholder:text-slate-400 outline-none focus:border-cyan-primary/50 transition-all font-sans relative z-10"
                 />
                 <button 
                   onClick={handleSend}
                   disabled={isLoading || !input.trim()}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-cyan-primary text-navy-black rounded-2xl hover:scale-110 active:scale-95 transition-all disabled:opacity-50 shadow-lg z-20"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-cyan-primary text-white rounded-2xl hover:scale-110 active:scale-95 transition-all disabled:opacity-50 shadow-lg z-20 cursor-pointer"
                 >
                   <Send size={20} />
                 </button>
               </div>
-              <p className="text-center mt-6 text-[10px] font-mono text-slate-700 uppercase tracking-[0.3em] font-black flex items-center justify-center gap-3">
+              <p className="text-center mt-6 text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-[0.3em] font-black flex items-center justify-center gap-3">
                 <Zap size={12} className="text-cyan-primary opacity-50" />
                 Chidon Iq Intelligence Interface v4.0.8
                 <Zap size={12} className="text-purple-vibrant opacity-50" />

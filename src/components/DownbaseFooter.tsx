@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChidonLogo } from './ChidonLogo';
 import { 
-  FileText, Shield, Mail, Info, BookOpen, Cpu, Sparkles, X, 
+  FileText, Shield, Mail, Info, BookOpen, Cpu, X, 
   ChevronRight, Download, Send, AlertCircle, Briefcase, FileCheck, CheckCircle2,
   Calendar, MapPin, Users, HeartHandshake, HelpCircle, Laptop, Share2, Zap, Trash2, Plus
 } from 'lucide-react';
@@ -234,7 +234,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
             onClick={() => { setActiveModal('solutions'); setSolutionsTab('social'); }}
             className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-[var(--border-base)]/60 bg-[var(--bg-card)]/40 hover:bg-brand/5 hover:border-brand/40 transition-all group cursor-pointer"
           >
-            <Sparkles size={16} className="text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
+            <Cpu size={16} className="text-[var(--text-secondary)] group-hover:text-brand transition-colors" />
             <span className="text-xs font-bold text-[var(--text-primary)]">Solutions</span>
           </button>
 
@@ -311,7 +311,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-brand/15 text-brand flex items-center justify-center">
                     {activeModal === 'about' && <Info size={16} />}
-                    {activeModal === 'solutions' && <Sparkles size={16} />}
+                    {activeModal === 'solutions' && <Cpu size={16} />}
                     {activeModal === 'resources' && <BookOpen size={16} />}
                     {activeModal === 'careers' && <Briefcase size={16} />}
                     {activeModal === 'contact' && <Mail size={16} />}
@@ -363,7 +363,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                            <Cpu size={12} className="text-brand" /> Engine Model: Linguistic Optimizer Core (chidoniq core)
                         </li>
                         <li className="flex items-center gap-2">
-                           <Sparkles size={12} className="text-brand" /> Delivery State: Organic Video Feed Strategizer Optimization
+                           <Zap size={12} className="text-brand" /> Delivery State: Organic Video Feed Strategizer Optimization
                         </li>
                         <li className="flex items-center gap-2">
                            <Users size={12} className="text-brand" /> User Target: High-impact Creators & SEO Strategists

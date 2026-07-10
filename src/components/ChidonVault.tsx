@@ -9,7 +9,7 @@ import {
   Download, 
   ExternalLink,
   ChevronLeft,
-  Sparkles,
+  Cpu,
   Lock,
   Calendar,
   Layers,
@@ -185,20 +185,22 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
 
   // Prepares the feature label badge
   const getFeatureLabel = (featureId: string) => {
+    let label = '';
     switch (featureId) {
-      case 'content-ideas': return 'Video Ideas';
-      case 'scripts': return 'Script Writer';
-      case 'bio': return 'Bio Optimizer';
-      case 'competitor-analysis': return 'Competitor Lab';
-      case 'posting-schedule': return 'Schedule Lab';
-      case 'youtube-seo': return 'Youtube SEO';
-      case 'seo-scorecard': return 'SEO Scorecard';
-      case 'keyword-research': return 'Keyword Intel';
-      case 'post-optimizer': return 'Time Optimizer';
-      case 'ai-script-outline': return 'Script Outline';
-      case 'daily-ideas': return 'Daily Ideas';
-      default: return featureId.replace('-', ' ').toUpperCase();
+      case 'content-ideas': label = 'Video Ideas'; break;
+      case 'scripts': label = 'Script Writer'; break;
+      case 'bio': label = 'Bio Optimizer'; break;
+      case 'competitor-analysis': label = 'Competitor Lab'; break;
+      case 'posting-schedule': label = 'Schedule Lab'; break;
+      case 'youtube-seo': label = 'Youtube SEO'; break;
+      case 'seo-scorecard': label = 'SEO Scorecard'; break;
+      case 'keyword-research': label = 'Keyword Intel'; break;
+      case 'post-optimizer': label = 'Time Optimizer'; break;
+      case 'ai-script-outline': label = 'Script Outline'; break;
+      case 'daily-ideas': label = 'Daily Ideas'; break;
+      default: label = featureId.replace('-', ' ').toUpperCase(); break;
     }
+    return label.replace(/^Feature\.\s*/i, '').replace(/^Feature:\s*/i, '');
   };
 
   // Safe helper to obtain JavaScript Date from database Timestamp or standard Date representations
@@ -308,7 +310,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
               CHIDON SAVED INTEL
             </h1>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest bg-brand/10 text-brand uppercase border border-brand/20">
-              <Sparkles size={10} className="mr-1 inline animate-pulse" /> Vault
+              <Cpu size={10} className="mr-1 inline animate-pulse" /> Vault
             </span>
           </div>
           <p className="text-xs text-[var(--text-secondary)] max-w-2xl leading-relaxed">
