@@ -186,7 +186,20 @@ export const ExploreView: React.FC<ExploreViewProps> = ({ profile, onSelectGig }
         ...doc.data()
       })) as Gig[];
 
-      setGigs(dbGigs.filter(g => !g.isPaused));
+      if (dbGigs.length === 0) {
+        // Automatically seed the gigs into Firestore to convert mock data into actual persistent database records
+        const seedPromises = SEED_GIGS.map(async (gig) => {
+          const gigDocRef = doc(db, 'gigs', gig.id);
+          await setDoc(gigDocRef, {
+            ...gig,
+            createdAt: new Date().toISOString()
+          });
+        });
+        await Promise.all(seedPromises);
+        setGigs(SEED_GIGS);
+      } else {
+        setGigs(dbGigs.filter(g => !g.isPaused));
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.LIST, 'gigs');
     } finally {

@@ -23,7 +23,8 @@ import {
   ChevronLeft,
   Copy,
   Check,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Trash2
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -35,8 +36,8 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
-import { cn } from '../lib/utils';
-import { BookContext } from '../App';
+import { cn, getCleanFeatureLabel } from '../lib/utils';
+import { BookContext } from '../lib/contexts';
 
 import { 
   ScriptPrompterWidget, 
@@ -46,7 +47,16 @@ import {
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
   RepurposePipelineWidget,
-  GoogleBrowserEngineWidget
+  ViralIdeaCardDeckWidget,
+  NarrativeArchitectBlueprintWidget,
+  HeadlineCTRVisualizerWidget,
+  KeywordIntelligenceMatrixWidget,
+  LiveVideoFeedPreviewWidget,
+  MetadataAABenchmarkWidget,
+  SemanticTagCloudWidget,
+  WeeklyPostingHeatmapWidget,
+  GlobalPostingTimeClockWidget,
+  DynamicAuditScorecardWidget
 } from './SpecializedWidgets';
 
 // --- FORMATTING PROTOCOL ---
@@ -681,7 +691,7 @@ const FEATURE_IMAGES: Record<string, { src: string, alt: string, badge: string, 
 };
 
 // --- MAIN UNIFIED COMPONENT ---
-export default function AdvancedNeuralTool({ feature, onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, onBack }: any) {
+export default function AdvancedNeuralTool({ feature, onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, onBack, onDeleteMessage, onClearAllChatData }: any) {
   const { t } = useTranslation();
   const bookContext = useContext(BookContext);
   
@@ -689,31 +699,89 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
   const schema = SCHEMAS[feature.id] || {
     p1Label: 'Neural Directive',
     p2Label: 'Additional Context',
-    p1Placeholder: `Describe your target for ${feature.label.toLowerCase()}...`,
+    p1Placeholder: `Describe your target for ${getCleanFeatureLabel(feature.label).toLowerCase()}...`,
     p2Placeholder: 'Optional tactical focus notes...',
     suggestions: [],
-    buildPrompt: (p1, p2) => `Analyze and provide expert social media advice for: "${p1}" in the context of ${feature.label}. Additional detail: "${p2}".`
+    buildPrompt: (p1, p2) => `Analyze and provide expert social media advice for: "${p1}" in the context of ${getCleanFeatureLabel(feature.label)}. Additional detail: "${p2}".`
   };
 
-  const [input1, setInput1] = useState('');
-  const [input2, setInput2] = useState('');
-  const [input3, setInput3] = useState('');
+  const [input1, setInput1] = useState(() => {
+    try {
+      return localStorage.getItem(`chidon_draft_input1_${feature.id}`) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [input2, setInput2] = useState(() => {
+    try {
+      return localStorage.getItem(`chidon_draft_input2_${feature.id}`) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [input3, setInput3] = useState(() => {
+    try {
+      return localStorage.getItem(`chidon_draft_input3_${feature.id}`) || '';
+    } catch {
+      return '';
+    }
+  });
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
   const [activeTierFilter, setActiveTierFilter] = useState<'all' | 'tier1' | 'tier2' | 'tier3'>('all');
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
 
-  // Reset states on feature switch
+  // Load states on feature switch
   useEffect(() => {
+    try {
+      const saved1 = localStorage.getItem(`chidon_draft_input1_${feature.id}`) || '';
+      const saved2 = localStorage.getItem(`chidon_draft_input2_${feature.id}`) || (schema.p2Type === 'select' && schema.p2Options ? schema.p2Options[0] : '');
+      const saved3 = localStorage.getItem(`chidon_draft_input3_${feature.id}`) || (schema.p3Type === 'select' && schema.p3Options ? schema.p3Options[0] : '');
+      setInput1(saved1);
+      setInput2(saved2);
+      setInput3(saved3);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [feature.id]);
+
+  // Periodic Auto-Save every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        localStorage.setItem(`chidon_draft_input1_${feature.id}`, input1);
+        localStorage.setItem(`chidon_draft_input2_${feature.id}`, input2);
+        localStorage.setItem(`chidon_draft_input3_${feature.id}`, input3);
+        
+        setIsAutoSaving(true);
+        const timer = setTimeout(() => setIsAutoSaving(false), 2000);
+        return () => clearTimeout(timer);
+      } catch (e) {
+        console.error("AdvancedNeuralTool auto-save failed:", e);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [input1, input2, input3, feature.id]);
+
+  const handleClearInputs = () => {
     setInput1('');
     setInput2(schema.p2Type === 'select' && schema.p2Options ? schema.p2Options[0] : '');
     setInput3(schema.p3Type === 'select' && schema.p3Options ? schema.p3Options[0] : '');
-  }, [feature.id]);
+    try {
+      localStorage.removeItem(`chidon_draft_input1_${feature.id}`);
+      localStorage.removeItem(`chidon_draft_input2_${feature.id}`);
+      localStorage.removeItem(`chidon_draft_input3_${feature.id}`);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleAction = () => {
     if (!input1.trim()) return;
     let prompt = schema.buildPrompt(input1, input2, input3);
     prompt += FORMATTING_PROTOCOL;
-    onGenerate(prompt, `${feature.label} scan for: ${input1.slice(0, 30)}...`);
+    onGenerate(prompt, `${getCleanFeatureLabel(feature.label)} scan for: ${input1.slice(0, 30)}...`);
   };
 
   const actions = (msg: any) => (
@@ -725,7 +793,7 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
         <MessageSquare size={14} /> Profile
       </button>
       <button 
-        onClick={() => onSaveDraft(feature.id, msg.content, `${feature.label}: ${input1.slice(0, 20)}`)}
+        onClick={() => onSaveDraft(feature.id, msg.content, `${getCleanFeatureLabel(feature.label)}: ${input1.slice(0, 20)}`)}
         className={cn("flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-full text-slate-400 hover:text-white transition-all text-[10px] uppercase tracking-[0.2em] font-black cursor-pointer")}
       >
         <BookOpen size={14} /> Vault
@@ -734,6 +802,31 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
   );
 
   const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+
+  // Group messages into pairs (User query + Assistant response)
+  const chatSessions = useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+    const sessions: { id: string; userMsg: any; assistantMsg: any }[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      if (messages[i].role === 'user') {
+        const next = messages[i + 1];
+        if (next && next.role === 'assistant') {
+          sessions.push({
+            id: next.id,
+            userMsg: messages[i],
+            assistantMsg: next
+          });
+        } else {
+          sessions.push({
+            id: messages[i].id,
+            userMsg: messages[i],
+            assistantMsg: null
+          });
+        }
+      }
+    }
+    return sessions.reverse();
+  }, [messages]);
 
   // Hashtag specific parser helper
   const tagsList = useMemo(() => {
@@ -806,9 +899,7 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
           {feature.persona || 'ChidonIQ Artificial Strategist'}
         </span>
       </div>
-
-      {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
-
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         
         {/* INPUT PANEL CARD */}
@@ -821,10 +912,27 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
                 <feature.icon size={20} />
               </div>
               <div className="text-left">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-tight">{feature.label}</h3>
+                <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-tight">{getCleanFeatureLabel(feature.label)}</h3>
                 <p className="text-[10px] text-[var(--text-secondary)] font-mono tracking-wider">NODE CONTROL</p>
               </div>
             </div>
+
+            {/* Feature Banner Image */}
+            {feature.imageUrl && (
+              <div className="w-full h-32 rounded-2xl overflow-hidden border border-[var(--border-base)] relative group shadow-inner shrink-0">
+                <img 
+                  src={feature.imageUrl} 
+                  alt={getCleanFeatureLabel(feature.label)} 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex items-end p-3">
+                  <span className="text-[8px] font-mono font-bold text-white uppercase tracking-widest bg-black/70 px-2 py-0.5 rounded border border-white/10">
+                    {feature.persona}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Field 1 */}
             <div className="space-y-2 text-left">
@@ -923,6 +1031,28 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
             >
               {loading ? 'Synthesizing...' : `EXECUTE MODULE`}
             </button>
+
+            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500 pt-1">
+              <span className="flex items-center gap-1.5">
+                {isAutoSaving ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-500 dark:text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                    <span>Auto-saved progress</span>
+                  </span>
+                ) : (
+                  <span>Auto-saves every 30s</span>
+                )}
+              </span>
+              {(input1 || input2 || input3) && (
+                <button
+                  type="button"
+                  onClick={handleClearInputs}
+                  className="text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors font-bold cursor-pointer uppercase text-[9px] tracking-wider"
+                >
+                  Clear Draft
+                </button>
+              )}
+            </div>
           </div>
 
           {FEATURE_IMAGES[feature.id] && (
@@ -993,6 +1123,16 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
               {feature.id === 'trending' && <TrendMomentumTickerWidget content={lastResponse.content} />}
               {feature.id === 'personas' && <AudienceDossierWidget content={lastResponse.content} />}
               {feature.id === 'repurposing' && <RepurposePipelineWidget content={lastResponse.content} />}
+              {feature.id === 'content-ideas' && <ViralIdeaCardDeckWidget content={lastResponse.content} />}
+              {feature.id === 'ai-script-outline' && <NarrativeArchitectBlueprintWidget content={lastResponse.content} />}
+              {feature.id === 'headlines' && <HeadlineCTRVisualizerWidget content={lastResponse.content} />}
+              {(feature.id === 'keyword-research' || feature.id === 'vseo-keywords') && <KeywordIntelligenceMatrixWidget content={lastResponse.content} />}
+              {feature.id === 'youtube-seo' && <LiveVideoFeedPreviewWidget content={lastResponse.content} />}
+              {feature.id === 'vseo-title-desc' && <MetadataAABenchmarkWidget content={lastResponse.content} />}
+              {feature.id === 'vseo-tags' && <SemanticTagCloudWidget content={lastResponse.content} />}
+              {feature.id === 'posting-schedule' && <WeeklyPostingHeatmapWidget content={lastResponse.content} />}
+              {(feature.id === 'post-optimizer' || feature.id === 'vseo-best-time') && <GlobalPostingTimeClockWidget content={lastResponse.content} />}
+              {(feature.id === 'seo-scorecard' || feature.id === 'vseo-scorecard') && <DynamicAuditScorecardWidget content={lastResponse.content} />}
 
               {/* Hashtag custom directory layout */}
               {feature.id === 'hashtags' && tagsList.length > 0 && (
@@ -1054,20 +1194,107 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
                     {actions(lastResponse)}
                     {bookContext?.onSendToBook && (
                       <button 
-                        onClick={() => bookContext.onSendToBook?.(lastResponse.content, `${feature.label}: ${input1.slice(0, 15)}`)}
+                        onClick={() => bookContext.onSendToBook?.(lastResponse.content, `${getCleanFeatureLabel(feature.label)}: ${input1.slice(0, 15)}`)}
                         className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-[var(--border-base)] rounded-lg text-[var(--text-secondary)] hover:text-brand transition-all cursor-pointer"
                         title="Send to Ruled Book"
                       >
                         <BookOpen size={14} />
                       </button>
                     )}
+                    {onDeleteMessage && (
+                      <button 
+                        onClick={() => onDeleteMessage(feature.id, lastResponse.id)}
+                        className="p-2 bg-slate-50 hover:bg-red-500/10 hover:text-red-500 dark:bg-slate-800 dark:hover:bg-red-500/10 border border-[var(--border-base)] rounded-lg text-slate-400 hover:text-red-500 transition-all cursor-pointer"
+                        title="Delete this chat session"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] leading-relaxed font-sans max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
+                <div className="markdown-body prose dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] leading-relaxed font-sans max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
                   <ReactMarkdown>{lastResponse.content}</ReactMarkdown>
                 </div>
               </div>
+
+              {/* Saved History & Previous Sessions Section */}
+              {chatSessions.length > 1 && (
+                <div className="p-6 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl shadow-sm space-y-4 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between pb-3 border-b border-[var(--border-base)]">
+                    <div className="flex items-center gap-2">
+                      <HistoryIcon size={16} className={feature.themeColor} />
+                      <h3 className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider">Saved Session Logs ({chatSessions.length - 1} saved)</h3>
+                    </div>
+                    {onClearAllChatData && (
+                      <button
+                        onClick={() => onClearAllChatData(feature.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 rounded-xl text-[10px] font-mono uppercase tracking-wider font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="Wipe all saved chats for this feature to free up space"
+                      >
+                        <Trash2 size={12} />
+                        <span>Clear All Data</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                    {chatSessions.slice(1).map((session) => {
+                      const timestampStr = session.userMsg.timestamp instanceof Date 
+                        ? session.userMsg.timestamp.toLocaleString() 
+                        : new Date(session.userMsg.timestamp).toLocaleString();
+
+                      return (
+                        <div key={session.id} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-[var(--border-base)] rounded-2xl space-y-3 relative group">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <span className="text-[9px] font-mono text-slate-400 block">{timestampStr}</span>
+                              <p className="text-xs font-semibold text-[var(--text-primary)] leading-normal italic">
+                                &ldquo;{session.userMsg.content}&rdquo;
+                              </p>
+                            </div>
+                            {onDeleteMessage && (
+                              <button
+                                onClick={() => onDeleteMessage(feature.id, session.assistantMsg?.id || session.userMsg.id)}
+                                className="p-1.5 bg-slate-100 hover:bg-red-500 dark:bg-slate-800 dark:hover:bg-red-500 text-slate-400 hover:text-white border border-[var(--border-base)] rounded-lg transition-all cursor-pointer shadow-sm"
+                                title="Delete this session from history"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+
+                          {session.assistantMsg && (
+                            <div className="pt-3 border-t border-[var(--border-base)]/60">
+                              <div className="markdown-body prose dark:prose-invert prose-xs max-w-none text-[var(--text-secondary)] leading-relaxed font-sans max-h-48 overflow-y-auto pr-1.5 custom-scrollbar">
+                                <ReactMarkdown>{session.assistantMsg.content}</ReactMarkdown>
+                              </div>
+                              
+                              {/* Mini actions for previous session */}
+                              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[var(--border-base)]/40">
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(session.assistantMsg.content);
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all text-[9px] font-mono uppercase tracking-wider font-bold cursor-pointer border border-white/5"
+                                >
+                                  <Copy size={10} /> Copy
+                                </button>
+                                <button
+                                  onClick={() => onSaveDraft(feature.id, session.assistantMsg.content, `${getCleanFeatureLabel(feature.label)}: ${session.userMsg.content.slice(0, 20)}`)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all text-[9px] font-mono uppercase tracking-wider font-bold cursor-pointer border border-white/5"
+                                >
+                                  <BookOpen size={10} /> Vault
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
             </div>
           )}

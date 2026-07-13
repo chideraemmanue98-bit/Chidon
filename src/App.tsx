@@ -97,7 +97,7 @@ import { Tooltip } from './components/Tooltip';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { ChidonLogo } from './components/ChidonLogo';
 import { WelcomePage } from './components/WelcomePage';
-import { ChidonAuth, getSupabaseAuthClient } from './components/ChidonAuth';
+import { ChidonAuth } from './components/ChidonAuth';
 
 // PERF: Lazy load heavy overlays and non-critical modular sub-components to reduce initial load times and optimize bundle sizing
 const FeedbackModal = lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -119,14 +119,14 @@ import {
   GrowthMathWidget, 
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
-  RepurposePipelineWidget,
-  GoogleBrowserEngineWidget
+  RepurposePipelineWidget
 } from './components/SpecializedWidgets';
 
 import { ChidonFreelance, FreelanceView } from './components/ChidonFreelance';
 import { ProfilePage } from './components/ProfilePage';
 
-export const BookContext = createContext<{ onSendToBook?: (content: string, title?: string) => void }>({});
+import { BookContext } from './lib/contexts';
+export { BookContext };
 import { cn } from './lib/utils';
 import LanguageSelector, { LANGUAGES } from './components/LanguageSelector';
 
@@ -220,7 +220,6 @@ type FeatureId =
   | 'competitor-analysis'
   | 'posting-schedule'
   | 'engagement-calc'
-  | 'trending-now'
   | 'personas'
   | 'headlines'
   | 'repurposing'
@@ -251,6 +250,7 @@ interface Feature {
   themeColor: string;
   glowColor: string;
   persona: string;
+  imageUrl?: string;
 }
 
 // --- CONSTANTS ---
@@ -286,7 +286,8 @@ const FEATURES: Feature[] = [
     category: 'Content Creation',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
-    persona: 'Viral Producer AI'
+    persona: 'Viral Producer AI',
+    imageUrl: '/src/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg'
   },
   { 
     id: 'scripts', 
@@ -296,7 +297,8 @@ const FEATURES: Feature[] = [
     category: 'Content Creation',
     themeColor: 'text-emerald-vibrant',
     glowColor: 'bg-emerald-vibrant/20',
-    persona: 'Narrative Engine AI'
+    persona: 'Narrative Engine AI',
+    imageUrl: '/src/assets/images/content_writing_banner_1783649293057.jpg'
   },
   { 
     id: 'ai-script-outline', 
@@ -306,7 +308,8 @@ const FEATURES: Feature[] = [
     category: 'Content Creation',
     themeColor: 'text-purple-vibrant',
     glowColor: 'bg-purple-vibrant/20',
-    persona: 'Narrative Architect AI'
+    persona: 'Narrative Architect AI',
+    imageUrl: '/src/assets/images/portfolio_case_study_banner_1783649308111.jpg'
   },
   { 
     id: 'headlines', 
@@ -316,7 +319,8 @@ const FEATURES: Feature[] = [
     category: 'Content Creation',
     themeColor: 'text-yellow-400',
     glowColor: 'bg-yellow-400/20',
-    persona: 'Click Magnet AI'
+    persona: 'Click Magnet AI',
+    imageUrl: '/src/assets/images/template_wireframe_1783490763717.jpg'
   },
   { 
     id: 'ruled-book', 
@@ -326,7 +330,8 @@ const FEATURES: Feature[] = [
     category: 'Content Creation',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
-    persona: 'Lined Scribe AI'
+    persona: 'Lined Scribe AI',
+    imageUrl: '/src/assets/images/journal_ruled_cover_1783488617827.jpg'
   },
   { 
     id: 'keyword-research', 
@@ -336,7 +341,8 @@ const FEATURES: Feature[] = [
     category: 'SEO & Optimization',
     themeColor: 'text-amber-500',
     glowColor: 'bg-amber-500/20',
-    persona: 'Data Miner AI'
+    persona: 'Data Miner AI',
+    imageUrl: '/src/assets/images/keyword_intel_radar_1783488604768.jpg'
   },
   { 
     id: 'youtube-seo', 
@@ -346,7 +352,8 @@ const FEATURES: Feature[] = [
     category: 'SEO & Optimization',
     themeColor: 'text-red-500',
     glowColor: 'bg-red-500/20',
-    persona: 'Organic Quality Architect AI'
+    persona: 'Organic Quality Architect AI',
+    imageUrl: '/src/assets/images/seo_tool_banner_1783649274905.jpg'
   },
   { 
     id: 'vseo-title-desc', 
@@ -356,7 +363,8 @@ const FEATURES: Feature[] = [
     category: 'SEO & Optimization',
     themeColor: 'text-red-400',
     glowColor: 'bg-red-400/20',
-    persona: 'Metadata Architect AI'
+    persona: 'Metadata Architect AI',
+    imageUrl: '/src/assets/images/seo_analytics_vector_1783490751280.jpg'
   },
   { 
     id: 'vseo-tags', 
@@ -366,7 +374,8 @@ const FEATURES: Feature[] = [
     category: 'SEO & Optimization',
     themeColor: 'text-red-500',
     glowColor: 'bg-red-500/20',
-    persona: 'Semantic Tagging AI'
+    persona: 'Semantic Tagging AI',
+    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'vseo-keywords', 
@@ -376,7 +385,8 @@ const FEATURES: Feature[] = [
     category: 'SEO & Optimization',
     themeColor: 'text-amber-400',
     glowColor: 'bg-amber-400/20',
-    persona: 'Query Intelligence AI'
+    persona: 'Query Intelligence AI',
+    imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'bio', 
@@ -386,7 +396,8 @@ const FEATURES: Feature[] = [
     category: 'Branding & Strategy',
     themeColor: 'text-pink-vibrant',
     glowColor: 'bg-pink-vibrant/20',
-    persona: 'Identity Strategist AI'
+    persona: 'Identity Strategist AI',
+    imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'personas', 
@@ -396,7 +407,8 @@ const FEATURES: Feature[] = [
     category: 'Branding & Strategy',
     themeColor: 'text-indigo-500',
     glowColor: 'bg-indigo-500/20',
-    persona: 'Psychographic Architect AI'
+    persona: 'Psychographic Architect AI',
+    imageUrl: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg'
   },
   { 
     id: 'thumbnails', 
@@ -406,7 +418,8 @@ const FEATURES: Feature[] = [
     category: 'Branding & Strategy',
     themeColor: 'text-amber-500',
     glowColor: 'bg-amber-500/20',
-    persona: 'Visual Psychologist AI'
+    persona: 'Visual Psychologist AI',
+    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'competitor-analysis', 
@@ -416,7 +429,8 @@ const FEATURES: Feature[] = [
     category: 'Branding & Strategy',
     themeColor: 'text-cyan-400',
     glowColor: 'bg-cyan-400/20',
-    persona: 'Market Analyst AI'
+    persona: 'Market Analyst AI',
+    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'hashtags', 
@@ -426,7 +440,8 @@ const FEATURES: Feature[] = [
     category: 'Publishing & Logistics',
     themeColor: 'text-purple-vibrant',
     glowColor: 'bg-purple-vibrant/20',
-    persona: 'Reach Architect AI'
+    persona: 'Reach Architect AI',
+    imageUrl: 'https://images.unsplash.com/photo-1562577309-4932fdd64cd1?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'repurposing', 
@@ -436,7 +451,8 @@ const FEATURES: Feature[] = [
     category: 'Publishing & Logistics',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
-    persona: 'Omni-channel Strategist AI'
+    persona: 'Omni-channel Strategist AI',
+    imageUrl: '/src/assets/images/chidon_iq_engine_v4_1783388111932.jpg'
   },
   { 
     id: 'posting-schedule', 
@@ -446,7 +462,8 @@ const FEATURES: Feature[] = [
     category: 'Publishing & Logistics',
     themeColor: 'text-blue-500',
     glowColor: 'bg-blue-500/20',
-    persona: 'Temporal Logistics AI'
+    persona: 'Temporal Logistics AI',
+    imageUrl: '/src/assets/images/empty_scheduler_1781319203016.jpg'
   },
   { 
     id: 'post-scheduler', 
@@ -456,7 +473,8 @@ const FEATURES: Feature[] = [
     category: 'Publishing & Logistics',
     themeColor: 'text-white',
     glowColor: 'bg-white/10',
-    persona: 'Operations Matrix AI'
+    persona: 'Operations Matrix AI',
+    imageUrl: '/src/assets/images/empty_scheduler_1781319203016.jpg'
   },
   { 
     id: 'post-optimizer', 
@@ -466,7 +484,8 @@ const FEATURES: Feature[] = [
     category: 'Publishing & Logistics',
     themeColor: 'text-emerald-vibrant',
     glowColor: 'bg-emerald-vibrant/20',
-    persona: 'Chronos Optimizer AI'
+    persona: 'Chronos Optimizer AI',
+    imageUrl: 'https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'vseo-best-time', 
@@ -476,7 +495,8 @@ const FEATURES: Feature[] = [
     category: 'Publishing & Logistics',
     themeColor: 'text-blue-400',
     glowColor: 'bg-blue-400/20',
-    persona: 'Temporal Reach AI'
+    persona: 'Temporal Reach AI',
+    imageUrl: 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'seo-scorecard', 
@@ -486,7 +506,8 @@ const FEATURES: Feature[] = [
     category: 'Diagnostics & Trends',
     themeColor: 'text-emerald-500',
     glowColor: 'bg-emerald-500/20',
-    persona: 'Algorithmic Judge AI'
+    persona: 'Algorithmic Judge AI',
+    imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'vseo-scorecard', 
@@ -496,7 +517,8 @@ const FEATURES: Feature[] = [
     category: 'Diagnostics & Trends',
     themeColor: 'text-emerald-400',
     glowColor: 'bg-emerald-400/20',
-    persona: 'Ranking Auditor AI'
+    persona: 'Ranking Auditor AI',
+    imageUrl: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&w=800&q=80'
   },
   { 
     id: 'shadowban-solutions', 
@@ -506,7 +528,8 @@ const FEATURES: Feature[] = [
     category: 'Diagnostics & Trends',
     themeColor: 'text-red-500',
     glowColor: 'bg-red-500/20',
-    persona: 'YouTube Policy Expert AI'
+    persona: 'YouTube Policy Expert AI',
+    imageUrl: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg'
   },
   { 
     id: 'drafts', 
@@ -516,7 +539,8 @@ const FEATURES: Feature[] = [
     category: 'SaaS Workspace',
     themeColor: 'text-brand',
     glowColor: 'bg-brand/20',
-    persona: 'Vault Guardian AI'
+    persona: 'Vault Guardian AI',
+    imageUrl: '/src/assets/images/empty_vault_1781319190599.jpg'
   },
   { 
     id: 'template-library', 
@@ -526,7 +550,8 @@ const FEATURES: Feature[] = [
     category: 'SaaS Workspace',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
-    persona: 'Architect copywriter AI'
+    persona: 'Architect copywriter AI',
+    imageUrl: '/src/assets/images/template_wireframe_1783490763717.jpg'
   },
   { 
     id: 'engagement-calc', 
@@ -536,13 +561,34 @@ const FEATURES: Feature[] = [
     category: 'SaaS Workspace',
     themeColor: 'text-emerald-400',
     glowColor: 'bg-emerald-400/20',
-    persona: 'Growth Mathematician AI'
+    persona: 'Growth Mathematician AI',
+    imageUrl: '/src/assets/images/empty_earned_1781319231364.jpg'
   },
 ];
 
 const getCleanFeatureLabel = (label: string): string => {
   if (!label) return '';
-  return label.replace(/^Feature\.\s*/i, '').replace(/^Feature:\s*/i, '');
+  
+  // 1. Remove prefixes like ( Feature.), (Feature.), Feature., Feature:, features., etc.
+  let cleaned = label;
+  
+  cleaned = cleaned.replace(/^[\s\(\[\{]*feature[s]?[\s\.\:\-\)\]\}]*/i, '');
+  cleaned = cleaned.replace(/^\s*\.\s*/, '');
+  
+  // 2. If it's a fallback translation key like "features.content-ideas.label"
+  if (cleaned.toLowerCase().includes('.label') || cleaned.toLowerCase().includes('features.')) {
+    const parts = cleaned.split('.');
+    const mainPart = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+    cleaned = mainPart
+      .split(/[\-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  cleaned = cleaned.replace(/\.label$/i, '');
+  cleaned = cleaned.trim();
+  
+  return cleaned || label;
 };
 
 // PERF: Elegant micro-skeleton loader to improve core web vitals and provide beautiful instant feedback during lazy-loading component resolution
@@ -554,6 +600,69 @@ const ComponentLoader = () => (
 );
 
 // --- HYBRID AI SERVICE ---
+
+const cleanAiResponse = (text: string): string => {
+  if (!text || typeof text !== 'string') return text;
+
+  let cleaned = text;
+
+  // 1. "stop starting From ( respond; )"
+  // Find "respond;" or "( respond; )" and truncate everything starting from it
+  const respondRegex = /(?:\(\s*)?respond\s*;/gi;
+  const matchRespond = cleaned.match(respondRegex);
+  if (matchRespond && matchRespond.index !== undefined) {
+    cleaned = cleaned.substring(0, matchRespond.index);
+  }
+
+  // Also strip standalone occurrences of "( respond; )" or "respond;" if any remain
+  cleaned = cleaned.replace(/\(\s*respond\s*;\s*\)/gi, '');
+  cleaned = cleaned.replace(/respond\s*;/gi, '');
+
+  // 2. Convert digits/numbers to words ("Must List Number words when Needed")
+  const numWords: Record<string, string> = {
+    '10': 'Ten', '9': 'Nine', '8': 'Eight', '7': 'Seven', '6': 'Six',
+    '5': 'Five', '4': 'Four', '3': 'Three', '2': 'Two', '1': 'One'
+  };
+  
+  // Replace list-style numbers (e.g. "1. ", "2) ", etc.) at start of line
+  cleaned = cleaned.split('\n').map(line => {
+    let l = line.trim();
+    const match = l.match(/^(\d+)([\.\)\-\s]+)(.*)/);
+    if (match) {
+      const numStr = match[1];
+      const rest = match[3];
+      const word = numWords[numStr] || numStr;
+      return `${word}: ${rest}`;
+    }
+    // Remove list bullet symbols (*, -, +) at start of lines and replace with clean spacing
+    if (l.startsWith('* ') || l.startsWith('- ') || l.startsWith('+ ')) {
+      return '  ' + l.slice(2);
+    }
+    return line;
+  }).join('\n');
+
+  // Replace other standalone digits/numbers in the text with words if they are separate numbers
+  Object.keys(numWords).forEach(num => {
+    const regex = new RegExp(`\\b${num}\\b`, 'g');
+    cleaned = cleaned.replace(regex, numWords[num]);
+  });
+
+  // 3. Remove all symbols and signs ("No Symbols Or sign Shown")
+  // We keep letters, standard spaces, newlines, and basic punctuation.
+  // We remove all special symbols like * # _ ~ [ ] ( ) { } < > / \ | ^ = + - @ $ % &
+  cleaned = cleaned.replace(/[\*\#\_\~\[\]\(\)\{\}\<\>\/\\\|\^\=\+\-\@\$\%\&]/g, ' ');
+
+  // 4. "ending with Symbols" - remove non-letter trailing punctuation/symbols at the very end
+  cleaned = cleaned.replace(/[^a-zA-Z0-9\s\.\u4e00-\u9fa5\u0600-\u06FF\u0400-\u04FF\u3040-\u30ff\u31f0-\u31ff]+$/, '');
+
+  // 5. "Lots of space and paragraph"
+  // Reduce multiple spaces to single space
+  cleaned = cleaned.replace(/[ \t]+/g, ' ');
+  // Ensure lines have lots of space - let's make paragraphs separated by exactly 2 newlines (double spacing)
+  cleaned = cleaned.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n\n');
+
+  return cleaned.trim();
+};
 
 const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel?: string) => {
   const { i18n } = useTranslation();
@@ -579,8 +688,23 @@ const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel
       }
 
       const data = await res.json();
-      const geminiText = data.text;
+      let geminiText = data.text;
       if (!geminiText) throw new Error("No response from Gemini.");
+
+      if (typeof geminiText === 'string') {
+        geminiText = geminiText
+          .replace(/\\n\\n/g, '\n\n')
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '')
+          .replace(/n\/n\//g, '\n\n')
+          .replace(/\/n\/n\//g, '\n\n')
+          .replace(/\/n\//g, '\n')
+          .replace(/\s*n\/n\s*/g, '\n\n')
+          .trim();
+        
+        // Strictly sanitize response according to the rules
+        geminiText = cleanAiResponse(geminiText);
+      }
 
       setLoading(false);
       return geminiText;
@@ -2747,21 +2871,36 @@ const NeuralHub = ({
                         transition: { duration: 0.2, ease: "easeOut" }
                       }}
                       whileTap={{ scale: 0.985, y: -1 }}
-                      className="group p-5 rounded-2xl border border-[var(--border-base)] bg-[var(--bg-card)] hover:border-brand transition-all text-left flex items-start gap-5 relative overflow-hidden cursor-pointer"
+                      className="group p-4 rounded-2xl border border-[var(--border-base)] bg-[var(--bg-card)] hover:border-brand transition-all text-left flex flex-col h-full relative overflow-hidden cursor-pointer"
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      {f.id === 'trending-now' && (
-                        <span className="absolute top-3.5 right-10 flex items-center gap-1 bg-red-500/15 text-red-500 border border-red-500/30 px-2.5 py-0.5 rounded-full font-mono text-[9px] font-black uppercase tracking-wider animate-pulse">
-                          <Flame size={12} className="fill-red-500 text-red-500 animate-pulse" />
-                          HOT!!!!
-                        </span>
+                      
+                      {/* Image header */}
+                      {f.imageUrl && (
+                        <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 border border-[var(--border-base)] shrink-0">
+                          <img 
+                            src={f.imageUrl} 
+                            alt={f.label} 
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className={cn(
+                            "absolute top-3 left-3 w-8 h-8 rounded-lg flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/60"
+                          )}>
+                            <f.icon size={16} />
+                          </div>
+                        </div>
                       )}
+
                       {f.id === 'shadowban-solutions' && (() => {
-                        const riskInfo = getShadowbanRiskInfo(featureResults);
-                        if (!riskInfo) return null;
+                        const riskInfo = getShadowbanRiskInfo(featureResults) || {
+                          label: 'Unchecked',
+                          className: 'bg-slate-500/10 text-slate-500 border border-slate-500/20 dark:border-slate-500/30',
+                          dotColor: 'bg-slate-400'
+                        };
                         return (
                           <span className={cn(
-                            "absolute top-3.5 right-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border",
+                            "absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border backdrop-blur-md z-10",
                             riskInfo.className
                           )}>
                             <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", riskInfo.dotColor)} />
@@ -2769,22 +2908,21 @@ const NeuralHub = ({
                           </span>
                         );
                       })()}
-                      <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110",
-                        f.glowColor,
-                        f.themeColor
-                      )}>
-                        <f.icon size={22} />
+
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] mb-1 group-hover:text-brand transition-colors uppercase tracking-tight">
+                            {getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed mb-4">
+                            {t(`features.${f.id}.desc`) || f.description}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 text-brand text-[10px] font-black uppercase tracking-widest mt-auto">
+                          <span>Launch Protocol</span>
+                          <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 pr-4">
-                        <h4 className="text-base font-bold text-[var(--text-primary)] mb-1 group-hover:text-brand transition-colors">
-                          {getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}
-                        </h4>
-                        <p className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
-                          {t(`features.${f.id}.desc`) || f.description}
-                        </p>
-                      </div>
-                      <ChevronRight size={16} className="text-[var(--text-secondary)] group-hover:text-brand mt-1 transition-all group-hover:translate-x-1" />
                     </motion.button>
                   ))}
                 </motion.div>
@@ -2925,7 +3063,6 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
       loading={loading}
     >
       <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
-        {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
         <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
           <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
             <feature.icon size={18} />
@@ -3016,7 +3153,8 @@ const Dashboard = ({
   generationTone,
   experienceLevel,
   user,
-  onSignIn
+  onSignIn,
+  featureResults = {}
 }: { 
   onSelectFeature: (id: FeatureId) => void, 
   onNavigate: (view: 'dashboard' | 'tools' | 'hub' | 'matrix', feature?: FeatureId) => void, 
@@ -3025,7 +3163,8 @@ const Dashboard = ({
   generationTone: string,
   experienceLevel: string,
   user: User | null,
-  onSignIn: () => void
+  onSignIn: () => void,
+  featureResults?: Record<string, ChatMessage[]>
 }) => {
   const { t } = useTranslation();
   const [qualities, setQualities] = useState<any[]>(STATIC_QUALITIES);
@@ -3044,8 +3183,9 @@ const Dashboard = ({
   const problems = [
     { title: t("dashboard.marketDna"), desc: t("dashboard.marketDnaDesc"), solution: t("dashboard.neuralResearcher"), id: 'keyword-research' as FeatureId, icon: Microscope },
     { title: t("dashboard.engagement"), desc: t("dashboard.engagementDesc"), solution: t("dashboard.trendingDetector"), id: 'trending' as FeatureId, icon: TrendingUp },
-    { title: t("dashboard.creativeBlock"), desc: t("dashboard.creativeBlockDesc"), solution: t("features.content-ideas.label") || t("dashboard.videoIdeas"), id: 'content-ideas' as FeatureId, icon: Lightbulb },
+    { title: t("dashboard.creativeBlock"), desc: t("dashboard.creativeBlockDesc"), solution: getCleanFeatureLabel(t("features.content-ideas.label") || t("dashboard.videoIdeas")), id: 'content-ideas' as FeatureId, icon: Lightbulb },
     { title: t("dashboard.brandVoice"), desc: t("dashboard.brandVoiceDesc"), solution: t("dashboard.identityStrategist"), id: 'personas' as FeatureId, icon: Users },
+    { title: "Shadowban Solutions", desc: "Audit channel health, check sensitive policy risk indicators and trace 30-day view recovery action steps.", solution: "YouTube Policy Expert", id: 'shadowban-solutions' as FeatureId, icon: AlertCircle },
   ];
 
   return (
@@ -3144,28 +3284,67 @@ const Dashboard = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {problems.map((p, i) => (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            onClick={() => onSelectFeature(p.id)}
-            className="card-base p-6 hover:border-brand/40 group cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[var(--text-primary)] group-hover:bg-brand group-hover:text-white transition-all mb-6">
-              <p.icon size={24} />
-            </div>
-            <h3 className="text-xl font-bold mb-2">{p.title}</h3>
-            <p className="text-[var(--text-secondary)] text-sm mb-6 leading-relaxed">
-              {p.desc}
-            </p>
-            <div className="flex items-center gap-2 text-brand text-[10px] font-bold uppercase tracking-wider">
-              {p.solution} <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        {problems.map((p, i) => {
+          const feat = FEATURES.find(f => f.id === p.id);
+          return (
+            <motion.div
+              key={p.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              onClick={() => onSelectFeature(p.id)}
+              className="card-base hover:border-brand/40 group cursor-pointer overflow-hidden flex flex-col h-full"
+            >
+              {feat && (
+                <div className="relative w-full h-36 overflow-hidden border-b border-[var(--border-base)] shrink-0">
+                  <img 
+                    src={feat.imageUrl} 
+                    alt={p.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute top-3 left-3 w-8 h-8 rounded-lg bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
+                    <p.icon size={16} />
+                  </div>
+                  {p.id === 'shadowban-solutions' && (() => {
+                    const riskInfo = getShadowbanRiskInfo(featureResults);
+                    if (riskInfo) {
+                      return (
+                        <span className={cn(
+                          "absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border bg-black/60 backdrop-blur-md text-white border-white/10 shadow-lg",
+                          riskInfo.className
+                        )}>
+                          <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", riskInfo.dotColor)} />
+                          {riskInfo.label}
+                        </span>
+                      );
+                    } else {
+                      return (
+                        <span className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border bg-black/60 backdrop-blur-md text-slate-400 border-white/10 shadow-lg">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                          Unchecked
+                        </span>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
+              <div className="p-5 flex flex-col flex-1 justify-between text-left">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2 line-clamp-1 uppercase tracking-tight">{p.title}</h3>
+                  <p className="text-[var(--text-secondary)] text-xs mb-4 leading-normal line-clamp-3">
+                    {p.desc}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-brand text-[10px] font-bold uppercase tracking-widest mt-auto">
+                  <span>{p.solution}</span>
+                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -3241,20 +3420,32 @@ const MatrixHub = ({
                 <button 
                   key={f.id} 
                   onClick={() => onNavigate('tools', f.id)}
-                  className="p-6 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl text-left hover:border-brand/40 hover:shadow-lg transition-all group relative overflow-hidden"
+                  className="p-4 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl text-left hover:border-brand/40 hover:shadow-lg transition-all group relative overflow-hidden flex flex-col h-full"
                 >
-                  {f.id === 'trending-now' && (
-                    <span className="absolute top-4 right-4 z-10 flex items-center gap-1 bg-red-500/15 text-red-500 border border-red-500/30 px-2.5 py-0.5 rounded-full font-mono text-[9px] font-black uppercase tracking-wider animate-pulse">
-                      <Flame size={12} className="fill-red-500 text-red-500 animate-pulse" />
-                      HOT!!!!
-                    </span>
+                  {/* Feature Image Header */}
+                  {f.imageUrl && (
+                    <div className="relative w-full h-36 rounded-2xl overflow-hidden mb-4 border border-[var(--border-base)] shrink-0">
+                      <img 
+                        src={f.imageUrl} 
+                        alt={f.label} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute top-3 left-3 w-8 h-8 rounded-lg flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/60">
+                        <Icon size={16} />
+                      </div>
+                    </div>
                   )}
+
                   {f.id === 'shadowban-solutions' && (() => {
-                    const riskInfo = getShadowbanRiskInfo(featureResults);
-                    if (!riskInfo) return null;
+                    const riskInfo = getShadowbanRiskInfo(featureResults) || {
+                      label: 'Unchecked',
+                      className: 'bg-slate-500/10 text-slate-500 border border-slate-500/20 dark:border-slate-500/30',
+                      dotColor: 'bg-slate-400'
+                    };
                     return (
                       <span className={cn(
-                        "absolute top-4 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border bg-[var(--bg-card)]",
+                        "absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border backdrop-blur-md",
                         riskInfo.className
                       )}>
                         <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", riskInfo.dotColor)} />
@@ -3262,18 +3453,21 @@ const MatrixHub = ({
                       </span>
                     );
                   })()}
-                  <div className={cn("inline-flex p-3 rounded-2xl bg-gray-100 dark:bg-gray-800/60 mb-4 group-hover:scale-110 transition-transform", f.themeColor)}>
-                    <Icon size={24} />
-                  </div>
-                  <h3 className="text-[var(--text-primary)] font-bold text-lg mb-2">
-                    {getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}
-                  </h3>
-                  <p className="text-[var(--text-secondary)] text-xs leading-relaxed line-clamp-2">
-                    {t(`features.${f.id}.desc`) || f.description}
-                  </p>
-                  
-                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-[var(--text-primary)]">
-                    <Icon size={64} />
+
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-[var(--text-primary)] font-bold text-base mb-1 uppercase tracking-tight">
+                        {getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}
+                      </h3>
+                      <p className="text-[var(--text-secondary)] text-xs leading-relaxed line-clamp-2 mb-4">
+                        {t(`features.${f.id}.desc`) || f.description}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 text-brand text-[10px] font-black uppercase tracking-widest mt-auto">
+                      <span>Execute Protocol</span>
+                      <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
                 </button>
               );
@@ -3479,33 +3673,57 @@ export default function App() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  // Synchronize systemLanguage state with active i18n translations bi-directionally (safeguarded against circular re-entrant loops and subtags like en-US)
+  // Safely synchronize i18n language and systemLanguage bi-directionally using a Ref-gated guard to prevent circular updates
+  const lastLangRef = useRef<{ i18n: string; system: string }>({
+    i18n: (i18n.language || 'en').split('-')[0].toLowerCase(),
+    system: systemLanguage
+  });
+
   useEffect(() => {
     const rawLang = i18n.language || 'en';
     const cleanCode = rawLang.split('-')[0].toLowerCase();
-    const match = LANGUAGES.find(l => l.code === cleanCode) || LANGUAGES[0];
-    const currentLang = match.label;
+    const matchByCode = LANGUAGES.find(l => l.code === cleanCode) || LANGUAGES[0];
     
-    if (systemLanguage !== currentLang) {
-      setSystemLanguage(currentLang);
-      localStorage.setItem('system_language', currentLang);
-    }
-  }, [i18n.language]);
+    // Determine if i18n language changed since last check
+    const i18nChanged = cleanCode !== lastLangRef.current.i18n;
+    // Determine if systemLanguage changed since last check
+    const systemChanged = systemLanguage !== lastLangRef.current.system;
 
-  // Keep i18n language engine in perfect sync with systemLanguage state updates (safeguarded against circular loops)
-  useEffect(() => {
-    if (systemLanguage) {
-      const match = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage);
-      if (match) {
-        const cleanI18nCode = (i18n.language || 'en').split('-')[0].toLowerCase();
-        if (cleanI18nCode !== match.code) {
-          i18n.changeLanguage(match.code);
-        }
+    if (i18nChanged && !systemChanged) {
+      // i18n was changed by the user (e.g., via LanguageSelector), update systemLanguage to match
+      setSystemLanguage(matchByCode.label);
+      localStorage.setItem('system_language', matchByCode.label);
+      lastLangRef.current = { i18n: cleanCode, system: matchByCode.label };
+    } else if (systemChanged && !i18nChanged) {
+      // systemLanguage was changed (e.g., loaded from database/settings), update i18n to match
+      const matchBySystemLabel = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage) || LANGUAGES[0];
+      if (cleanCode !== matchBySystemLabel.code) {
+        i18n.changeLanguage(matchBySystemLabel.code);
+      }
+      lastLangRef.current = { i18n: matchBySystemLabel.code, system: systemLanguage };
+    } else if (i18nChanged && systemChanged) {
+      // Both changed (e.g., initial load mismatch or rapid updates)
+      const matchBySystemLabel = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage) || LANGUAGES[0];
+      if (cleanCode !== matchBySystemLabel.code) {
+        i18n.changeLanguage(matchBySystemLabel.code);
+        lastLangRef.current = { i18n: matchBySystemLabel.code, system: systemLanguage };
+      } else {
+        lastLangRef.current = { i18n: cleanCode, system: systemLanguage };
+      }
+    } else {
+      // Neither changed directly, but perform safety checks for misalignment
+      const matchBySystemLabel = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage) || LANGUAGES[0];
+      if (cleanCode !== matchBySystemLabel.code) {
+        i18n.changeLanguage(matchBySystemLabel.code);
+        lastLangRef.current = { i18n: matchBySystemLabel.code, system: systemLanguage };
+      } else {
+        lastLangRef.current = { i18n: cleanCode, system: systemLanguage };
       }
     }
-  }, [systemLanguage]);
+  }, [systemLanguage, i18n.language]);
 
   const [user, setUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<'buyer' | 'seller' | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'blog' | 'auth' | 'pricing' | 'freelance' | 'profile'>('dashboard');
   const [freelanceView, setFreelanceView] = useState<FreelanceView>('explore');
@@ -3516,7 +3734,6 @@ export default function App() {
     return {
       'keyword-research': Date.now() - 300000,
       'vseo-title-desc': Date.now() - 600000,
-      'trending-now': Date.now() - 900000,
       'ai-script-outline': Date.now() - 1500000,
       'hashtag-engine': Date.now() - 1800000,
       'competitor-lab': Date.now() - 2100000,
@@ -3615,11 +3832,40 @@ export default function App() {
   // Credit system states
   const [credits, setCredits] = useState<number | null>(null);
   const [isOutofCreditsModalOpen, setIsOutofCreditsModalOpen] = useState<boolean>(false);
+  const [showDailyCreditGranted, setShowDailyCreditGranted] = useState<boolean>(false);
   
   // Real-time Cloud settings sync hook
   useEffect(() => {
     if (!user) return;
+    if (user.uid === 'offline_sandbox_user_id') {
+      setCredits(99);
+      setCustomGeminiApiKey(localStorage.getItem('custom_gemini_api_key') || '');
+      setCustomHfApiKey(localStorage.getItem('custom_hf_api_key') || '');
+      return () => {};
+    }
     const userDocRef = doc(db, 'users', user.uid);
+
+    // Dynamic Admin & Unlimited access initialization for requested developer email
+    if (user.email === 'chideraemmanue98@gmail.com') {
+      setCredits(999999);
+      const grantUnlimited = async () => {
+        try {
+          await setDoc(userDocRef, {
+            credits: 999999,
+            subscriptionPlan: 'Unlimited Enterprise IQ',
+            subscriptionStatus: 'active',
+            email: 'chideraemmanue98@gmail.com',
+            isVerified: true,
+            role: 'seller', // Ensure they can list services and access workspaces
+            hasCompletedSetup: true
+          }, { merge: true });
+        } catch (e) {
+          console.warn("Auto-initializing unlimited developer profile:", e);
+        }
+      };
+      grantUnlimited();
+    }
+
     const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
@@ -3659,22 +3905,29 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
-        if (data.credits !== undefined) {
+        if (user.email === 'chideraemmanue98@gmail.com') {
+          setCredits(999999);
+        } else if (data.credits !== undefined) {
           setCredits(data.credits);
           
-          // Check for daily 3 credits grant!
+          // Check for daily 1 credit grant!
           const todayStr = new Date().toISOString().split('T')[0];
           if (!data.lastDailyCreditReset || data.lastDailyCreditReset !== todayStr) {
-            const updatedCredits = (data.credits || 0) + 3;
+            const updatedCredits = (data.credits || 0) + 1;
             setCredits(updatedCredits);
             updateDoc(userDocRef, {
               credits: updatedCredits,
               lastDailyCreditReset: todayStr,
               updatedAt: serverTimestamp()
-            }).catch(err => console.error("Failed to grant daily credits:", err));
+            })
+            .then(() => {
+              // Trigger a high-visibility toast to inform the user about the daily 1 free credit
+              setShowDailyCreditGranted(true);
+            })
+            .catch(err => console.warn("Failed to grant daily credit (offline fallback):", err));
           }
         } else {
-          // Default: Give 3 Free Credits To every User Who signs Up with a New email
+          // Default: Give 3 Free Welcome Credits To every User Who signs Up with a New email
           const initialCredits = 3;
           const todayStr = new Date().toISOString().split('T')[0];
           setCredits(initialCredits);
@@ -3682,22 +3935,28 @@ export default function App() {
             credits: initialCredits,
             lastDailyCreditReset: todayStr
           }, { merge: true })
-            .catch(err => console.error("Failed to initialize free trial credits:", err));
+            .catch(err => console.warn("Failed to initialize free trial credits (offline fallback):", err));
         }
       } else {
-        // Document does not exist: initialize with 3 credits for email signup
-        const initialCredits = 3;
-        const todayStr = new Date().toISOString().split('T')[0];
-        setCredits(initialCredits);
-        setDoc(userDocRef, {
-          credits: initialCredits,
-          lastDailyCreditReset: todayStr,
-          email: user.email || '',
-          displayName: user.displayName || '',
-          createdAt: serverTimestamp()
-        }, { merge: true })
-          .catch(err => console.error("Failed to initialize user document:", err));
+        // Document does not exist: initialize with 3 credits for email signup (except if admin)
+        if (user.email === 'chideraemmanue98@gmail.com') {
+          setCredits(999999);
+        } else {
+          const initialCredits = 3;
+          const todayStr = new Date().toISOString().split('T')[0];
+          setCredits(initialCredits);
+          setDoc(userDocRef, {
+            credits: initialCredits,
+            lastDailyCreditReset: todayStr,
+            email: user.email || '',
+            displayName: user.displayName || '',
+            createdAt: serverTimestamp()
+          }, { merge: true })
+            .catch(err => console.warn("Failed to initialize user document (offline fallback):", err));
+        }
       }
+    }, (error) => {
+      console.warn("User data sync connection offline:", error);
     });
     return () => unsubscribe();
   }, [user?.uid]);
@@ -3705,6 +3964,9 @@ export default function App() {
   // Credit Deduction System Helper
   const deductCredits = async (amount: number): Promise<boolean> => {
     if (!user) return false;
+    if (user.email === 'chideraemmanue98@gmail.com') {
+      return true;
+    }
     const currentCredits = credits ?? 0;
     if (currentCredits < amount) {
       setIsOutofCreditsModalOpen(true);
@@ -3757,51 +4019,54 @@ export default function App() {
   };
   
   useEffect(() => {
-    let activeUnsubscribe: (() => void) | null = null;
-
-    const runAuthSequence = async () => {
-      const supabaseClient = getSupabaseAuthClient();
-      if (supabaseClient) {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
         try {
-          const { data: { session } } = await supabaseClient.auth.getSession();
-          if (session?.user) {
-            setUser({
-              uid: session.user.id,
-              email: session.user.email || '',
-              displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-              isSupabase: true
-            });
-            setAuthLoading(false);
-            return;
-          }
-        } catch (supabaseError) {
-          console.warn("Supabase initial session check bypassed:", supabaseError);
-        }
-      }
-      
-      // Fallback: Start standard Firebase Auth for anonymous workspace sandbox
-      activeUnsubscribe = onAuthStateChanged(auth, async (u) => {
-        if (!u) {
-          try {
-            await signInAnonymously(auth);
-          } catch (e) {
-            console.error("Anonymous authentication fallback error:", e);
-            setUser(null);
-            setAuthLoading(false);
-          }
-        } else {
-          setUser(u);
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error("Anonymous authentication fallback error:", e);
+          const offlineUser = {
+            uid: "offline_sandbox_user_id",
+            isAnonymous: true,
+            email: "guest@chidoniq.com",
+            displayName: "Offline Guest",
+          };
+          setUser(offlineUser);
           setAuthLoading(false);
         }
-      });
-    };
-
-    runAuthSequence();
+      } else {
+        setUser(u);
+        setAuthLoading(false);
+      }
+    });
 
     return () => {
-      if (activeUnsubscribe) activeUnsubscribe();
+      unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.uid || user.uid === "offline_sandbox_user_id") {
+      setUserRole(null);
+      return;
+    }
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data?.role && data?.hasCompletedSetup) {
+          setUserRole(data.role);
+        } else {
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    }, (error) => {
+      console.warn("User profile snapshot subscription error:", error);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   const handleSendToBook = (content: string, title?: string) => {
     setPreFilledContent(prev => ({
@@ -3823,11 +4088,22 @@ export default function App() {
   const handleClearDatabase = async () => {
     setResetStatus('clearing');
     try {
-      // 1. Clear local storage settings and features
+      // 1. Clear local storage settings, features, and mock caches
       localStorage.removeItem('pinned_features');
       localStorage.removeItem('security_modes');
       localStorage.removeItem('neural_notifications');
       localStorage.removeItem('theme');
+      localStorage.removeItem('freelance_favs');
+      localStorage.removeItem('guest_drafts');
+      localStorage.removeItem('guest_ruled_pages');
+      localStorage.removeItem('local_blogs');
+      localStorage.removeItem('chidon_shadowban_checklist');
+      localStorage.removeItem('chidon_shadowban_risk_score');
+      
+      if (user?.uid) {
+        localStorage.removeItem(`withdrawals_${user.uid}`);
+        localStorage.removeItem(`chidon_freelance_profile_${user.uid}`);
+      }
       
       // 2. Clear IndexedDB local notes
       try {
@@ -3840,7 +4116,7 @@ export default function App() {
         console.error("IndexedDB clear error:", idbErr);
       }
 
-      // 3. Clear Firestore collections
+      // 3. Clear Firestore collections across both Chidon IQ and Freelance Hub
       const collectionsToClear = [
         'jobs',
         'job_applications',
@@ -3848,7 +4124,15 @@ export default function App() {
         'notes',
         'folders',
         'feedback',
-        'global_presence'
+        'global_presence',
+        'gigs',
+        'orders',
+        'messages',
+        'reviews',
+        'disputes',
+        'notifications',
+        'milestone_updates',
+        'blogs'
       ];
       
       for (const colName of collectionsToClear) {
@@ -3886,16 +4170,207 @@ export default function App() {
   const [hfKey] = useState<string>(process.env.HUGGINGFACE_API_KEY || '');
   const activeGeminiKey = customGeminiApiKey || apiKey;
   const activeHfKey = customHfApiKey || hfKey;
-  const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>({});
+  const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>(() => {
+    try {
+      const stored = localStorage.getItem('chidon_feature_results');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        Object.keys(parsed).forEach(featureId => {
+          if (Array.isArray(parsed[featureId])) {
+            parsed[featureId] = parsed[featureId].map((m: any) => ({
+              ...m,
+              timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
+            }));
+          }
+        });
+        return parsed;
+      }
+    } catch (e) {
+      console.error("Error reading featureResults from localStorage:", e);
+    }
+    return {};
+  });
+
+  // Load feature results from Firestore when user logs in
+  useEffect(() => {
+    if (!user || user.uid === 'offline_sandbox_user_id') return;
+    
+    const loadFirestoreChats = async () => {
+      try {
+        const chatsCol = collection(db, 'users', user.uid, 'feature_chats');
+        const qSnap = await getDocs(chatsCol);
+        const firestoreResults: Record<string, ChatMessage[]> = {};
+        qSnap.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.messages) {
+            firestoreResults[docSnap.id] = data.messages.map((m: any) => ({
+              ...m,
+              timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
+            }));
+          }
+        });
+        
+        if (Object.keys(firestoreResults).length > 0) {
+          setFeatureResults(prev => {
+            const merged = { ...prev };
+            Object.keys(firestoreResults).forEach(fId => {
+              merged[fId] = firestoreResults[fId];
+            });
+            return merged;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load chat history from Firestore:", e);
+      }
+    };
+    
+    loadFirestoreChats();
+  }, [user]);
+
+  const handleDeleteMessage = async (featureId: string, messageId: string) => {
+    const messages = featureResults[featureId] || [];
+    const index = messages.findIndex(m => m.id === messageId);
+    if (index === -1) return;
+
+    let idsToRemove = [messageId];
+    if (messages[index].role === 'assistant' && index > 0 && messages[index - 1].role === 'user') {
+      idsToRemove.push(messages[index - 1].id);
+    } else if (messages[index].role === 'user' && index < messages.length - 1 && messages[index + 1].role === 'assistant') {
+      idsToRemove.push(messages[index + 1].id);
+    }
+
+    const updatedMessages = messages.filter(m => !idsToRemove.includes(m.id));
+    const newResults = {
+      ...featureResults,
+      [featureId]: updatedMessages
+    };
+
+    setFeatureResults(newResults);
+
+    try {
+      localStorage.setItem('chidon_feature_results', JSON.stringify(newResults));
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (user && user.uid !== 'offline_sandbox_user_id') {
+      try {
+        const chatDocRef = doc(db, 'users', user.uid, 'feature_chats', featureId);
+        if (updatedMessages.length === 0) {
+          await deleteDoc(chatDocRef);
+        } else {
+          await setDoc(chatDocRef, {
+            featureId,
+            messages: updatedMessages.map(m => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+              language: m.language || 'en'
+            })),
+            updatedAt: serverTimestamp()
+          });
+        }
+      } catch (e) {
+        console.error("Failed to delete message from Firestore:", e);
+      }
+    }
+  };
+
+  const handleClearAllChatData = async (featureId: string) => {
+    const newResults = {
+      ...featureResults,
+      [featureId]: []
+    };
+
+    setFeatureResults(newResults);
+
+    try {
+      localStorage.setItem('chidon_feature_results', JSON.stringify(newResults));
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (user && user.uid !== 'offline_sandbox_user_id') {
+      try {
+        const chatDocRef = doc(db, 'users', user.uid, 'feature_chats', featureId);
+        await deleteDoc(chatDocRef);
+      } catch (e) {
+        console.error("Failed to clear chat history from Firestore:", e);
+      }
+    }
+  };
+
   const [isTranslatingResults, setIsTranslatingResults] = useState(false);
   const featureResultsRef = useRef(featureResults);
   useEffect(() => {
     featureResultsRef.current = featureResults;
   }, [featureResults]);
 
-  // Pruned destructive auto-translation of chat history on language shift to prevent crash/infinite loop issues
+  // Robust automatic translation of existing chat history when the language shift occurs
+  const lastTranslatedLang = useRef<string>(i18n.language || 'en');
   useEffect(() => {
-    // Keep results in original generation language, no slow API translation sweeps are done on every language shift
+    const targetLang = i18n.language || 'en';
+    const cleanTarget = targetLang.split('-')[0].toLowerCase();
+    
+    if (cleanTarget === lastTranslatedLang.current.split('-')[0].toLowerCase()) {
+      return;
+    }
+    
+    lastTranslatedLang.current = targetLang;
+
+    const translateExistingMessages = async () => {
+      setIsTranslatingResults(true);
+      try {
+        const updatedResults = { ...featureResultsRef.current };
+        let changed = false;
+
+        for (const featureId of Object.keys(updatedResults)) {
+          const messages = updatedResults[featureId] || [];
+          const newMessages = [...messages];
+          let featureChanged = false;
+
+          for (let i = 0; i < newMessages.length; i++) {
+            const msg = newMessages[i];
+            if (msg.role === 'assistant' && msg.language !== cleanTarget) {
+              try {
+                const response = await fetch("/api/gemini/translate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ text: msg.content, targetLanguage: cleanTarget })
+                });
+                const data = await response.json();
+                if (data && data.text) {
+                  newMessages[i] = {
+                    ...msg,
+                    content: data.text,
+                    language: cleanTarget
+                  };
+                  featureChanged = true;
+                  changed = true;
+                }
+              } catch (e) {
+                console.error("Failed to translate message during language shift", e);
+              }
+            }
+          }
+
+          if (featureChanged) {
+            updatedResults[featureId] = newMessages;
+          }
+        }
+
+        if (changed) {
+          setFeatureResults(updatedResults);
+        }
+      } catch (err) {
+        console.error("Failed to translate existing feature results", err);
+      } finally {
+        setIsTranslatingResults(false);
+      }
+    };
+
+    translateExistingMessages();
   }, [i18n.language]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -4088,14 +4563,62 @@ export default function App() {
       originalPrompt: prompt
     };
 
+    const initialMsgs = [...(featureResults[activeFeature] || []), userMsg];
     setFeatureResults(prev => ({
       ...prev,
-      [activeFeature]: [...(prev[activeFeature] || []), userMsg]
+      [activeFeature]: initialMsgs
     }));
+
+    // Helper to persist both local and firestore
+    const persistMessages = async (featureId: string, msgs: ChatMessage[]) => {
+      try {
+        const stored = localStorage.getItem('chidon_feature_results');
+        const parsed = stored ? JSON.parse(stored) : {};
+        parsed[featureId] = msgs;
+        localStorage.setItem('chidon_feature_results', JSON.stringify(parsed));
+      } catch (e) {
+        console.error("Failed to persist messages to localStorage", e);
+      }
+
+      if (user && user.uid !== 'offline_sandbox_user_id') {
+        try {
+          const chatDocRef = doc(db, 'users', user.uid, 'feature_chats', featureId);
+          await setDoc(chatDocRef, {
+            featureId,
+            messages: msgs.map(m => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+              language: m.language || 'en'
+            })),
+            updatedAt: serverTimestamp()
+          });
+        } catch (e) {
+          console.error("Failed to persist messages to Firestore", e);
+        }
+      }
+    };
+
+    await persistMessages(activeFeature, initialMsgs);
 
     let finalPrompt = prompt;
     if (generationTone) {
       finalPrompt = `${prompt}\n\n[STYLE PROTOCOL: Generate response in a highly distinct '${generationTone.toUpperCase()}' default writing tone.]`;
+    }
+
+    // STYLING PROTOCOL: Enforce Gemini-like beautiful, highly structured, and listed outputs (No long book-like text)
+    finalPrompt = `${finalPrompt}\n\n[STRICT VISUAL LAYOUT & ANALYTICAL COMPACTNESS PROTOCOL]:
+- STRICTLY DO NOT output long-form, wordy book text, verbose paragraphs, essays, or generic explanations.
+- ALWAYS use highly structured, compact, listed or table-based Markdown layouts with high visual clarity.
+- For SEO & Optimization features (e.g., SEO scorecards, title generators, tag architects, keyword research): Output clean, well-spaced, listed SEO terms with their 'High Ranking Power' (e.g. [RANKING POWER: 98%], [SEARCH VOLUME: 45k/mo], [DIFFICULTY: LOW]), short-form metrics, and high-impact CTR markers. Do not write full chapters or explanations.
+- For Content Creation features (e.g., video ideas, script templates, headlines): Output short bulleted guides, formats, and structural layouts with concrete markers. Keep explanations under 2 lines per bullet.
+- For Branding & Strategy features (e.g., competitor scans, personas): Output concise profiles and tactical key-value attributes.
+- Ensure all generated text is neatly arranged, attractive, readable, and highly professional, mirroring Google Gemini's standard-setting, crisp tabular results.`;
+
+    const activeLangObj = LANGUAGES.find(l => l.code === (i18n.language || 'en').split('-')[0].toLowerCase()) || LANGUAGES[0];
+    if (activeLangObj && activeLangObj.code !== 'en') {
+      finalPrompt = `${finalPrompt}\n\n[CRITICAL TRANSLATION MANDATE]: You MUST output your entire response, including all headers, tables, explanations, and generated content, fully translated into the ${activeLangObj.label} (${activeLangObj.native}) language. Do not mix with English unless explicitly requested.`;
     }
 
     const result = await generate(finalPrompt, activeFeature);
@@ -4106,12 +4629,16 @@ export default function App() {
         role: 'assistant',
         content: result,
         timestamp: new Date(),
-        language: i18n.language || 'en'
+        language: (i18n.language || 'en').split('-')[0].toLowerCase()
       };
+      
+      const finalMsgs = [...initialMsgs, aiMsg];
       setFeatureResults(prev => ({
         ...prev,
-        [activeFeature]: [...(prev[activeFeature] || []), aiMsg]
+        [activeFeature]: finalMsgs
       }));
+
+      await persistMessages(activeFeature, finalMsgs);
     }
   };
 
@@ -4127,6 +4654,7 @@ export default function App() {
           experienceLevel={experienceLevel}
           user={user}
           onSignIn={handleSignIn}
+          featureResults={featureResults}
         />
       );
     }
@@ -4201,6 +4729,7 @@ export default function App() {
           onTriggerAuth={handleSignIn}
           subView={freelanceView}
           onSubViewChange={(v) => navigateTo('freelance', undefined, v)}
+          onSendToNotepad={handleSendToBook}
         />
       );
     }
@@ -4234,7 +4763,9 @@ export default function App() {
       onGenerateFeedback: openFeedback,
       onSaveDraft: handleSaveDraft,
       onRestoreDraft: handleRestoreDraft,
-      onBack: goBack
+      onBack: goBack,
+      onDeleteMessage: handleDeleteMessage,
+      onClearAllChatData: handleClearAllChatData
     };
 
     const renderFeature = () => {
@@ -4253,8 +4784,10 @@ export default function App() {
         case 'vseo-keywords':
         case 'vseo-best-time':
         case 'ai-script-outline':
-        case 'shadowban-solutions':
           return <AdvancedNeuralTool {...commonProps} />;
+
+        case 'shadowban-solutions':
+          return <ShadowbanSolutions {...commonProps} />;
 
         case 'post-scheduler': return (
           <Suspense fallback={<ComponentLoader />}>
@@ -4274,6 +4807,7 @@ export default function App() {
             <ChidonVault 
               onBack={commonProps.onBack}
               onSignIn={handleSignIn}
+              onSendToNotepad={handleSendToBook}
             />
           </Suspense>
         );
@@ -4427,78 +4961,82 @@ export default function App() {
                   <div className="pl-4 pr-1 py-2 space-y-3 border-l-2 border-brand/20 ml-5 animate-in slide-in-from-top-2 duration-200">
                     
                     {/* Buyer Portal Subsection */}
-                    <div className="space-y-1 text-left">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
-                        Buyer Portal
+                    {(!userRole || userRole === 'buyer') && (
+                      <div className="space-y-1 text-left">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
+                          Buyer Portal
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigateTo('freelance', undefined, 'explore');
+                            setIsMenuOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                            freelanceView === 'explore' || freelanceView === 'gig_detail'
+                              ? "text-brand bg-brand/5 dark:text-emerald-400 dark:bg-emerald-500/5 font-extrabold"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          )}
+                        >
+                          <Compass size={12} className="text-emerald-500" />
+                          Explore Gigs
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigateTo('freelance', undefined, 'job_board');
+                            setIsMenuOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                            freelanceView === 'job_board'
+                              ? "text-brand bg-brand/5 dark:text-emerald-400 dark:bg-emerald-500/5 font-extrabold"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          )}
+                        >
+                          <Briefcase size={12} className="text-emerald-500" />
+                          Active Jobs Board
+                        </button>
                       </div>
-                      <button
-                        onClick={() => {
-                          navigateTo('freelance', undefined, 'explore');
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                          freelanceView === 'explore' || freelanceView === 'gig_detail'
-                            ? "text-brand bg-brand/5 dark:text-emerald-400 dark:bg-emerald-500/5 font-extrabold"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        )}
-                      >
-                        <Compass size={12} className="text-emerald-500" />
-                        Explore Gigs
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigateTo('freelance', undefined, 'job_board');
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                          freelanceView === 'job_board'
-                            ? "text-brand bg-brand/5 dark:text-emerald-400 dark:bg-emerald-500/5 font-extrabold"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        )}
-                      >
-                        <Briefcase size={12} className="text-emerald-500" />
-                        Active Jobs Board
-                      </button>
-                    </div>
+                    )}
 
                     {/* Seller Portal Subsection */}
-                    <div className="space-y-1 text-left">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
-                        Seller Portal
+                    {(!userRole || userRole === 'seller') && (
+                      <div className="space-y-1 text-left">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
+                          Seller Portal
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigateTo('freelance', undefined, 'dashboard');
+                            setIsMenuOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                            freelanceView === 'dashboard' || freelanceView === 'order_detail'
+                              ? "text-brand bg-brand/5 dark:text-cyan-400 dark:bg-cyan-500/5 font-extrabold"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          )}
+                        >
+                          <Briefcase size={12} className="text-cyan-500" />
+                          Seller Workspace
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigateTo('freelance', undefined, 'create_gig');
+                            setIsMenuOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                            freelanceView === 'create_gig'
+                              ? "text-brand bg-brand/5 dark:text-cyan-400 dark:bg-cyan-500/5 font-extrabold"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          )}
+                        >
+                          <Plus size={12} className="text-cyan-500" />
+                          List Service Gig
+                        </button>
                       </div>
-                      <button
-                        onClick={() => {
-                          navigateTo('freelance', undefined, 'dashboard');
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                          freelanceView === 'dashboard' || freelanceView === 'order_detail'
-                            ? "text-brand bg-brand/5 dark:text-cyan-400 dark:bg-cyan-500/5 font-extrabold"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        )}
-                      >
-                        <Briefcase size={12} className="text-cyan-500" />
-                        Seller Workspace
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigateTo('freelance', undefined, 'create_gig');
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                          freelanceView === 'create_gig'
-                            ? "text-brand bg-brand/5 dark:text-cyan-400 dark:bg-cyan-500/5 font-extrabold"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        )}
-                      >
-                        <Plus size={12} className="text-cyan-500" />
-                        List Service Gig
-                      </button>
-                    </div>
+                    )}
 
                     {/* Shared Collaboration channels */}
                     <div className="space-y-1 text-left border-t border-slate-200/40 dark:border-slate-800 pt-2">
@@ -4570,7 +5108,7 @@ export default function App() {
                 )}
               >
                 <BookOpen size={15} className="text-cyan-primary" />
-                <span>Chidon IQ Gazette</span>
+                <span>Chidon Blog</span>
               </button>
 
               <button
@@ -4646,12 +5184,6 @@ export default function App() {
                             isActive ? "text-brand" : "text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]"
                           )} />
                           <span className="truncate">{getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}</span>
-                          {f.id === 'trending-now' && (
-                            <span className="ml-1.5 px-1 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-0.5 animate-pulse shrink-0">
-                              <Flame size={8} className="fill-red-500 text-red-500" />
-                              HOT
-                            </span>
-                          )}
 
                           {/* Quick Share action button */}
                           {isActive && (
@@ -4705,11 +5237,7 @@ export default function App() {
           <div className="p-6 border-t border-[var(--border-base)]">
             <button 
               onClick={() => {
-                if (user) {
-                  navigateTo('profile');
-                } else {
-                  setView('auth');
-                }
+                setView('auth');
                 setIsMenuOpen(false);
               }}
               className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 hover:bg-gray-100 dark:hover:bg-gray-800/60 border border-[var(--border-base)]/40 transition-all text-left cursor-pointer group"
@@ -4717,10 +5245,10 @@ export default function App() {
               <UserCircle className="w-8 h-8 text-cyan-500 group-hover:scale-105 transition-transform shrink-0" />
               <div className="flex-1 text-left min-w-0">
                 <p className="text-xs font-bold text-[var(--text-primary)] truncate">
-                  {user?.isSupabase ? (user.displayName || 'Authorized Agent') : 'Workspace Master'}
+                  {user && !user.isAnonymous ? (user.displayName || user.email?.split('@')[0] || 'Authorized Agent') : 'Guest Session'}
                 </p>
                 <p className="text-[9px] font-mono text-[var(--text-secondary)] truncate">
-                  {user?.isSupabase ? user.email : 'Tap to sync credentials'}
+                  {user && !user.isAnonymous ? user.email : 'Tap to sign in / register'}
                 </p>
               </div>
             </button>
@@ -4740,7 +5268,7 @@ export default function App() {
               </button>
               <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                 <span className="md:hidden"><ChidonLogo size="xs" iconOnly /></span>
-                <span>{view === 'dashboard' ? t('common.overview') : view === 'blog' ? "Chidon IQ Gazette & Blog" : view === 'pricing' ? "Chidon Pricing Matrix" : view === 'matrix' ? t('common.commandMatrix') : view === 'profile' ? "Intelligence Profile" : view === 'freelance' ? "ChidonFreelance Hub" : (currentFeature ? getCleanFeatureLabel(t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}</span>
+                <span>{view === 'dashboard' ? t('common.overview') : view === 'blog' ? "Chidon Blog" : view === 'pricing' ? "Chidon Pricing Matrix" : view === 'matrix' ? t('common.commandMatrix') : view === 'profile' || view === 'auth' ? "Security Authentication Portal" : view === 'freelance' ? "ChidonFreelance Hub" : (currentFeature ? getCleanFeatureLabel(t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}</span>
               </h2>
             </div>
 
@@ -4831,6 +5359,50 @@ export default function App() {
         <ChidonIqGuide credits={credits} onDeductCredits={deductCredits} />
       </Suspense>
 
+      {/* FLOATING TRANSLATION PROCESS INDICATOR */}
+      <AnimatePresence>
+        {isTranslatingResults && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 right-6 bg-slate-950 border border-brand/50 text-brand px-5 py-3.5 rounded-2xl flex items-center gap-3 shadow-2xl z-[9999] text-xs font-mono font-bold"
+          >
+            <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+            <div className="flex flex-col text-left">
+              <span className="text-white font-extrabold tracking-wide uppercase">Translating Workspace Assets</span>
+              <span className="text-brand/70 font-bold text-[10px]">Converting generated features into selected language...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DAILY RECHARGE TOAST */}
+      <AnimatePresence>
+        {showDailyCreditGranted && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 left-6 bg-slate-950 border border-emerald-500 text-emerald-400 px-5 py-4 rounded-2xl flex flex-col gap-1 shadow-[0_10px_30px_rgba(16,185,129,0.25)] z-[9999] text-xs max-w-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Coins size={16} className="text-emerald-400 animate-bounce" />
+              <span className="text-white font-extrabold tracking-wide uppercase">Daily Recharge Active</span>
+            </div>
+            <p className="text-slate-300 font-semibold text-[10px] leading-relaxed">
+              You have been granted your <span className="text-emerald-400 font-black">+1 Free Daily Credit</span> for today! Keep powering your social workspace.
+            </p>
+            <button 
+              onClick={() => setShowDailyCreditGranted(false)}
+              className="mt-1.5 self-start text-[9px] font-black uppercase text-emerald-300 hover:text-white underline cursor-pointer"
+            >
+              Acknowledge
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* OUT OF CREDITS DYNAMIC DIALOG */}
       <AnimatePresence>
         {isOutofCreditsModalOpen && (
@@ -4863,7 +5435,10 @@ export default function App() {
 
               <div className="my-6 p-4 bg-black/40 border border-white/5 rounded-2xl text-left space-y-2.5">
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Your active Chidon IQ workspace is currently out of credits. Every standard analysis run consumes **1 credit**, and premium script outlines consume **5 credits**.
+                  Your active Chidon IQ workspace is currently out of credits. Standard features consume **1 credit**, while premium script outlines consume **5 credits**.
+                </p>
+                <p className="text-[11px] text-amber-400 font-bold leading-normal">
+                  ⚡ Note: New accounts receive exactly 3 Welcome Credits (one-time) and 1 Free Daily Credit. To continue uninterrupted, please purchase a premium fuel package.
                 </p>
                 <div className="flex justify-between items-center text-[10px] font-mono border-t border-white/5 pt-2 text-slate-500">
                   <span>CURRENT REPLENISH RATE:</span>

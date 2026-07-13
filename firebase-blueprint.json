@@ -288,6 +288,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title", "message", "isRead", "createdAt"]
+    },
+    "BlogPost": {
+      "title": "Blog Post",
+      "description": "User created or seeded blog posts on Chidon Blog",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "readTime": { "type": "string" },
+        "date": { "type": "string" },
+        "author": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "excerpt", "content", "category", "readTime", "date", "author"]
     }
   },
   "firestore": {
@@ -366,6 +384,10 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "Collection of freelance and workspace notifications"
+    },
+    "/blogs/{blogId}": {
+      "schema": "BlogPost",
+      "description": "Collection of Chidon Blog posts"
     }
   }
 }

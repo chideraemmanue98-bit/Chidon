@@ -236,6 +236,23 @@ export default function ChidonPricing({ user, onBack, db }: ChidonPricingProps) 
 
   const plans: PricingPlan[] = [
     {
+      id: 'free',
+      name: 'Welcome Credits Tier',
+      price: 0,
+      creditsAmount: 3,
+      description: 'Automatically activated for all new workspace creators upon registration.',
+      icon: Cpu,
+      color: 'from-slate-500/10 to-zinc-500/5',
+      borderColor: 'border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700',
+      features: [
+        '3 Welcome Credits (One-Time)',
+        '1 Free Daily Credit added every day',
+        'Standard Features: 1 Credit per run',
+        'Full Workspace multi-language support',
+        'Upgrade anytime to premium packs'
+      ]
+    },
+    {
       id: 'starter',
       name: 'Starter Credits Pack',
       price: 5,
@@ -300,6 +317,16 @@ export default function ChidonPricing({ user, onBack, db }: ChidonPricingProps) 
     setCheckoutUrl('');
     setPayRef('');
     setPaySuccess(false);
+
+    if (plan.id === 'free') {
+      setLoading(false);
+      if (!user) {
+        setVerifyError("Please authenticate in Chidon IQ to see your Welcome Credits status.");
+        return;
+      }
+      setVerifyError("Your Welcome Tier is already active! You received 3 Welcome Credits upon registration, plus 1 free credit daily. To buy more credits, please purchase one of our premium packs below.");
+      return;
+    }
 
     try {
       const response = await fetch('/api/paystack/initialize', {
@@ -1040,7 +1067,27 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* DOLLAR/NAIRA EXCHANGE NOTICE BANNER */}
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex items-start gap-4">
+          <div className="p-2.5 bg-amber-500/20 text-amber-500 rounded-xl shrink-0 mt-0.5">
+            <AlertCircle size={20} />
+          </div>
+          <div className="space-y-1.5 text-left">
+            <h4 className="text-sm font-bold uppercase tracking-wide text-amber-500 font-mono">
+              Dollar / Naira Multi-Currency Notice
+            </h4>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-medium">
+              Chidon IQ processes core payments using **USD ($)** pricing. For our Nigerian creators, the Paystack engine dynamically converts the total to **Naira (₦)** at the live market exchange rate of **1 USD = ₦{exchangeRate.toLocaleString()} NGN**. You can securely complete checkout using your local cards, bank transfers, or USSD.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-1 text-[10px] font-mono font-bold text-amber-500/80">
+              <span className="flex items-center gap-1">✔ Transparent Conversion</span>
+              <span className="flex items-center gap-1">✔ Local Naira Processing</span>
+              <span className="flex items-center gap-1">✔ Zero Hidden Markups</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => {
             const PlanIcon = plan.icon;
             const isSelectedPlan = activePlan === plan.name;
@@ -1103,17 +1150,19 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
                       ${plan.price}
                     </span>
                     <span className="text-xs text-[var(--text-secondary)] font-mono uppercase font-bold">
-                      USD / One-time
+                      {plan.price === 0 ? "USD / Free" : "USD / One-time"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-brand font-extrabold font-mono">
                     <Coins size={14} className="text-brand" />
-                    <span className="bg-gradient-to-r from-brand to-cyan-500 bg-clip-text text-transparent uppercase tracking-wider">Adds {plan.creditsAmount} Fuel Credits</span>
+                    <span className="bg-gradient-to-r from-brand to-cyan-500 bg-clip-text text-transparent uppercase tracking-wider">
+                      {plan.price === 0 ? `Unlocks ${plan.creditsAmount} Free Credits` : `Adds ${plan.creditsAmount} Fuel Credits`}
+                    </span>
                   </div>
                   <div className="mt-2.5 p-2 bg-indigo-50/40 dark:bg-slate-900/60 border border-[var(--border-base)]/40 rounded-xl inline-flex items-center gap-1.5 w-full">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping shrink-0" />
                     <span className="text-[10px] font-mono text-[var(--text-secondary)] font-bold truncate">
-                      Naira value: ₦{priceInNgn.toLocaleString()} NGN
+                      {plan.price === 0 ? "Naira value: ₦0 (Free)" : `Naira value: ₦${priceInNgn.toLocaleString()} NGN`}
                     </span>
                   </div>
                 </div>
@@ -1138,10 +1187,12 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
                   className={`w-full py-4 rounded-xl font-mono text-xs uppercase tracking-wider font-extrabold transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer text-center ${
                     isCreator
                       ? 'bg-gradient-to-r from-brand via-indigo-600 to-brand text-white hover:brightness-110 shadow-[0_6px_20px_rgba(99,102,241,0.35)]'
+                      : plan.price === 0
+                      ? 'bg-slate-900 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:bg-slate-800'
                       : 'bg-slate-50 dark:bg-slate-800/80 border border-[var(--border-base)] hover:bg-slate-100 dark:hover:bg-slate-700 text-[var(--text-primary)]'
                   }`}
                 >
-                  Charge Up Pack
+                  {plan.price === 0 ? 'Welcome Tier Active' : 'Charge Up Pack'}
                 </button>
               </motion.div>
             );

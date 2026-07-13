@@ -50,6 +50,7 @@ interface SavedDraft {
 interface ChidonVaultProps {
   onBack?: () => void;
   onSignIn?: () => void;
+  onSendToNotepad?: (content: string, title: string) => void;
 }
 
 const CATEGORIES = [
@@ -60,7 +61,7 @@ const CATEGORIES = [
   { id: 'seo', label: 'SEO & Tech', icon: Award, features: ['competitor-analysis', 'keyword-research', 'youtube-seo', 'seo-scorecard', 'thumbnails', 'posting-schedule', 'post-optimizer'] }
 ];
 
-export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) => {
+export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSendToNotepad }) => {
   const [drafts, setDrafts] = useState<SavedDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,8 +103,18 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
       `Are you sure you want to permanently discard all ${selectedIds.length} selected blueprints from your CHIDON Vault? This operation is irreversible.`,
       async () => {
         try {
-          const promises = selectedIds.map(id => deleteDoc(doc(db, 'drafts', id)));
-          await Promise.all(promises);
+          if (auth.currentUser) {
+            const promises = selectedIds.map(id => deleteDoc(doc(db, 'drafts', id)));
+            await Promise.all(promises);
+          } else {
+            const guestDrafts = localStorage.getItem('guest_drafts');
+            if (guestDrafts) {
+              const list = JSON.parse(guestDrafts);
+              const updated = list.filter((item: any) => !selectedIds.includes(item.id));
+              localStorage.setItem('guest_drafts', JSON.stringify(updated));
+              setDrafts(prev => prev.filter(item => !selectedIds.includes(item.id)));
+            }
+          }
           if (selectedDraft && selectedIds.includes(selectedDraft.id)) {
             setSelectedDraft(null);
           }
@@ -148,7 +159,22 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
         setLoading(false);
       });
     } else {
-      setLoading(true);
+      // Guest local storage fallback
+      const local = localStorage.getItem('guest_drafts');
+      if (local) {
+        try {
+          const list = JSON.parse(local).map((d: any) => ({
+            ...d,
+            createdAt: new Date(d.createdAt)
+          }));
+          setDrafts(list);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setDrafts([]);
+      }
+      setLoading(false);
     }
 
     return () => unsubscribe();
@@ -167,7 +193,18 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
       "Are you sure you want to permanently discard this blueprint from your CHIDON Vault? This blueprint will be deleted from the database.",
       async () => {
         try {
-          await deleteDoc(doc(db, 'drafts', id));
+          if (auth.currentUser) {
+            await deleteDoc(doc(db, 'drafts', id));
+          } else {
+            // Guest delete
+            const guestDrafts = localStorage.getItem('guest_drafts');
+            if (guestDrafts) {
+              const list = JSON.parse(guestDrafts);
+              const updated = list.filter((item: any) => item.id !== id);
+              localStorage.setItem('guest_drafts', JSON.stringify(updated));
+              setDrafts(prev => prev.filter(item => item.id !== id));
+            }
+          }
           if (selectedDraft?.id === id) {
             setSelectedDraft(null);
           }
@@ -669,6 +706,17 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
                     {copiedId === 'selected' ? <Check size={14} className="text-brand" /> : <Copy size={14} />}
                     {copiedId === 'selected' ? 'Copied' : 'Copy'}
                   </button>
+
+                  {onSendToNotepad && (
+                    <button
+                      onClick={() => onSendToNotepad(selectedDraft.content, selectedDraft.title || 'Saved Intel')}
+                      className="p-2 border border-brand/20 bg-brand/5 text-brand hover:bg-brand/10 rounded-xl transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                      title="Send to Notepad (Notebook with Lines)"
+                    >
+                      <BookOpen size={14} />
+                      <span>Notepad</span>
+                    </button>
+                  )}
 
                   {/* Edit button removed */}
 

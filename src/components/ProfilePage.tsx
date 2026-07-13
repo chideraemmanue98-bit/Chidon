@@ -231,11 +231,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-[var(--border-base)] pt-6">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-[var(--border-base)]/40 text-center">
-              <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wider block">Cognitive Credits</span>
-              <span className="text-2xl font-black text-brand flex items-center justify-center gap-1 mt-1">
-                <Zap size={18} className="text-brand animate-pulse" />
-                {(profile as any)?.credits ?? 0}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-[var(--border-base)]/40 text-center flex flex-col justify-between min-h-[96px]">
+              <div>
+                <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wider block">Cognitive Credits</span>
+                <span className="text-2xl font-black text-brand flex items-center justify-center gap-1 mt-1">
+                  <Zap size={18} className="text-brand animate-pulse" />
+                  {(profile as any)?.credits ?? 0}
+                </span>
+              </div>
+              <span className="text-[8px] font-mono text-emerald-500 font-extrabold uppercase mt-1 tracking-wider block">
+                +1 Free Daily Credit Active
               </span>
             </div>
 

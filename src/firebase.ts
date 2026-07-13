@@ -1,4 +1,6 @@
 import { initializeApp } from 'firebase/app';
+import 'firebase/firestore';
+import 'firebase/auth';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';

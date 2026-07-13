@@ -256,7 +256,20 @@ ${paramsSummary}
         throw new Error("No text response received from Gemini engine proxy.");
       }
 
-      setGeneratedOutput(data.text);
+      let textResult = data.text;
+      if (typeof textResult === 'string') {
+        textResult = textResult
+          .replace(/\\n\\n/g, '\n\n')
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '')
+          .replace(/n\/n\//g, '\n\n')
+          .replace(/\/n\/n\//g, '\n\n')
+          .replace(/\/n\//g, '\n')
+          .replace(/\s*n\/n\s*/g, '\n\n')
+          .trim();
+      }
+
+      setGeneratedOutput(textResult);
     } catch (err: any) {
       console.error("Template library generation failure:", err);
       setErrorStatus(err.message || 'An internal error occurred during the cognitive generation cycle.');

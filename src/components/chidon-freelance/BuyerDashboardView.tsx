@@ -1,26 +1,174 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShoppingCart, RefreshCw, ArrowRight, ShieldCheck, 
-  Search, ExternalLink, Sparkles, Compass, HelpCircle, Activity
+  Search, ExternalLink, Cpu, Zap, Compass, HelpCircle, Activity
 } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Order, FreelanceProfile } from './types';
+import { PaystackGatewayModal } from './PaystackGatewayModal';
 
 interface BuyerDashboardViewProps {
   profile: FreelanceProfile;
   onSelectOrder: (order: Order) => void;
   onNavigateToExplore: () => void;
+  onRefreshProfile?: () => void;
 }
 
 export const BuyerDashboardView: React.FC<BuyerDashboardViewProps> = ({ 
   profile, 
   onSelectOrder,
-  onNavigateToExplore
+  onNavigateToExplore,
+  onRefreshProfile
 }) => {
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Paystack Modal states for Direct Milestone Payout
+  const [paystackOpen, setPaystackOpen] = useState(false);
+  const [paystackData, setPaystackData] = useState<{
+    amount: number;
+    reference: string;
+    targetSellerId: string;
+    targetSellerName: string;
+    memo: string;
+  } | null>(null);
+
+  // Direct Payout states
+  const [sellers, setSellers] = useState<{uid: string, username: string, fullName: string}[]>([]);
+  const [selectedSellerId, setSelectedSellerId] = useState('');
+  const [payoutAmount, setPayoutAmount] = useState<number>(100);
+  const [projectMemo, setProjectMemo] = useState('');
+  const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
+  const [payoutSuccess, setPayoutSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchSellers = async () => {
+      try {
+        const usersCol = collection(db, 'users');
+        const q = query(usersCol, where('role', '==', 'seller'));
+        const snap = await getDocs(q);
+        const list = snap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            uid: doc.id,
+            username: data.username || 'unknown',
+            fullName: data.fullName || data.username || 'Anonymous Seller'
+          };
+        });
+        setSellers(list);
+        if (list.length > 0) {
+          setSelectedSellerId(list[0].uid);
+        }
+      } catch (err) {
+        console.warn("Error fetching sellers list for pay form:", err);
+      }
+    };
+    fetchSellers();
+  }, []);
+
+  const fallbackSellers = [
+    { uid: 'sim_wizard_123', username: 'solidity_wizard', fullName: 'Solidity Smart Contract Wizard' },
+    { uid: 'sim_guru_456', username: 'creative_guru', fullName: 'Creative UI/UX Guru' },
+  ];
+  const activeSellersList = sellers.length > 0 ? sellers : fallbackSellers;
+
+  const handleDirectPayout = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetSellerId = selectedSellerId || activeSellersList[0]?.uid;
+    if (!targetSellerId) {
+      alert("No freelancer selected.");
+      return;
+    }
+    const targetSeller = activeSellersList.find(s => s.uid === targetSellerId);
+    if (!targetSeller) return;
+
+    if (payoutAmount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+    if (!projectMemo.trim()) {
+      alert("Please enter a short description/memo for the contract milestone.");
+      return;
+    }
+
+    const reference = `DIRECT_ESC_${Date.now()}`;
+    setPaystackData({
+      amount: Number(payoutAmount),
+      reference,
+      targetSellerId,
+      targetSellerName: targetSeller.username,
+      memo: projectMemo.trim()
+    });
+    setPaystackOpen(true);
+  };
+
+  const handlePaystackSuccess = async (reference: string) => {
+    if (!paystackData) return;
+    const { amount, targetSellerId, targetSellerName, memo } = paystackData;
+
+    setIsSubmittingPayout(true);
+    try {
+      const orderData = {
+        buyerId: profile.uid,
+        buyerName: profile.fullName || profile.username,
+        sellerId: targetSellerId,
+        sellerName: targetSellerName,
+        gigId: 'direct_milestone',
+        gigTitle: `Direct Funding: ${memo}`,
+        gigImage: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=500&auto=format&fit=crop&q=60',
+        packageType: 'basic',
+        packageTitle: 'Custom Milestone Deliverable',
+        amount,
+        status: 'in_progress',
+        paystackReference: reference,
+        paystackStatus: 'success',
+        createdAt: new Date()
+      };
+
+      await addDoc(collection(db, 'orders'), orderData);
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: targetSellerId,
+        title: 'New Escrow Order Secured!',
+        message: `@${profile.username} funded a direct milestone of $${amount} for: "${memo}"`,
+        type: 'order',
+        isRead: false,
+        createdAt: new Date()
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        userId: profile.uid,
+        title: 'Direct Escrow Funded',
+        message: `Your payment of $${amount} is held securely in escrow for @${targetSellerName}.`,
+        type: 'order',
+        isRead: false,
+        createdAt: new Date()
+      });
+
+      setPayoutSuccess(true);
+      setProjectMemo('');
+      setPayoutAmount(100);
+
+      fetchBuyerData();
+      if (onRefreshProfile) {
+        onRefreshProfile();
+      }
+
+      setTimeout(() => {
+        setPayoutSuccess(false);
+      }, 3000);
+
+    } catch (err) {
+      console.error("Error creating direct milestone payment:", err);
+      alert("Failed to submit direct escrow payment. Please try again.");
+    } finally {
+      setIsSubmittingPayout(false);
+      setPaystackOpen(false);
+      setPaystackData(null);
+    }
+  };
 
   const fetchBuyerData = async () => {
     setLoading(true);
@@ -165,6 +313,79 @@ export const BuyerDashboardView: React.FC<BuyerDashboardViewProps> = ({
 
         {/* Right 1 Column: Guarantees & Safe Harbor */}
         <div className="space-y-6">
+          {/* Milestone Funding & Direct Payment form */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center gap-1.5 border-b border-slate-800 pb-3">
+              <Zap size={15} className="text-emerald-400" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 font-mono">
+                Pay a Freelancer Direct
+              </h3>
+            </div>
+
+            {payoutSuccess ? (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center space-y-2">
+                <span className="text-emerald-400 font-black text-xs uppercase block">Funds Locked in Escrow!</span>
+                <p className="text-[10px] text-slate-400 font-mono">Milestone contract created & freelancer notified successfully.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleDirectPayout} className="space-y-4 text-xs">
+                {/* Select Freelancer */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Select Freelancer</label>
+                  <select
+                    value={selectedSellerId}
+                    onChange={(e) => setSelectedSellerId(e.target.value)}
+                    className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 font-sans text-xs font-semibold"
+                  >
+                    {activeSellersList.map(s => (
+                      <option key={s.uid} value={s.uid}>
+                        @{s.username} ({s.fullName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Funding Amount (USD)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+                    <input
+                      type="number"
+                      required
+                      min={10}
+                      max={10000}
+                      value={payoutAmount}
+                      onChange={(e) => setPayoutAmount(Number(e.target.value))}
+                      className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl pl-7 pr-3 py-2 outline-none focus:border-emerald-500 font-mono text-xs font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Project Memo */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Milestone Description / Memo</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={projectMemo}
+                    onChange={(e) => setProjectMemo(e.target.value)}
+                    placeholder="e.g. Design customized logo concepts & brand guidelines..."
+                    className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 font-sans text-xs font-semibold"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingPayout}
+                  className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md hover:shadow-emerald-500/10"
+                >
+                  {isSubmittingPayout ? 'Securing Escrow...' : 'Lock Funds & Pay'}
+                </button>
+              </form>
+            )}
+          </div>
+
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
             <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 font-mono">
               <ShieldCheck size={14} /> Chidon Escrow Protection
@@ -178,7 +399,7 @@ export const BuyerDashboardView: React.FC<BuyerDashboardViewProps> = ({
 
           <div className="bg-gradient-to-br from-slate-900 to-indigo-950/20 border border-slate-800 rounded-3xl p-6 space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-brand" />
+              <Cpu size={14} className="text-brand" />
               <h4 className="text-xs font-black text-white uppercase tracking-wider font-mono">Looking for Gigs?</h4>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
@@ -195,6 +416,20 @@ export const BuyerDashboardView: React.FC<BuyerDashboardViewProps> = ({
         </div>
 
       </div>
+
+      <AnimatePresence>
+        {paystackOpen && paystackData && (
+          <PaystackGatewayModal
+            isOpen={paystackOpen}
+            onClose={() => { setPaystackOpen(false); setPaystackData(null); }}
+            onSuccess={handlePaystackSuccess}
+            email={profile.email || 'buyer@chidoniq.com'}
+            amountUsd={paystackData.amount}
+            reference={paystackData.reference}
+            title={`Direct Milestone Funding`}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );

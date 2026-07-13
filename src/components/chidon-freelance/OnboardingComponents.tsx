@@ -24,7 +24,7 @@ export const WelcomeOnboardingView: React.FC<WelcomeOnboardingViewProps> = ({ on
     {
       title: "Welcome to Chidon Freelance",
       subtitle: "The Next-Generation Commission-Free Sandbox Marketplace",
-      description: "Chidon Freelance is a high-fidelity Web3 sandbox ecosystem designed for elite talent and hiring managers. Unlike legacy platforms like Fiverr or Upwork, we charge 0% platform fees—meaning freelancers keep 100% of their earnings and buyers save big.",
+      description: "Chidon Freelance is a high-fidelity Web3 sandbox ecosystem designed for elite talent and hiring managers. Unlike legacy centralized platforms, we charge 0% platform fees—meaning freelancers keep 100% of their earnings and buyers save big.",
       icon: <Zap className="w-14 h-14 text-brand animate-pulse" />,
       badge: "Introducing Web3 Freelance"
     },

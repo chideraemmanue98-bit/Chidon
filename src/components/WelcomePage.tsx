@@ -214,12 +214,15 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
         {/* Action and Disclaimer block */}
         <div className="flex flex-col items-center gap-5 w-full mt-2">
           <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-2xl px-6 py-3.5 text-center max-w-sm w-full shadow-[0_0_20px_rgba(34,211,238,0.05)]">
-            <div className="flex items-center justify-center gap-2 text-cyan-300 font-bold text-[11px] font-mono tracking-wider">
-              <Zap size={14} className="text-cyan-400" />
-              <span>+3 FREE DAILY CREDITS INITIALIZED</span>
+            <div className="flex flex-col gap-1 items-center justify-center text-cyan-300 font-bold text-[11px] font-mono tracking-wider">
+              <div className="flex items-center gap-1.5">
+                <Zap size={14} className="text-cyan-400 animate-pulse" />
+                <span>+3 WELCOME CREDITS GRANTED</span>
+              </div>
+              <span className="text-[9px] text-emerald-400 font-black tracking-widest">+1 FREE DAILY CREDIT ENROLLED</span>
             </div>
-            <p className="text-[9px] text-slate-400 font-mono mt-1 uppercase tracking-tight font-semibold">
-              Powering your workspace with zero persistent costs
+            <p className="text-[9px] text-slate-400 font-mono mt-1.5 uppercase tracking-tight font-semibold">
+              Get started with 3 one-time welcome credits, plus 1 free credit daily!
             </p>
           </div>
 

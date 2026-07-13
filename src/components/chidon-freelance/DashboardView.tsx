@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Briefcase, TrendingUp, Star, Plus, Pause, Play, 
   Trash, Edit2, FileText, CheckCircle, ArrowRight, RefreshCw, 
-  Tag, Clock, User, Sparkles, Image as ImageIcon, Zap, X, ShieldCheck, Heart, Send, HelpCircle
+  Tag, Clock, User, Cpu, Image as ImageIcon, Zap, X, ShieldCheck, Heart, Send, HelpCircle
 } from 'lucide-react';
 import { collection, getDocs, query, where, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -16,6 +16,7 @@ interface DashboardViewProps {
   onCreateGig: () => void;
   onEditGig: (gig: Gig) => void;
   onSelectOrder: (order: Order) => void;
+  onRefreshProfile?: () => void;
 }
 
 interface JobPost {
@@ -39,7 +40,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   profile, 
   onCreateGig,
   onEditGig,
-  onSelectOrder
+  onSelectOrder,
+  onRefreshProfile
 }) => {
   const { i18n } = useTranslation();
   // Gigs and Orders state
@@ -48,6 +50,104 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [jobs, setJobs] = useState<JobPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobsLoading, setJobsLoading] = useState(true);
+
+  // Withdrawal/Payout States
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(50);
+  const [payoutMethod, setPayoutMethod] = useState<'bank' | 'crypto' | 'paypal'>('bank');
+  const [bankName, setBankName] = useState('GTBank');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [cryptoAddress, setCryptoAddress] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
+  const [withdrawalHistory, setWithdrawalHistory] = useState<{amount: number, method: string, date: string, status: string}[]>(() => {
+    const saved = localStorage.getItem(`withdrawals_${profile.uid}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const handleWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const earnings = profile.earnings || 0;
+    if (withdrawAmount <= 0) {
+      alert("Please enter a valid payout amount.");
+      return;
+    }
+    if (withdrawAmount > earnings) {
+      alert(`Insufficient balance. You only have $${earnings} available to withdraw.`);
+      return;
+    }
+
+    let payoutDetails = '';
+    if (payoutMethod === 'bank') {
+      if (!accountNumber || accountNumber.length < 10) {
+        alert("Please enter a valid 10-digit NGN account number.");
+        return;
+      }
+      payoutDetails = `${bankName} - Account ending in ${accountNumber.slice(-4)}`;
+    } else if (payoutMethod === 'crypto') {
+      if (!cryptoAddress || cryptoAddress.length < 20) {
+        alert("Please enter a valid Web3 destination wallet address.");
+        return;
+      }
+      payoutDetails = `Crypto Wallet ending in ${cryptoAddress.slice(-6)}`;
+    } else {
+      payoutDetails = `PayPal associated email`;
+    }
+
+    if (!confirm(`Authorize immediate Sandbox cashout / withdrawal of $${withdrawAmount} via ${payoutMethod.toUpperCase()}?\nDetails: ${payoutDetails}`)) {
+      return;
+    }
+
+    setIsWithdrawing(true);
+    try {
+      // 1. Deduct earnings from Firestore user profile document
+      const userRef = doc(db, 'users', profile.uid);
+      const remainingEarnings = Math.max(0, earnings - withdrawAmount);
+      await updateDoc(userRef, {
+        earnings: remainingEarnings
+      });
+
+      // 2. Add system notification
+      await addDoc(collection(db, 'notifications'), {
+        userId: profile.uid,
+        title: 'Payout Processed Successfully',
+        message: `Your withdrawal of $${withdrawAmount} via ${payoutMethod.toUpperCase()} is completed. Funds routed to: ${payoutDetails}`,
+        type: 'system',
+        isRead: false,
+        createdAt: new Date()
+      });
+
+      // 3. Update withdrawal logs locally
+      const newLog = {
+        amount: withdrawAmount,
+        method: payoutMethod === 'bank' ? `${bankName} Transfer` : payoutMethod === 'crypto' ? 'USDT Wallet' : 'PayPal Payout',
+        date: new Date().toLocaleDateString(),
+        status: 'completed'
+      };
+      const updatedLogs = [newLog, ...withdrawalHistory];
+      setWithdrawalHistory(updatedLogs);
+      localStorage.setItem(`withdrawals_${profile.uid}`, JSON.stringify(updatedLogs));
+
+      setWithdrawalSuccess(true);
+      setWithdrawAmount(50);
+      setAccountNumber('');
+      setCryptoAddress('');
+
+      // 4. Trigger profile refresh in parent layout
+      if (onRefreshProfile) {
+        onRefreshProfile();
+      }
+
+      setTimeout(() => {
+        setWithdrawalSuccess(false);
+      }, 3000);
+
+    } catch (err) {
+      console.error("Payout transaction failed:", err);
+      alert("Cashout failed. Please verify your connection and try again.");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
 
   // Job Search / Category state
   const [search, setSearch] = useState('');
@@ -311,9 +411,10 @@ Return your result strictly in this JSON format (no surrounding markdown code bl
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-2 relative overflow-hidden group">
-          <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider block">Active Incoming Orders</span>
-          <div className="text-2xl font-black text-white font-mono">
-            {myOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length}
+          <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider block">Active Escrow & Incoming Orders</span>
+          <div className="text-2xl font-black text-white font-mono flex items-baseline gap-2">
+            <span>{myOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length}</span>
+            <span className="text-xs text-slate-500 font-normal">(${myOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').reduce((acc, o) => acc + (o.amount || 0), 0)} locked)</span>
           </div>
           <p className="text-[10px] text-slate-500 font-mono">Contracts currently undergoing execution</p>
           <div className="absolute right-4 bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -391,6 +492,149 @@ Return your result strictly in this JSON format (no surrounding markdown code bl
 
         {/* Right 1 Column: Gig Management (Seller only) */}
         <div className="space-y-6">
+          {/* Income & Withdrawal Terminal */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center gap-1.5 border-b border-slate-800 pb-3">
+              <TrendingUp size={15} className="text-emerald-400" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 font-mono">
+                Cashout & Withdrawal Terminal
+              </h3>
+            </div>
+
+            {withdrawalSuccess ? (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center space-y-2">
+                <span className="text-emerald-400 font-black text-xs uppercase block">Withdrawal Successful!</span>
+                <p className="text-[10px] text-slate-400 font-mono">Your funds have been transferred. Please check your transaction history.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleWithdrawal} className="space-y-4 text-xs">
+                {/* Method */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Payout Destination</label>
+                  <select
+                    value={payoutMethod}
+                    onChange={(e) => setPayoutMethod(e.target.value as any)}
+                    className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-sans text-xs font-semibold"
+                  >
+                    <option value="bank">Direct Nigerian Bank Transfer (NGN)</option>
+                    <option value="crypto">Web3 Crypto Wallet (USDT / USDC)</option>
+                    <option value="paypal">Stripe / PayPal (USD)</option>
+                  </select>
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Withdraw Amount (USD)</label>
+                    <button
+                      type="button"
+                      onClick={() => setWithdrawAmount(profile.earnings || 0)}
+                      className="text-[9px] font-mono text-cyan-400 hover:underline"
+                    >
+                      Max Available (${profile.earnings || 0})
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+                    <input
+                      type="number"
+                      required
+                      min={5}
+                      max={profile.earnings || 0}
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                      className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl pl-7 pr-3 py-2 outline-none focus:border-cyan-500 font-mono text-xs font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Conditional Fields based on method */}
+                {payoutMethod === 'bank' && (
+                  <div className="space-y-3.5 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Select Bank</label>
+                      <select
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-sans text-xs font-semibold"
+                      >
+                        <option value="GTBank">Guaranty Trust Bank (GTBank)</option>
+                        <option value="Zenith">Zenith Bank</option>
+                        <option value="Access">Access Bank</option>
+                        <option value="Kuda">Kuda Microfinance Bank</option>
+                        <option value="UBA">United Bank for Africa (UBA)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">10-Digit Account Number</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={10}
+                        pattern="\d{10}"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                        placeholder="e.g. 0123456789"
+                        className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-mono text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {payoutMethod === 'crypto' && (
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block">Destination Wallet Address (ERC-20/Solana)</label>
+                    <input
+                      type="text"
+                      required
+                      value={cryptoAddress}
+                      onChange={(e) => setCryptoAddress(e.target.value)}
+                      placeholder="e.g. 0x71C...3A9f or Sol Address..."
+                      className="w-full bg-slate-950 text-white border border-slate-800 rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-mono text-xs font-bold"
+                    />
+                  </div>
+                )}
+
+                {payoutMethod === 'paypal' && (
+                  <div className="p-3 bg-slate-950 border border-slate-850 rounded-2xl text-[11px] text-slate-400 leading-relaxed font-semibold">
+                    Withdrawals will be transferred to your registered email: <span className="text-white font-mono">{profile.email}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isWithdrawing || (profile.earnings || 0) <= 0}
+                  className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isWithdrawing ? 'Processing payout...' : 'Execute Cashout'}
+                </button>
+              </form>
+            )}
+
+            {/* Withdrawal logs history list */}
+            {withdrawalHistory.length > 0 && (
+              <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-wider block">Cashout History</span>
+                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                  {withdrawalHistory.slice(0, 3).map((log, i) => (
+                    <div key={i} className="flex justify-between items-center text-[10px] bg-slate-950/40 p-2 rounded-lg border border-slate-850/60 font-mono">
+                      <div className="text-left">
+                        <div className="text-slate-300 font-bold">${log.amount}</div>
+                        <div className="text-[8px] text-slate-500">{log.method}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase font-black">
+                          {log.status}
+                        </span>
+                        <div className="text-[8px] text-slate-500 mt-0.5">{log.date}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
             
             <div className="flex justify-between items-center border-b border-slate-850 pb-4">
@@ -531,7 +775,7 @@ Return your result strictly in this JSON format (no surrounding markdown code bl
                 >
                   {job.iqOptimized && (
                     <div className="absolute right-0 top-0 bg-cyan-500/10 border-l border-b border-cyan-500/30 px-3 py-1 rounded-bl-xl text-cyan-400 text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles size={8} /> Chidon IQ Optimized
+                      <Zap size={8} /> Chidon IQ Optimized
                     </div>
                   )}
 
@@ -776,7 +1020,7 @@ Return your result strictly in this JSON format (no surrounding markdown code bl
                   <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-3.5">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-cyan-400" />
+                        <Cpu size={14} className="text-cyan-400" />
                         <h4 className="text-[10px] font-black uppercase text-white font-mono tracking-wider">Chidon IQ AI Optimizer</h4>
                       </div>
                       <button
@@ -792,7 +1036,7 @@ Return your result strictly in this JSON format (no surrounding markdown code bl
                           </>
                         ) : (
                           <>
-                            <Sparkles size={10} />
+                            <Cpu size={10} />
                             <span>Run Chidon IQ</span>
                           </>
                         )}

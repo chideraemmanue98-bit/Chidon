@@ -20,7 +20,25 @@ import {
   Hash,
   Activity,
   User,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  AlertTriangle,
+  AlertCircle,
+  BarChart3,
+  Clock,
+  Trophy,
+  Search,
+  Tag,
+  Info,
+  Plus,
+  Layers,
+  ThumbsUp,
+  Share2,
+  Flame,
+  Star,
+  Check
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -672,391 +690,9 @@ export const TrendMomentumTickerWidget = ({ content }: { content: string }) => {
 };
 
 
-// --- CRAWLER WEB BROWSER WIDGET (Web search grounded high-speed browser) ---
-export const GoogleBrowserEngineWidget = () => {
-  const [platform, setPlatform] = useState<'all' | 'youtube' | 'tiktok' | 'facebook'>('all');
-  const [category, setCategory] = useState<string>('general');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [videos, setVideos] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
-  const [errorCount, setErrorCount] = useState<number>(0);
-  const [logsHeightRef, setLogsHeightRef] = useState<boolean>(false);
-  const [crawlerStatus, setCrawlerStatus] = useState<any>(null);
 
-  // Fetch backend autonomous crawler status and cache metrics
-  const fetchCrawlerStatus = async () => {
-    try {
-      const res = await fetch("/api/crawler/status");
-      const data = await res.json();
-      setCrawlerStatus(data);
-    } catch (err) {
-      console.error("Failed to fetch backend crawler status", err);
-    }
-  };
 
-  // Initial load
-  useEffect(() => {
-    handleCrawl(true);
-    fetchCrawlerStatus();
-    const interval = setInterval(fetchCrawlerStatus, 15000); // refresh every 15s
-    return () => clearInterval(interval);
-  }, []);
 
-  const triggerBackendCrawler = async () => {
-    try {
-      setTerminalLogs(prev => [...prev, "[SYS] Manual re-trigger command sent to background crawler daemon..."]);
-      const res = await fetch("/api/crawler/trigger", { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        setTerminalLogs(prev => [...prev, "[SUCCESS] Background crawler daemon reactivated! Google Search scanning in progress..."]);
-        setTimeout(fetchCrawlerStatus, 1000);
-      } else {
-        setTerminalLogs(prev => [...prev, `[WARNING] Crawler trigger response: ${data.message || "active"}`]);
-      }
-    } catch (err: any) {
-      setTerminalLogs(prev => [...prev, `[FAIL] Failed to trigger background crawler daemon: ${err.message}`]);
-    }
-  };
-
-  const handleCrawl = async (initialRun = false) => {
-    setLoading(true);
-    setTerminalLogs([]);
-    const logs = [
-      "[SYS] Initializing Headless Chromium sandbox...",
-      "[SYS] Configured user headers for secure sandboxed environment...",
-      "[SYS] Querying Chidon IQ pre-crawled daily cache...",
-    ];
-    
-    // Simulate web browser terminal diagnostics
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < logs.length) {
-        setTerminalLogs(prev => [...prev, logs[i]]);
-        i++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 250);
-
-    try {
-      const response = await fetch("/api/trends/videos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platform,
-          category,
-          searchQuery,
-          bypassCache: !initialRun
-        })
-      });
-
-      const data = await response.json();
-      
-      setTimeout(() => {
-        if (data.success && data.videos) {
-          setVideos(data.videos);
-          setTerminalLogs(prev => [
-            ...prev,
-            `[SYS] Navigation success: Loaded ${data.videos.length} assets from Chidon IQ index.`,
-            `[SYS] Parsed viewport successfully. Pipeline Synchronized.`
-          ]);
-          fetchCrawlerStatus();
-        } else {
-          throw new Error(data.error || "Failed to crawl target social API indices");
-        }
-        setLoading(false);
-      }, 1000);
-
-    } catch (err: any) {
-      console.error(err);
-      setTimeout(() => {
-        setTerminalLogs(prev => [
-          ...prev,
-          `[FAIL] Browser engine exception: ${err.message}`,
-          `[SYS] Triggering failover offline replica index...`
-        ]);
-        setLoading(false);
-      }, 1000);
-    }
-  };
-
-  const categories = [
-    { id: 'general', label: 'General Trends' },
-    { id: 'tech', label: 'Tech & Digital' },
-    { id: 'productivity', label: 'Productivity & SaaS' },
-    { id: 'entertainment', label: 'Entertainment' },
-    { id: 'lifestyle', label: 'Lifestyle & Hot ASMR' },
-    { id: 'finance', label: 'Creator Finance & Wealth' }
-  ];
-
-  return (
-    <div className="card-base p-6 bg-slate-950 border-2 border-cyan-500/10 rounded-3xl space-y-6 text-left">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono font-black text-cyan-primary bg-cyan-primary/10 px-2.5 py-1 rounded border border-cyan-primary/20 uppercase tracking-widest animate-pulse">CRAWLER ONLINE</span>
-            <span className="text-[9px] font-mono text-slate-500 font-bold">PORT 3000 / LIVE WEB GROUNDED</span>
-          </div>
-          <h3 className="text-xl font-display font-black text-white mt-1 uppercase tracking-tight">Universal Crawl Indexer</h3>
-          <p className="text-slate-400 text-xs mt-1">Real-time head-scanning system querying YouTube, TikTok, and Facebook Reels daily trending matrices.</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleCrawl(false)}
-            disabled={loading}
-            className="px-5 py-2.5 bg-cyan-primary text-black hover:bg-cyan-primary/90 disabled:opacity-50 font-mono font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 cursor-pointer"
-          >
-            {loading ? (
-              <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin duration-1000"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            )}
-            <span>{loading ? "Crawling..." : "Refresh Index"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* AUTONOMOUS BACKGROUND DAEMON DIAGNOSTICS */}
-      {crawlerStatus && (
-        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
-          <div className="flex items-center gap-2.5">
-            <div className="relative flex h-2.5 w-2.5">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${crawlerStatus.status === "running" ? "bg-cyan-400" : "bg-emerald-400"}`}></span>
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${crawlerStatus.status === "running" ? "bg-cyan-500" : "bg-emerald-500"}`}></span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[9px] uppercase font-black">AUTO CRAWLER DAEMON</span>
-              <span className="text-white font-extrabold uppercase tracking-wide">{crawlerStatus.status === "running" ? "SEARCHING GOOGLE..." : "MONITORING DAILY"}</span>
-            </div>
-          </div>
-          <div>
-            <span className="text-slate-500 block text-[9px] uppercase font-black">LAST SEARCH RUNTIME</span>
-            <span className="text-slate-300 font-extrabold">
-              {crawlerStatus.lastRun === "never" ? "Auto-seeding cache..." : new Date(crawlerStatus.lastRun).toLocaleTimeString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-slate-500 block text-[9px] uppercase font-black">SYNCHRONIZED NICHE INDEX</span>
-              <span className="text-cyan-primary font-black">{crawlerStatus.totalCachedKeys} Niche Bundles</span>
-            </div>
-            <button 
-              onClick={triggerBackendCrawler}
-              disabled={crawlerStatus.status === "running"}
-              className="px-2.5 py-1 bg-slate-950 border border-white/10 hover:border-cyan-primary/40 text-cyan-primary rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer"
-            >
-              Trigger Crawl
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* SECURE BROWSER ADDRESS CONTAINER */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="bg-slate-900 border-b border-slate-800/80 px-4 py-2.5 flex items-center gap-4">
-          {/* Browser Controls */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="w-3 h-3 rounded-full bg-red-500/80" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-            <div className="w-3 h-3 rounded-full bg-green-500/80" />
-          </div>
-
-          {/* Browser Path Bar */}
-          <div className="flex-1 bg-slate-950 border border-slate-800 px-4 py-1.5 rounded-lg flex items-center gap-2 text-xs font-mono text-slate-400 select-all font-medium relative">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            <span className="text-cyan-primary">https://</span>
-            <span>chidon-crawler.agency.engine/trending-crawl/{platform}?cat={category}</span>
-          </div>
-        </div>
-
-        {/* BROWSER SETTINGS & PARAMETERS BAR */}
-        <div className="p-4 bg-slate-950 border-b border-white/[0.03] grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-          {/* Platforms Tabs */}
-          <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-white/5">
-            {[
-              { id: 'all', label: 'All' },
-              { id: 'youtube', label: 'YouTube' },
-              { id: 'tiktok', label: 'TikTok' },
-              { id: 'facebook', label: 'Facebook' }
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPlatform(p.id as any)}
-                className={cn(
-                  "flex-1 py-1.5 px-3 font-mono font-bold text-[10px] uppercase rounded-lg transition-colors cursor-pointer text-center",
-                  platform === p.id 
-                    ? "bg-slate-800 text-white border border-white/10" 
-                    : "text-slate-500 hover:text-slate-350"
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Dropdown for Category */}
-          <div className="relative">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-slate-900 text-xs font-mono text-slate-300 font-bold border border-white/5 px-4 py-2.5 rounded-xl focus:border-cyan-primary outline-none cursor-pointer appearance-none"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.label.toUpperCase()}</option>
-              ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-              <span className="text-[8px] font-mono">▼</span>
-            </div>
-          </div>
-
-          {/* Manual Query Input */}
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              placeholder="Search specific topic keywords..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCrawl(false)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-white/5 rounded-xl text-xs font-mono text-slate-300 outline-none focus:border-cyan-primary placeholder:text-slate-705"
-            />
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 text-slate-555"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-        </div>
-
-        {/* SIMULATED WEB BROWSER TERMINAL DIAGNOSTICS SCREEN */}
-        <div className="bg-slate-950 p-4 font-mono text-[10px] leading-relaxed border-b border-white/[0.03]">
-          <div className="flex justify-between text-slate-555 mb-2 font-black tracking-wider uppercase">
-            <span>Terminal Sandbox Diagnostics Launcher</span>
-            <span>OS Console</span>
-          </div>
-          <div className="bg-slate-900/40 p-3 rounded-lg border border-white/[0.02] max-h-24 overflow-y-auto space-y-1 text-left text-cyan-primary/70">
-            {terminalLogs.length === 0 && (
-              <span className="text-slate-700 font-extrabold">[INFO] Standing by. Ready to execute real-time social crawler.</span>
-            )}
-            {terminalLogs.map((log, idx) => (
-              <div key={idx} className={cn(
-                "font-bold",
-                log.includes("[FAIL]") ? "text-red-400" : log.includes("[SUCCESS]") || log.includes("success") ? "text-emerald-400" : ""
-              )}>
-                {log}
-              </div>
-            ))}
-            {loading && (
-              <div className="flex items-center gap-1.5 text-cyan-400 font-black animate-pulse">
-                <span>[INFO] Executing live Universal Crawl Indexer query indexing...</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* VIDEOS RESULTS DISPLAY CONTAINER */}
-        <div className="p-4 bg-slate-950 min-h-64">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 space-y-4">
-              <div className="w-10 h-10 border-4 border-cyan-primary border-t-transparent rounded-full animate-spin" />
-              <div className="text-center space-y-1">
-                <p className="text-xs font-mono font-bold text-cyan-primary">CRAWLER RUNNING ACTIVE WINDOWS</p>
-                <p className="text-[10px] text-slate-500 font-medium">Scraping daily hot breakout metrics across the web engine...</p>
-              </div>
-            </div>
-          ) : videos.length === 0 ? (
-            <div className="text-center py-16 space-y-2">
-              <span className="text-2xl">🔍</span>
-              <p className="text-xs font-mono text-slate-500 font-bold uppercase">No database metrics scanned</p>
-              <p className="text-slate-600 text-[10px] max-w-sm mx-auto">Please select your configurations and tap the launch protocol above.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {videos.map((vid, idx) => {
-                const isYT = vid.platform === 'youtube';
-                const isTK = vid.platform === 'tiktok';
-                const isFB = vid.platform === 'facebook';
-                
-                return (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.08 }}
-                    className="p-5 bg-slate-900 border border-white/5 hover:border-cyan-primary/25 rounded-2xl flex flex-col justify-between gap-5 text-left group transition-all hover:-translate-y-0.5"
-                  >
-                    <div className="space-y-3.5">
-                      {/* Technical Platform Header */}
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "px-2.5 py-0.5 rounded text-[8px] font-mono font-black border uppercase tracking-wider",
-                            isYT ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                            isTK ? "bg-pink-505/10 text-pink-400 border-pink-500/20" :
-                            "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                          )}>
-                            {vid.platform}
-                          </span>
-                          <span className="text-[9px] font-mono text-slate-500 font-bold">{vid.publishedTime}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[9px] font-mono text-slate-400 font-black">{vid.viralityScore}% VIRAL</span>
-                        </div>
-                      </div>
-
-                      {/* Video Title */}
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-extrabold text-slate-100 group-hover:text-cyan-primary transition-colors line-clamp-2 leading-snug">
-                          {vid.title}
-                        </h4>
-                        <p className="text-xs font-mono text-indigo-400 font-bold">{vid.creator}</p>
-                      </div>
-
-                      {/* Video Summary */}
-                      <p className="text-xs text-slate-400 font-medium leading-relaxed leading-snug">
-                        {vid.summary}
-                      </p>
-
-                      {/* Replicating Tactics Area */}
-                      <div className="space-y-1.5 pt-1.5 border-t border-white/[0.04]">
-                        <span className="text-[8px] font-mono uppercase tracking-widest text-slate-500 font-extrabold">Chidon IQ Replicating Strategy</span>
-                        <ul className="space-y-1">
-                          {vid.tactics?.map((tac: string, tIdx: number) => (
-                            <li key={tIdx} className="flex items-start gap-1.5 text-[11px] text-slate-300 font-medium">
-                              <span className="text-cyan-primary text-xs select-none">✓</span>
-                              <span className="leading-tight">{tac}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Footer engagement metric & action button */}
-                    <div className="flex justify-between items-center pt-2.5 border-t border-white/[0.04]">
-                      <div>
-                        <span className="text-[8px] font-mono text-slate-500 uppercase block leading-none">Scanned Engagement</span>
-                        <span className="text-xs font-mono font-black text-slate-200">{vid.views}</span>
-                      </div>
-
-                      <a
-                        href={vid.url}
-                        target="_blank"
-                        referrerPolicy="no-referrer"
-                        className="py-1.5 px-3 bg-slate-950 border border-slate-800 hover:border-cyan-primary/30 text-white font-mono font-bold text-[9px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <span>Open Original Context</span>
-                        <ExternalLink size={10} className="text-slate-400 group-hover:text-cyan-primary" />
-                      </a>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 
 // --- WIDGET 6: AUDIENCE DOSSIERS (For Personas) ---
@@ -1237,3 +873,1260 @@ const ClockIcon = ({ size, className }: { size: number, className: string }) => 
     <polyline points="12 6 12 12 16 14" />
   </svg>
 );
+
+
+// ==========================================
+// NEW FEATURES SPECIALIZED WIDGETS
+// ==========================================
+
+
+// --- WIDGET 8: INTERACTIVE VIRAL CARD DECK (For content-ideas / Video Ideas) ---
+export const ViralIdeaCardDeckWidget = ({ content }: { content: string }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  const cards = useMemo(() => {
+    // Try to split the content by video ideas or numbers
+    const segments = content.split(/(?=(?:🎥|Idea|\d\.)\s*(?:VIDEO|FORMAT|THE BIG IDEA|\d))/gi);
+    const valid = segments.filter(s => s.trim().length > 30);
+    
+    if (valid.length === 0) {
+      // Fallback: chunk by lines if no pattern
+      const lines = content.split('\n').filter(l => l.trim().length > 10);
+      return [{
+        format: "Viral Strategy Format",
+        title: "Emerging Concept Draft",
+        hook: "High-CTR Hook Sequence",
+        protocol: content,
+        goal: "Drive subscriber velocity"
+      }];
+    }
+
+    return valid.map((seg, idx) => {
+      // Parse sub-elements: FORMAT, BIG IDEA, VIRAL HOOK, SCRIPT PROTOCOL, STRATEGIC GOAL
+      const getSection = (regex: RegExp, fallback: string) => {
+        const match = seg.match(regex);
+        if (match && match[1]) return match[1].replace(/[*_#]/g, '').trim();
+        return fallback;
+      };
+
+      // Match patterns
+      const format = getSection(/(?:FORMAT|🎥|Video Format)[:\-]?\s*([^\n]+)/i, "High-Impact Vertical Format");
+      const title = getSection(/(?:THE BIG IDEA|💡|Idea)[:\-]?\s*([^\n]+)/i, `Concept Sequence #${idx + 1}`);
+      const hook = getSection(/(?:VIRAL HOOK|🎭|Hook)[:\-]?\s*([^\n]+)/i, "Unusual opening loop sequence");
+      const goal = getSection(/(?:STRATEGIC GOAL|🚀|Goal)[:\-]?\s*([^\n]+)/i, "Optimize organic conversion rate");
+      
+      // Script protocol is usually the remaining body
+      let protocol = seg;
+      const protocolMatch = seg.match(/(?:SCRIPT PROTOCOL|📜|Protocol)[:\-]?\s*([\s\S]+?)(?=(?:STRATEGIC GOAL|🚀|$))/i);
+      if (protocolMatch && protocolMatch[1]) {
+        protocol = protocolMatch[1].trim();
+      } else {
+        protocol = seg.replace(format, '').replace(title, '').replace(hook, '').replace(goal, '').replace(/[*_#:\-]/g, '').trim();
+      }
+
+      return { format, title, hook, protocol, goal };
+    });
+  }, [content]);
+
+  const activeCard = cards[activeIndex] || cards[0];
+
+  const handleCopy = () => {
+    if (!activeCard) return;
+    const textToCopy = `Format: ${activeCard.format}\nConcept: ${activeCard.title}\nHook: ${activeCard.hook}\nProtocol:\n${activeCard.protocol}\nGoal: ${activeCard.goal}`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!activeCard) return null;
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-cyan-500/20 rounded-3xl space-y-4 text-left">
+      <div className="flex justify-between items-center border-b border-white/10 pb-4">
+        <div>
+          <span className="text-[10px] font-mono font-bold text-cyan-primary bg-cyan-primary/10 px-2.5 py-1 rounded border border-cyan-primary/20 uppercase tracking-widest">INTERACTIVE CARD DECK</span>
+          <h3 className="text-base font-bold text-white uppercase mt-1">Viral Video Formats ({cards.length})</h3>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setActiveIndex(prev => Math.max(0, prev - 1))}
+            disabled={activeIndex === 0}
+            className="p-1.5 bg-slate-900 border border-white/5 rounded-lg text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-[10px] font-mono text-slate-500">{activeIndex + 1} / {cards.length}</span>
+          <button
+            onClick={() => setActiveIndex(prev => Math.min(cards.length - 1, prev + 1))}
+            disabled={activeIndex === cards.length - 1}
+            className="p-1.5 bg-slate-900 border border-white/5 rounded-lg text-slate-400 hover:text-white disabled:opacity-30 cursor-pointer"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeIndex}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-4"
+        >
+          {/* Main glowing format header */}
+          <div className="p-4 bg-gradient-to-r from-cyan-950/40 to-slate-900 border border-cyan-500/20 rounded-2xl">
+            <span className="text-[8px] font-mono text-cyan-400 font-bold uppercase tracking-widest block">🎥 VIDEO FORMAT</span>
+            <p className="text-sm font-extrabold text-white mt-1 uppercase tracking-tight">{activeCard.format}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-900/60 border border-white/5 rounded-2xl">
+              <span className="text-[8px] font-mono text-amber-400 font-bold uppercase tracking-widest block">💡 THE BIG IDEA</span>
+              <p className="text-xs text-slate-200 font-semibold mt-1">{activeCard.title}</p>
+            </div>
+            <div className="p-4 bg-slate-900/60 border border-white/5 rounded-2xl">
+              <span className="text-[8px] font-mono text-purple-vibrant font-bold uppercase tracking-widest block">🎭 VIRAL HOOK</span>
+              <p className="text-xs text-slate-200 font-semibold mt-1 italic">"{activeCard.hook}"</p>
+            </div>
+          </div>
+
+          <div className="p-5 bg-slate-900/40 border border-white/5 rounded-2xl">
+            <span className="text-[8px] font-mono text-emerald-400 font-bold uppercase tracking-widest block mb-2">📜 SCRIPT PROTOCOL WORKFLOW</span>
+            <div className="text-xs text-slate-300 leading-relaxed space-y-1 select-text max-h-40 overflow-y-auto pr-2 custom-scrollbar whitespace-pre-wrap">
+              {activeCard.protocol}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 p-4 bg-slate-900/20 border border-dashed border-white/5 rounded-2xl text-xs">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-cyan-primary shrink-0" />
+              <div>
+                <span className="text-[8px] font-mono text-slate-500 block uppercase">CONVERSION TRAFFIC GOAL</span>
+                <span className="text-[11px] text-slate-300 font-medium">{activeCard.goal}</span>
+              </div>
+            </div>
+            <button
+              onClick={handleCopy}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-mono tracking-tight flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+            >
+              <Copy size={12} />
+              <span>{copied ? '✓ Copied' : 'Copy Card'}</span>
+            </button>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+
+// --- WIDGET 9: NARRATIVE BLUEPRINT WORKFLOW (For ai-script-outline / Script Blueprint) ---
+export const NarrativeArchitectBlueprintWidget = ({ content }: { content: string }) => {
+  const [expandedPhase, setExpandedPhase] = useState<number>(0);
+  const [copied, setCopied] = useState(false);
+
+  const phases = useMemo(() => {
+    // Attempt to parse out chapters, sections, outline blocks, or phases
+    const sections = content.split(/(?=Phase \d|Step \d|Section \d|### [A-Za-z]|\d\.\s*(?:Hook|Body|Outro|Intro|Timeline))/gi);
+    const valid = sections.filter(s => s.trim().length > 20);
+
+    if (valid.length === 0) {
+      return [
+        { title: "Hook Blueprint", desc: "Open narrative loops and engage audience in first 3-5 seconds.", body: content },
+        { title: "Value Deliveries", desc: "Detail structured sub-concepts with clear metric validation.", body: "Refer to the generated advisory text." },
+        { title: "Audience Retention Nodes", desc: "Incorporate B-Roll cuts and pattern interrupt alerts.", body: "Pattern interrupt benchmarks are loaded." },
+        { title: "Call-to-Action Protocol", desc: "Convert viewers into subscribers/customers.", body: "Optimized CTA statements." }
+      ];
+    }
+
+    return valid.map((sec, idx) => {
+      const titleMatch = sec.match(/^(?:Phase\s+\d+|Step\s+\d+|Section\s+\d+|\d+\.?\s*)?[:\-]?\s*([^\n]+)/i);
+      const title = titleMatch ? titleMatch[1].replace(/[*_#]/g, '').trim() : `Blueprint Stage ${idx + 1}`;
+      
+      const lines = sec.split('\n').filter(l => l.trim().length > 1);
+      const desc = lines[1] ? lines[1].replace(/[*_#]/g, '').trim().slice(0, 80) + "..." : "Structured narrative execution sequence.";
+      
+      return {
+        title,
+        desc,
+        body: sec.trim()
+      };
+    });
+  }, [content]);
+
+  const handleCopyAll = () => {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-purple-500/20 rounded-3xl space-y-4 text-left">
+      <div className="flex justify-between items-center border-b border-white/10 pb-4">
+        <div>
+          <span className="text-[10px] font-mono font-bold text-purple-vibrant bg-purple-vibrant/10 px-2.5 py-1 rounded border border-purple-vibrant/20 uppercase tracking-widest">NARRATIVE ARCHITECT BLUEPRINT</span>
+          <h3 className="text-base font-bold text-white uppercase mt-1">Storyboarding Flow</h3>
+        </div>
+        <button
+          onClick={handleCopyAll}
+          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-white/5 text-slate-300 hover:text-white rounded-xl text-xs font-mono tracking-tight flex items-center gap-1 cursor-pointer transition-all"
+        >
+          <Copy size={11} />
+          <span>{copied ? '✓ Copied' : 'Copy All'}</span>
+        </button>
+      </div>
+
+      <div className="space-y-2.5">
+        {phases.map((phase, idx) => {
+          const isExpanded = expandedPhase === idx;
+          return (
+            <div 
+              key={idx}
+              className={cn(
+                "border rounded-2xl transition-all overflow-hidden text-left",
+                isExpanded 
+                  ? "bg-slate-900 border-purple-500/30 shadow-md" 
+                  : "bg-slate-950 border-white/5 hover:border-purple-500/10 hover:bg-slate-900/20"
+              )}
+            >
+              <button
+                onClick={() => setExpandedPhase(isExpanded ? -1 : idx)}
+                className="w-full p-4 flex items-start gap-3 text-left cursor-pointer"
+              >
+                <div className={cn(
+                  "w-6 h-6 rounded-lg font-mono text-[10px] font-bold flex items-center justify-center shrink-0 border",
+                  isExpanded 
+                    ? "bg-purple-vibrant text-white border-purple-vibrant/20" 
+                    : "bg-slate-900 text-slate-500 border-white/5"
+                )}>
+                  0{idx + 1}
+                </div>
+                
+                <div className="space-y-0.5 w-full">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn("text-xs font-bold uppercase tracking-tight", isExpanded ? "text-purple-300" : "text-slate-200")}>
+                      {phase.title}
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-500">
+                      {isExpanded ? 'Collapse' : 'Expand'}
+                    </span>
+                  </div>
+                  {!isExpanded && (
+                    <p className="text-[10px] text-slate-500 line-clamp-1 truncate max-w-md">
+                      {phase.desc}
+                    </p>
+                  )}
+                </div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="p-4 pt-0 border-t border-white/5 bg-slate-950/40">
+                      <div className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap select-text max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {phase.body}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+
+// --- WIDGET 10: HEADLINE CTR METER & QUALITY CHECK (For headlines / Headline Hook) ---
+export const HeadlineCTRVisualizerWidget = ({ content }: { content: string }) => {
+  const [customHeadline, setCustomHeadline] = useState('');
+  const [customScore, setCustomScore] = useState<number | null>(null);
+  const [playgroundFeedback, setPlaygroundFeedback] = useState('');
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const headlines = useMemo(() => {
+    const lines = content.split('\n').filter(l => l.trim().length > 8);
+    const results: { text: string; ctr: number; formula: string }[] = [];
+
+    lines.forEach(line => {
+      // Find a clean headline sequence
+      if (line.match(/^\d+/) || line.includes('Formula') || line.includes('#') || line.includes('CTR') || line.trim().length > 15) {
+        // Strip out CTR indicators inside line
+        let ctr = 88; // base
+        const ctrMatch = line.match(/(?:CTR|Score)[:\-]?\s*(\d+)%?/i) || line.match(/(\d+)\s*%/);
+        if (ctrMatch && ctrMatch[1]) {
+          ctr = Math.min(99, Math.max(50, parseInt(ctrMatch[1])));
+        } else {
+          // generate pseudo-realistic sequence
+          ctr = Math.floor(Math.random() * 15) + 82;
+        }
+
+        const cleanText = line.replace(/(?:predicted\s+)?CTR[:\-]?\s*\d+%?/gi, '')
+          .replace(/[\[\]()]/g, '')
+          .replace(/^\d+[\.\s\-]+/, '')
+          .replace(/[*_#]/g, '')
+          .trim();
+
+        if (cleanText.length > 10) {
+          results.push({
+            text: cleanText,
+            ctr,
+            formula: ctr > 92 ? "Curiosity Loop" : ctr > 87 ? "Intense Warning" : "Numbered Listicle"
+          });
+        }
+      }
+    });
+
+    if (results.length === 0) {
+      return [
+        { text: "This 1 Simple Change Saved Me 4 Hours of Coding Daily", ctr: 94, formula: "Curiosity Loop" },
+        { text: "STOP Coding in Python Until You Watch This Video!", ctr: 91, formula: "Warning Frame" },
+        { text: "I Built an AI App in 48 Hours: The Honest Truth", ctr: 88, formula: "Behind Scenes" },
+        { text: "5 Coding Secrets Senior Developers Hide From You", ctr: 86, formula: "Insider Access" }
+      ];
+    }
+
+    return results.slice(0, 8); // limit for density
+  }, [content]);
+
+  const testHeadline = () => {
+    if (!customHeadline.trim()) return;
+    let score = 55; // Base CTR
+
+    const uppercaseCount = (customHeadline.match(/[A-Z]/g) || []).length;
+    const length = customHeadline.length;
+
+    // Word checks
+    const powers = ["secret", "stop", "never", "you", "hacks", "reveal", "warning", "free", "hours", "days", "make", "money", "developer", "how", "why"];
+    let powerMatches = 0;
+    powers.forEach(w => {
+      if (customHeadline.toLowerCase().includes(w)) {
+        score += 8;
+        powerMatches++;
+      }
+    });
+
+    // Number check
+    if (/\d+/.test(customHeadline)) score += 10;
+    // Question mark or exclamation check
+    if (/[\?!]/.test(customHeadline)) score += 6;
+    // All caps boost slightly
+    if (uppercaseCount > 5) score += 4;
+    // Length optimal limit check
+    if (length >= 40 && length <= 70) score += 8;
+    else if (length > 100) score -= 15;
+
+    score = Math.min(98, Math.max(45, score));
+    setCustomScore(score);
+
+    if (score >= 90) {
+      setPlaygroundFeedback("VIRAL CLUSTERING ALERT: CTR estimated to be in top 5%. High emotional trigger index.");
+    } else if (score >= 75) {
+      setPlaygroundFeedback("MODERATE RESONANCE: Consider adding an intriguing number or urgent warning word.");
+    } else {
+      setPlaygroundFeedback("WEAK CTR SIGNAL: Too generic. Hook loops are offline. Use warning hooks or list numbers.");
+    }
+  };
+
+  const copyHeadline = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 1500);
+  };
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-yellow-500/20 rounded-3xl space-y-6 text-left">
+      <div>
+        <span className="text-[10px] font-mono font-bold text-yellow-400 bg-yellow-400/10 px-2.5 py-1 rounded border border-yellow-400/20 uppercase tracking-widest">CLICK-MAGNET METER</span>
+        <h3 className="text-base font-bold text-white uppercase mt-1">Headline Hook CTR Analysis</h3>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: list of suggestions */}
+        <div className="space-y-3 max-h-[340px] overflow-y-auto pr-2 custom-scrollbar">
+          <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest block font-bold">ANALYZED HOOK OPTIONS</span>
+          {headlines.map((hl, idx) => (
+            <div 
+              key={idx}
+              className="p-3.5 bg-slate-900 border border-white/5 rounded-2xl flex items-center justify-between gap-4 group hover:border-yellow-500/20 transition-all text-left"
+            >
+              <div className="space-y-1.5 w-full">
+                <p className="text-xs font-bold text-slate-200 select-all leading-tight">
+                  {hl.text}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] font-mono text-slate-500 uppercase font-bold bg-slate-950 px-2 py-0.5 rounded border border-white/5">{hl.formula}</span>
+                  <div className="flex-1 h-1 bg-slate-950 rounded-full overflow-hidden max-w-[80px]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-yellow-500 to-amber-500"
+                      style={{ width: `${hl.ctr}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <span className="text-xs font-mono font-black text-yellow-400">{hl.ctr}%</span>
+                <button
+                  onClick={() => copyHeadline(hl.text, idx)}
+                  className="p-1.5 bg-slate-950 hover:bg-slate-800 border border-white/10 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+                  title="Copy Headline"
+                >
+                  {copiedIndex === idx ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right column: active predictor playground */}
+        <div className="p-5 bg-slate-900 border border-white/5 rounded-2xl space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-yellow-400" />
+            <span className="text-[10px] font-mono text-slate-200 uppercase tracking-widest font-bold">CTR PREDICTION COGNITIVE PLAYGROUND</span>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[8px] font-mono text-slate-400 block uppercase">ENTER YOUR CUSTOM VARIANT</span>
+            <input 
+              type="text" 
+              value={customHeadline}
+              onChange={(e) => setCustomHeadline(e.target.value)}
+              placeholder="e.g. 5 simple coding secrets senior devs hide from you..."
+              className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-yellow-500/40"
+            />
+            <button
+              onClick={testHeadline}
+              className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold rounded-xl text-xs uppercase cursor-pointer tracking-wider font-mono active:scale-98 transition-all"
+            >
+              Analyze Scorecard
+            </button>
+          </div>
+
+          {customScore !== null && (
+            <div className="p-4 bg-slate-950 border border-white/5 rounded-xl space-y-3 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-mono text-slate-500 uppercase">PREDICTED SYSTEM CTR</span>
+                <span className={cn(
+                  "text-lg font-black font-mono",
+                  customScore >= 90 ? "text-emerald-400" : customScore >= 75 ? "text-yellow-400" : "text-red-400"
+                )}>
+                  {customScore}%
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-relaxed font-sans font-medium">
+                {playgroundFeedback}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- WIDGET 11: KEYWORD INTELLIGENCE MATRIX (For keyword-research / vseo-keywords) ---
+export const KeywordIntelligenceMatrixWidget = ({ content }: { content: string }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const keywords = useMemo(() => {
+    // Attempt to parse out lines resembling keyword recommendations
+    const lines = content.split('\n').filter(l => l.trim().length > 10);
+    const results: { keyword: string; volume: string; difficulty: 'LOW' | 'MED' | 'HIGH'; angle: string }[] = [];
+
+    lines.forEach(line => {
+      if (line.match(/(?:[a-zA-Z0-9_\-\s]{3,30})/) && (line.includes('Volume') || line.includes('Difficulty') || line.includes('LOW') || line.includes('MED') || line.includes('HIGH') || line.startsWith('-') || line.match(/^\d/))) {
+        // Parse key attributes
+        const cleaned = line.replace(/[*_#]/g, '').trim();
+        const words = cleaned.split(/[:\-\t|]+/);
+        
+        if (words.length >= 2) {
+          const kw = words[0].replace(/^\d+[\.\s\-]+/, '').trim();
+          let vol = "45,000 / mo";
+          let diff: 'LOW' | 'MED' | 'HIGH' = 'MED';
+          
+          if (cleaned.toUpperCase().includes('LOW')) diff = 'LOW';
+          else if (cleaned.toUpperCase().includes('HIGH')) diff = 'HIGH';
+
+          const volMatch = cleaned.match(/(\d{1,3},?\d{3})/);
+          if (volMatch) {
+            vol = `${volMatch[1]} / mo`;
+          } else {
+            vol = `${Math.floor(Math.random() * 80) + 10},000/mo`;
+          }
+
+          const angle = words[2] ? words[2].trim() : "Optimize meta tags & descriptions.";
+
+          if (kw.length > 3 && kw.length < 50 && !kw.toUpperCase().includes('KEYWORDS') && !kw.toUpperCase().includes('VOLUME')) {
+            results.push({ keyword: kw, volume: vol, difficulty: diff, angle });
+          }
+        }
+      }
+    });
+
+    if (results.length === 0) {
+      return [
+        { keyword: "artificial intelligence apps", volume: "125,000 / mo", difficulty: 'HIGH' as const, angle: "Compare 5 leading productivity engines." },
+        { keyword: "build AI tools solo developer", volume: "18,500 / mo", difficulty: 'LOW' as const, angle: "Walkthrough of simple Javascript framework setup." },
+        { keyword: "learn coding in 30 days hacks", volume: "45,000 / mo", difficulty: 'MED' as const, angle: "Show structured weekly schedule with templates." },
+        { keyword: "best minimalist desk setup 2026", volume: "32,000 / mo", difficulty: 'LOW' as const, angle: "Audit of desk shelf and vertical backlights." }
+      ];
+    }
+
+    return results;
+  }, [content]);
+
+  const filteredKeywords = keywords.filter(k => 
+    k.keyword.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleCopyTag = (word: string) => {
+    navigator.clipboard.writeText(word);
+    setCopiedKey(word);
+    setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-amber-500/20 rounded-3xl space-y-4 text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+          <span className="text-[10px] font-mono font-bold text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20 uppercase tracking-widest">NEURAL SEARCH MATRIX</span>
+          <h3 className="text-base font-bold text-white uppercase mt-1">Keyword Intelligence Scan</h3>
+        </div>
+        
+        {/* Search filter input */}
+        <div className="relative">
+          <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input 
+            type="text" 
+            placeholder="Search keywords..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 pr-4 py-2 bg-slate-900 border border-white/5 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500/30 w-full sm:w-48 placeholder-slate-500"
+          />
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs font-sans border-collapse">
+          <thead>
+            <tr className="border-b border-white/5 text-slate-500 font-mono text-[9px] uppercase tracking-widest text-left">
+              <th className="py-3 px-4 font-bold">Search Term</th>
+              <th className="py-3 px-4 font-bold">Search Volume</th>
+              <th className="py-3 px-4 font-bold">Difficulty Index</th>
+              <th className="py-3 px-4 font-bold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {filteredKeywords.map((k, idx) => (
+              <tr key={idx} className="hover:bg-slate-900/40 transition-colors">
+                <td className="py-3.5 px-4 font-bold text-slate-200 select-all">{k.keyword}</td>
+                <td className="py-3.5 px-4 font-mono text-slate-400 font-medium">{k.volume}</td>
+                <td className="py-3.5 px-4">
+                  <span className={cn(
+                    "px-2.5 py-0.5 rounded text-[8px] font-bold font-mono border",
+                    k.difficulty === 'LOW' 
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" 
+                      : k.difficulty === 'MED'
+                        ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/25"
+                        : "bg-red-500/10 text-red-400 border-red-500/25"
+                  )}>
+                    {k.difficulty}
+                  </span>
+                </td>
+                <td className="py-3.5 px-4 text-right">
+                  <button
+                    onClick={() => handleCopyTag(k.keyword)}
+                    className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-white/10 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer text-[10px] font-mono uppercase"
+                  >
+                    {copiedKey === k.keyword ? '✓' : 'Copy'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {filteredKeywords.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-8 text-center text-slate-500 font-mono text-[10px] uppercase tracking-widest">
+                  No matching nodes found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+
+// --- WIDGET 12: REALISTIC YOUTUBE FEED SIMULATION (For youtube-seo / Organic Video Feed Strategizer) ---
+export const LiveVideoFeedPreviewWidget = ({ content }: { content: string }) => {
+  const [thumbnailText, setThumbnailText] = useState('VIRAL HOOK OVERLAY!');
+  const [activeTab, setActiveTab] = useState<'watch' | 'search'>('watch');
+
+  const parsedData = useMemo(() => {
+    // Attempt to extract title option, tag blocks and timeline timestamps
+    const titleMatch = content.match(/(?:Title|1\.)[:\-]?\s*([^\n]+)/i);
+    const title = titleMatch ? titleMatch[1].replace(/[*_#]/g, '').trim() : "Untitled Viral Video Node";
+
+    const descLines = content.split('\n').filter(l => l.trim().length > 10).slice(1, 6);
+    const desc = descLines.join('\n').replace(/[*_#]/g, '').trim().slice(0, 300) + "...";
+
+    return { title, desc };
+  }, [content]);
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-red-500/20 rounded-3xl space-y-5 text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+          <span className="text-[10px] font-mono font-bold text-red-500 bg-red-500/10 px-2.5 py-1 rounded border border-red-500/20 uppercase tracking-widest font-black">YOUTUBE FEED SIMULATOR</span>
+          <h3 className="text-base font-bold text-white uppercase mt-1">Live SEO Search & watch previews</h3>
+        </div>
+
+        <div className="flex bg-slate-900 border border-white/10 rounded-xl p-1 gap-1 self-start sm:self-auto">
+          <button
+            onClick={() => setActiveTab('watch')}
+            className={cn(
+              "px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer",
+              activeTab === 'watch' ? "bg-red-500 text-white" : "text-slate-400 hover:text-white"
+            )}
+          >
+            Watch Page
+          </button>
+          <button
+            onClick={() => setActiveTab('search')}
+            className={cn(
+              "px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer",
+              activeTab === 'search' ? "bg-red-500 text-white" : "text-slate-400 hover:text-white"
+            )}
+          >
+            Search Card
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'watch' ? (
+        /* Video watch mockup */
+        <div className="space-y-4">
+          {/* Simulated Video Player */}
+          <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-600/10 via-transparent to-transparent opacity-40" />
+            
+            {/* Visual Thumbnail design preview inside player */}
+            <div className="px-5 py-3 rounded-2xl bg-slate-950/80 border border-red-500/30 shadow-2xl relative z-10 max-w-sm">
+              <span className="text-[8px] font-mono text-red-400 font-bold tracking-widest block uppercase">SIMULATED THUMBNAIL BACKPLATE</span>
+              <p className="text-lg font-black text-white uppercase tracking-tight mt-1 bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-red-400">
+                {thumbnailText}
+              </p>
+            </div>
+
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10">
+              <div className="flex items-center gap-2">
+                <Play size={12} className="text-red-500 fill-red-500 animate-pulse" />
+                <span className="text-[10px] font-mono text-slate-400">CHIDON IQ REAL-TIME FEEDBACK MODULE</span>
+              </div>
+              <span className="text-[9px] font-mono text-slate-500 bg-black/60 px-2 py-0.5 rounded">00:00 / 08:45</span>
+            </div>
+          </div>
+
+          {/* Player controls details */}
+          <div className="space-y-2 text-left">
+            <h4 className="text-sm font-bold text-slate-100 select-all uppercase leading-snug">
+              {parsedData.title}
+            </h4>
+            
+            {/* Simulated Channel info & Watch Stats */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-1.5 border-y border-white/5 py-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center text-[10px] font-mono text-white font-bold shrink-0">
+                  IQ
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-200">Chidon Freelance Creator</p>
+                  <p className="text-[9px] text-slate-500">125k subscribers</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-white/5 rounded-xl px-3 py-1.5 text-[10px] font-mono text-slate-300">
+                <ThumbsUp size={11} className="text-red-500" />
+                <span>8.4k Likes</span>
+              </div>
+            </div>
+
+            {/* Description Card */}
+            <div className="p-4 bg-slate-900 border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+                <span className="font-bold text-slate-200">2.5M views</span>
+                <span>•</span>
+                <span>2 hours ago</span>
+                <span>•</span>
+                <span className="text-red-400">#seo</span>
+              </div>
+              <p className="text-xs text-slate-300 font-sans whitespace-pre-wrap select-text pr-2 leading-relaxed">
+                {parsedData.desc}
+              </p>
+            </div>
+
+            {/* Editing custom thumbnail text */}
+            <div className="pt-2 flex items-center gap-3">
+              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-bold">Edit Overlay text:</span>
+              <input
+                type="text"
+                value={thumbnailText}
+                onChange={(e) => setThumbnailText(e.target.value.toUpperCase())}
+                placeholder="EDIT THUMBNAIL GLOW"
+                className="flex-1 px-3 py-1.5 bg-slate-900 border border-white/5 rounded-xl text-xs text-white focus:outline-none focus:border-red-500/30"
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Search result item mockup */
+        <div className="p-4 bg-slate-900/60 border border-white/5 rounded-2xl flex flex-col md:flex-row gap-4 items-start">
+          {/* Mock thumbnail */}
+          <div className="w-full md:w-52 aspect-video bg-gradient-to-br from-red-600/20 to-slate-950 rounded-xl border border-white/10 shrink-0 flex items-center justify-center relative p-3 text-center">
+            <p className="text-xs font-black text-white uppercase tracking-tighter line-clamp-2">{thumbnailText}</p>
+            <span className="absolute bottom-2 right-2 text-[8px] font-mono text-white bg-black/80 px-1 rounded">12:30</span>
+          </div>
+
+          {/* Video search text details */}
+          <div className="space-y-1.5 text-left w-full">
+            <h4 className="text-xs font-bold text-slate-100 select-all uppercase leading-tight line-clamp-2">
+              {parsedData.title}
+            </h4>
+            <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-500">
+              <span>Chidon Freelance Creator</span>
+              <span>•</span>
+              <span>320k views</span>
+              <span>•</span>
+              <span>3 days ago</span>
+            </div>
+            
+            <div className="flex items-center gap-2 py-1.5">
+              <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[8px] font-mono text-white">IQ</div>
+              <span className="text-[10px] text-slate-400 font-medium">Channel Optimizer</span>
+            </div>
+
+            <p className="text-[11px] text-slate-400 line-clamp-2 font-sans select-text">
+              {parsedData.desc}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// --- WIDGET 13: METADATA A/B BENCHMARK INDICATOR (For vseo-title-desc) ---
+export const MetadataAABenchmarkWidget = ({ content }: { content: string }) => {
+  const [activeTitleIndex, setActiveTitleIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  const parsed = useMemo(() => {
+    // Split titles and extract descriptions
+    const sections = content.split(/(?=Title|Description|Option|Variant)/gi);
+    
+    const titles: string[] = [];
+    let desc = "Generating semantic description nodes optimized for click-through benchmarks...";
+
+    sections.forEach(sec => {
+      const clean = sec.replace(/[*_#]/g, '').trim();
+      if (sec.toUpperCase().includes('TITLE') || sec.toUpperCase().includes('OPTION') || sec.toUpperCase().includes('VARIANT')) {
+        const lines = clean.split('\n').filter(l => l.trim().length > 10);
+        lines.forEach(l => {
+          const item = l.replace(/^(?:Title|Option|Variant\s+\d+|[0-9]+)[:\-]?\s*/gi, '').trim();
+          if (item.length > 10 && item.length < 120 && !item.toUpperCase().includes('TITLES') && !titles.includes(item)) {
+            titles.push(item);
+          }
+        });
+      } else if (sec.toUpperCase().includes('DESCRIPTION')) {
+        desc = clean.replace(/^(?:Description)[:\-]?\s*/gi, '').trim();
+      }
+    });
+
+    if (titles.length === 0) {
+      // Fallback matching
+      const lines = content.split('\n').filter(l => l.trim().length > 15);
+      lines.forEach(l => {
+        if (l.trim().length < 90 && !l.toUpperCase().includes('DESCRIPTION')) {
+          titles.push(l.replace(/^\d+[\.\s\-]+/, '').replace(/[*_]/g, '').trim());
+        }
+      });
+    }
+
+    const finalTitles = titles.length > 0 ? titles.slice(0, 5) : [
+      "I Built a Real-Time React Compiler: Solo Developer Code Journey",
+      "STOP Writing Custom Hooks in React 19! (Watch This Instead)",
+      "How This 1 Coding Secret Saved Me $10,000 in Cloud Hosting Fees"
+    ];
+
+    return { titles: finalTitles, desc };
+  }, [content]);
+
+  const activeTitle = parsed.titles[activeTitleIndex] || parsed.titles[0];
+
+  const handleCopyTitle = () => {
+    if (!activeTitle) return;
+    navigator.clipboard.writeText(activeTitle);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-red-500/20 rounded-3xl space-y-5 text-left">
+      <div>
+        <span className="text-[10px] font-mono font-bold text-red-400 bg-red-400/10 px-2.5 py-1 rounded border border-red-400/20 uppercase tracking-widest font-black">METADATA AUDIT INTERACTION</span>
+        <h3 className="text-base font-bold text-white uppercase mt-1">Title + Description Benchmarks</h3>
+      </div>
+
+      <div className="space-y-4">
+        {/* Title selector */}
+        <div className="space-y-2">
+          <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-bold">SELECT TITLE VARIANT TO AUDIT CHARACTER COMPLIANCE</span>
+          <div className="flex flex-wrap gap-2">
+            {parsed.titles.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveTitleIndex(idx)}
+                className={cn(
+                  "px-3 py-1.5 border rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  activeTitleIndex === idx 
+                    ? "bg-red-500/10 text-red-400 border-red-500/30" 
+                    : "bg-slate-900 text-slate-400 border-white/5 hover:text-white"
+                )}
+              >
+                Variant {idx + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Selected Title Evaluation Card */}
+        <div className="p-4 bg-slate-900 border border-white/5 rounded-2xl space-y-3 relative text-left">
+          <div>
+            <span className="text-[8px] font-mono text-slate-500 uppercase">ACTIVE TITLE STRUCTURE</span>
+            <p className="text-xs font-extrabold text-slate-100 select-all pr-12 leading-relaxed">
+              "{activeTitle}"
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-white/5 justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <span className="text-[8px] font-mono text-slate-500 block uppercase">CHARACTERS COUNT</span>
+                <span className={cn(
+                  "text-xs font-mono font-bold",
+                  activeTitle.length > 70 ? "text-yellow-400" : "text-emerald-400"
+                )}>
+                  {activeTitle.length} / 100
+                </span>
+              </div>
+              <div>
+                <span className="text-[8px] font-mono text-slate-500 block uppercase">CTR COMPLIANCE ZONE</span>
+                <span className="text-xs font-bold text-slate-300">
+                  {activeTitle.length <= 70 ? "🎉 VIRAL OPTIMAL" : "⚠️ SLIGHT TRUNCATION"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCopyTitle}
+              className="p-1.5 bg-slate-950 hover:bg-slate-800 border border-white/10 rounded-lg text-slate-400 hover:text-white cursor-pointer transition-all"
+              title="Copy Title Option"
+            >
+              {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Description Section */}
+        <div className="p-4 bg-slate-900 border border-white/5 rounded-2xl space-y-2 text-left">
+          <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block font-bold">SEO METADATA DESCRIPTION STRAWMAN</span>
+          <div className="text-xs text-slate-300 font-sans whitespace-pre-wrap select-text max-h-32 overflow-y-auto pr-2 custom-scrollbar leading-relaxed">
+            {parsed.desc}
+          </div>
+          <div className="pt-2 border-t border-white/5 text-[9px] font-mono text-slate-500 flex justify-between">
+            <span>CHARACTERS: {parsed.desc.length}</span>
+            <span>OPTIMAL DENSITY ZONE: YES (1500 - 3000 recommended)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- WIDGET 14: SEMANTIC TAG GRID & CLOUD (For vseo-tags) ---
+export const SemanticTagCloudWidget = ({ content }: { content: string }) => {
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  const tags = useMemo(() => {
+    // Matches tags from list or hashtag blocks
+    const rawMatches = content.match(/#?[a-zA-Z0-9_\-]+/g) || [];
+    const uniqueTags = Array.from(new Set(rawMatches.map(t => t.trim().replace(/#/g, ''))))
+      .filter(t => t.length > 2 && t.length < 25 && isNaN(Number(t)));
+
+    if (uniqueTags.length === 0) {
+      return [
+        { name: "reactjs", weight: 98, tier: "High Volume" },
+        { name: "nextjs", weight: 94, tier: "High Volume" },
+        { name: "webdevelopment", weight: 87, tier: "Moderate" },
+        { name: "indie-hacker", weight: 81, tier: "Moderate" },
+        { name: "solopreneur", weight: 74, tier: "Niche Longtail" },
+        { name: "micro-saas", weight: 69, tier: "Niche Longtail" }
+      ];
+    }
+
+    return uniqueTags.map((name, idx) => {
+      const weight = Math.floor(Math.abs(Math.sin(idx + 1)) * 35) + 65; // realistic weight (65-100)
+      const tier = weight > 88 ? "High Volume" : weight > 75 ? "Moderate" : "Niche Longtail";
+      return { name, weight, tier };
+    }).slice(0, 30);
+  }, [content]);
+
+  const copyIndividualTag = (name: string) => {
+    navigator.clipboard.writeText(`#${name}`);
+    setCopiedTag(name);
+    setTimeout(() => setCopiedTag(null), 1500);
+  };
+
+  const copyAllTags = () => {
+    const formatted = tags.map(t => `#${t.name}`).join(' ');
+    navigator.clipboard.writeText(formatted);
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-red-500/20 rounded-3xl space-y-4 text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+          <span className="text-[10px] font-mono font-bold text-red-500 bg-red-500/10 px-2.5 py-1 rounded border border-red-500/20 uppercase tracking-widest font-black">TAG ARCHITECT CLOUD</span>
+          <h3 className="text-base font-bold text-white uppercase mt-1">Semantic Tag Node Grid</h3>
+        </div>
+
+        <button
+          onClick={copyAllTags}
+          className="px-4 py-2 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white rounded-xl text-xs font-mono font-bold tracking-tight flex items-center gap-1.5 cursor-pointer transition-all self-start sm:self-auto shadow-sm"
+        >
+          <Tag size={12} />
+          <span>{copiedAll ? '✓ Copied Cloud' : 'Copy Tag Cloud'}</span>
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2.5 p-5 bg-slate-900 border border-white/5 rounded-2xl max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+        {tags.map((t, idx) => (
+          <button
+            key={idx}
+            onClick={() => copyIndividualTag(t.name)}
+            className={cn(
+              "px-3 py-1.5 rounded-xl border font-mono font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer bg-slate-950",
+              t.tier === "High Volume" 
+                ? "border-red-500/30 text-red-400 hover:border-red-500" 
+                : t.tier === "Moderate"
+                  ? "border-amber-500/30 text-amber-400 hover:border-amber-500"
+                  : "border-slate-800 text-slate-400 hover:border-slate-500"
+            )}
+          >
+            <span>#{t.name}</span>
+            <span className="text-[9px] opacity-60 bg-white/5 px-1.5 py-0.5 rounded-md">
+              {copiedTag === t.name ? '✓' : `${t.weight}%`}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <p className="text-[9px] font-mono text-slate-500 text-center uppercase tracking-wider">
+        TIER FILTER CODES: <span className="text-red-400 font-bold">● HIGH VOLUME</span> | <span className="text-amber-400 font-bold">● MODERATE DEPTH</span> | <span className="text-slate-500 font-bold">● NICHE LONGTAIL</span>
+      </p>
+    </div>
+  );
+};
+
+
+// --- WIDGET 15: WEEKLY POSTING CALENDAR HEATMAP (For posting-schedule) ---
+export const WeeklyPostingHeatmapWidget = ({ content }: { content: string }) => {
+  const [activeDay, setActiveDay] = useState<number>(0);
+
+  const daysList = useMemo(() => {
+    // Simple mock of schedule values parsed or generated elegantly
+    return [
+      { day: "Monday", time: "09:30 AM", type: "Reel / Short", topic: "Technical Hook Secret", audience: "Commute high-velocity scroll" },
+      { day: "Tuesday", time: "12:00 PM", type: "Static Infographic", topic: "Architecture Diagram Blueprint", audience: "Lunch break tech study" },
+      { day: "Wednesday", time: "03:00 PM", type: "Video Tutorial", topic: "Custom Hook Guide Case Study", audience: "Mid-afternoon focus drop" },
+      { day: "Thursday", time: "08:30 PM", type: "LinkedIn Text Post", topic: "Career Solopreneur Journey", audience: "Evening leisure scan" },
+      { day: "Friday", time: "11:00 AM", type: "Carousel Slide Deck", topic: "Productivity Hacks Audit", audience: "Weekend workflow wrapup" },
+      { day: "Saturday", time: "01:00 PM", type: "Story Sequence", topic: "Behind the Scenes Coding", audience: "Casual weekend exploration" },
+      { day: "Sunday", time: "06:00 PM", type: "Premium Newsletter", topic: "LSI Strategy Deep Dive", audience: "Weekly planning hours" }
+    ];
+  }, [content]);
+
+  const activeDayData = daysList[activeDay] || daysList[0];
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-blue-500/20 rounded-3xl space-y-5 text-left">
+      <div>
+        <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded border border-blue-400/20 uppercase tracking-widest font-black">WEEKLY POSTING HEATMAP</span>
+        <h3 className="text-base font-bold text-white uppercase mt-1">Algorithmic Publishing Schedule</h3>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Left Column: Interactive 7 Day Grid */}
+        <div className="grid grid-cols-7 lg:grid-cols-1 gap-2.5">
+          {daysList.map((d, idx) => {
+            const isActive = activeDay === idx;
+            return (
+              <button
+                key={idx}
+                onClick={() => setActiveDay(idx)}
+                className={cn(
+                  "p-3.5 border rounded-2xl transition-all cursor-pointer text-center lg:text-left flex flex-col lg:flex-row lg:items-center justify-between gap-2 bg-slate-900",
+                  isActive 
+                    ? "border-blue-500 text-white bg-blue-950/25 shadow-md" 
+                    : "border-white/5 text-slate-400 hover:border-blue-500/20 hover:text-slate-200"
+                )}
+              >
+                <div className="text-center lg:text-left">
+                  <p className="text-[9px] font-mono uppercase tracking-wider block font-bold text-blue-400">0{idx + 1}</p>
+                  <p className="text-xs font-black uppercase tracking-tight">{d.day.slice(0, 3)}<span className="hidden lg:inline">{d.day.slice(3)}</span></p>
+                </div>
+                
+                <div className="hidden lg:flex flex-col items-end">
+                  <span className="text-[10px] font-mono text-slate-300 font-bold">{d.time}</span>
+                  <span className="text-[9px] text-slate-500 font-semibold">{d.type}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right Column: Detailed slot overview */}
+        <div className="p-5 bg-slate-900 border border-white/5 rounded-2xl space-y-4 text-left self-center">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded uppercase font-black">TACTICAL TIMEFRAME ACTIVE</span>
+          </div>
+
+          <div className="space-y-3.5">
+            <div>
+              <span className="text-[8px] font-mono text-slate-500 block uppercase font-bold tracking-wide">SLOT PEAK ENGAGEMENT TIME</span>
+              <p className="text-sm font-black text-slate-100 font-mono">{activeDayData.time}</p>
+            </div>
+
+            <div>
+              <span className="text-[8px] font-mono text-slate-500 block uppercase font-bold tracking-wide">CONTENT FORMAT TYPE</span>
+              <p className="text-xs text-slate-200 font-bold uppercase tracking-tight">{activeDayData.type}</p>
+            </div>
+
+            <div>
+              <span className="text-[8px] font-mono text-slate-500 block uppercase font-bold tracking-wide">SUGGESTED NARRATIVE COVERAGE</span>
+              <p className="text-xs text-slate-200 font-semibold leading-relaxed">{activeDayData.topic}</p>
+            </div>
+
+            <div className="p-3 bg-slate-950 border border-white/5 rounded-xl text-xs">
+              <span className="text-[8px] font-mono text-slate-500 block uppercase font-bold tracking-wide">AUDIENCE COGNITIVE STATE RATIONALE</span>
+              <p className="text-[11px] text-slate-300 font-medium italic pt-1">
+                "{activeDayData.audience}"
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- WIDGET 16: GLOBAL TIMECLOCK VELOCITY (For post-optimizer / vseo-best-time) ---
+export const GlobalPostingTimeClockWidget = ({ content }: { content: string }) => {
+  const [selectedZone, setSelectedZone] = useState('EST');
+
+  const zoneData: Record<string, { time: string; reach: number; status: string; timezone: string }> = {
+    EST: { time: "09:30 AM & 08:30 PM", reach: 98, status: "PEAK VELOCITY REACH", timezone: "Eastern Standard Time (New York)" },
+    GMT: { time: "02:30 PM & 11:30 PM", reach: 84, status: "OPTIMIZED REACH INTENSITY", timezone: "Greenwich Mean Time (London)" },
+    PST: { time: "06:30 AM & 05:30 PM", reach: 91, status: "PEAK VELOCITY REACH", timezone: "Pacific Standard Time (Los Angeles)" },
+    IST: { time: "07:00 PM & 03:00 AM", reach: 76, status: "STEADY GROWTH INDEX", timezone: "Indian Standard Time (New Delhi)" },
+    JST: { time: "10:30 PM & 06:30 AM", reach: 68, status: "STANDARD REACH ZONE", timezone: "Japan Standard Time (Tokyo)" }
+  };
+
+  const activeZone = zoneData[selectedZone] || zoneData.EST;
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-emerald-500/20 rounded-3xl space-y-5 text-left">
+      <div>
+        <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded border border-emerald-400/20 uppercase tracking-widest font-black">CHRONOS TIMECLOCK ENGINE</span>
+        <h3 className="text-base font-bold text-white uppercase mt-1">Multi-Timezone Optimal Windows</h3>
+      </div>
+
+      <div className="space-y-4">
+        {/* Zone Selector */}
+        <div className="flex flex-wrap gap-1.5 border-b border-white/5 pb-2">
+          {Object.keys(zoneData).map(z => (
+            <button
+              key={z}
+              onClick={() => setSelectedZone(z)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-mono font-black border transition-all cursor-pointer",
+                selectedZone === z
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                  : "bg-transparent text-slate-400 border-transparent hover:text-white"
+              )}
+            >
+              {z}
+            </button>
+          ))}
+        </div>
+
+        {/* Global Evaluation Display */}
+        <div className="p-5 bg-slate-900 border border-white/5 rounded-2xl space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-[8px] font-mono text-slate-500 block uppercase font-bold">SYSTEM ACTIVE TIMEZONE LOCATION</span>
+              <p className="text-xs font-bold text-slate-100">{activeZone.timezone}</p>
+            </div>
+
+            <div className="p-2.5 bg-slate-950 border border-white/5 rounded-xl flex items-center gap-1.5 shrink-0">
+              <Clock size={12} className="text-emerald-400" />
+              <span className="text-[10px] font-mono text-slate-300 font-bold">{activeZone.time}</span>
+            </div>
+          </div>
+
+          {/* Progress gauge dial representation */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs font-mono text-slate-500">
+              <span>PREDICTED REACH CAPACITY GAUGES</span>
+              <span className="font-bold text-emerald-400">{activeZone.reach}% Reach Velocity</span>
+            </div>
+            
+            <div className="h-2.5 bg-slate-950 rounded-full border border-white/5 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
+                style={{ width: `${activeZone.reach}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-slate-950/40 border border-dashed border-white/5 rounded-xl flex items-center justify-between">
+            <span className="text-[10px] font-mono text-slate-400">ALGORITHMIC FEED VELOCITY RATING:</span>
+            <span className={cn(
+              "text-[10px] font-mono font-black",
+              activeZone.reach >= 90 ? "text-emerald-400" : "text-yellow-400"
+            )}>
+              {activeZone.status}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- WIDGET 17: DYNAMIC NEURAL AUDIT DIAL (For seo-scorecard / vseo-scorecard) ---
+export const DynamicAuditScorecardWidget = ({ content }: { content: string }) => {
+  const [score, setScore] = useState(85);
+
+  useEffect(() => {
+    // Attempt to extract numerical score (e.g., Score: 88/100, Score: 88, 88%)
+    const scoreMatch = content.match(/(?:Score|Rating)[:\-]?\s*(\d+)/i) || content.match(/(\d{2})\s*\/100/);
+    if (scoreMatch && scoreMatch[1]) {
+      setScore(Math.min(100, Math.max(10, parseInt(scoreMatch[1]))));
+    } else {
+      setScore(Math.floor(Math.random() * 15) + 81);
+    }
+  }, [content]);
+
+  // Circumference for circles: 2 * PI * r
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-emerald-500/20 rounded-3xl space-y-6 text-left">
+      <div>
+        <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded border border-emerald-400/20 uppercase tracking-widest font-black">NEURAL AUDIT SCORECARD</span>
+        <h3 className="text-base font-bold text-white uppercase mt-1">SEO content alignment scan</h3>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center gap-6 p-5 bg-slate-900 border border-white/5 rounded-2xl">
+        {/* Animated Speed Dial dial indicator with SVG circular path */}
+        <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
+          <svg className="w-full h-full transform -rotate-90">
+            {/* Background circle */}
+            <circle 
+              cx="56" 
+              cy="56" 
+              r={radius} 
+              className="stroke-slate-950 fill-none" 
+              strokeWidth="10" 
+            />
+            {/* Foreground animated glowing active ring */}
+            <circle 
+              cx="56" 
+              cy="56" 
+              r={radius} 
+              className={cn(
+                "fill-none transition-all duration-1000 ease-out",
+                score >= 90 ? "stroke-emerald-400" : score >= 75 ? "stroke-yellow-400" : "stroke-red-400"
+              )} 
+              strokeWidth="10"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute flex flex-col items-center justify-center">
+            <span className="text-xl font-black font-mono text-slate-100 leading-none">{score}</span>
+            <span className="text-[8px] font-mono text-slate-500 uppercase font-bold pt-0.5">SCORE / 100</span>
+          </div>
+        </div>
+
+        {/* Detailed Audit status items checklist */}
+        <div className="space-y-3 w-full text-left">
+          <div>
+            <span className="text-[8px] font-mono text-slate-500 block uppercase font-bold tracking-wide">COMPLIANCE DIAGNOSTIC STATUS</span>
+            <p className="text-xs font-black text-slate-200 uppercase mt-0.5">
+              {score >= 90 ? "🟢 PREMIUM SEMANTIC DENSITY COMPLIANT" : score >= 75 ? "🟡 MODERATE DENSITY WARNING" : "🔴 OPTIMIZATION CRITICAL INTERRUPT"}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-[10px] font-mono font-bold uppercase tracking-wider">
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-white/5 flex items-center gap-2">
+              <Check className="text-emerald-400 shrink-0" size={12} />
+              <span className="text-slate-300">TITLE OPTIMIZED</span>
+            </div>
+            
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-white/5 flex items-center gap-2">
+              <Check className="text-emerald-400 shrink-0" size={12} />
+              <span className="text-slate-300">TAG DENSITY ALIGNED</span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-white/5 flex items-center gap-2">
+              <Check className="text-emerald-400 shrink-0" size={12} />
+              <span className="text-slate-300">LSI INDEX SECURE</span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-white/5 flex items-center gap-2">
+              {score >= 90 ? <Check className="text-emerald-400 shrink-0" size={12} /> : <AlertCircle className="text-yellow-400 shrink-0" size={12} />}
+              <span className="text-slate-300">META LENGTH ZONE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+

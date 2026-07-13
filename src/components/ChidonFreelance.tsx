@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Compass, Briefcase, MessageSquare, Shield, User, 
   Layers, ShoppingBag, Plus, RefreshCw, LogIn, Activity,
-  HelpCircle, Users, CheckCircle, TrendingUp, Globe, Award, Sparkles
+  HelpCircle, Users, CheckCircle, TrendingUp, Globe, Award, Cpu, CreditCard
 } from 'lucide-react';
 import { doc, getDoc, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { FreelanceProfile, Gig, Order } from './chidon-freelance/types';
 import { ensureFreelanceProfile, handleFirestoreError, OperationType } from './chidon-freelance/utils';
+import { PaystackGatewayModal } from './chidon-freelance/PaystackGatewayModal';
 
 // Import Views
 import { ExploreView } from './chidon-freelance/ExploreView';
@@ -24,6 +25,7 @@ import { FreelanceProjects } from './chidon-freelance/FreelanceProjects';
 import { ClientInteraction } from './chidon-freelance/ClientInteraction';
 import { JobBoardView } from './chidon-freelance/JobBoardView';
 import { ChidonIqToolsView } from './chidon-freelance/ChidonIqToolsView';
+import { PaymentDashboardView } from './chidon-freelance/PaymentDashboardView';
 
 // Import Onboarding & Profile Setup views
 import { WelcomeOnboardingView, OnboardingSetupView } from './chidon-freelance/OnboardingComponents';
@@ -33,6 +35,7 @@ export interface ChidonFreelanceProps {
   onTriggerAuth: () => void;
   subView?: FreelanceView;
   onSubViewChange?: (newView: FreelanceView) => void;
+  onSendToNotepad?: (content: string, title?: string) => void;
 }
 
 export type FreelanceView = 
@@ -48,13 +51,15 @@ export type FreelanceView =
   | 'projects'
   | 'client_interaction'
   | 'job_board'
+  | 'payment_dashboard'
   | 'iq_tools';
 
 export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({ 
   currentUser,
   onTriggerAuth,
   subView,
-  onSubViewChange
+  onSubViewChange,
+  onSendToNotepad
 }) => {
   const [localView, setLocalView] = useState<FreelanceView>('buyer_dashboard');
   const view = subView || localView;
@@ -82,6 +87,21 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editingGig, setEditingGig] = useState<Gig | null>(null);
   const [initialSellerChat, setInitialSellerChat] = useState<{ sellerId: string; sellerName: string } | null>(null);
+
+  // Paystack Gateway Modal state triggers
+  const [paystackModalOpen, setPaystackModalOpen] = useState(false);
+  const [paystackModalData, setPaystackModalData] = useState<{
+    packageType: 'basic' | 'standard' | 'premium';
+    amount: number;
+    reference: string;
+    title: string;
+    isDirectPayout?: boolean;
+    directPayload?: {
+      sellerId: string;
+      sellerName: string;
+      memo: string;
+    };
+  } | null>(null);
 
   // Load / Sync Freelance user profile
   const fetchProfile = async () => {
@@ -115,6 +135,23 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
     fetchProfile();
   }, [currentUser?.uid]);
 
+  // Enforce strict separation between Buyer and Seller views
+  useEffect(() => {
+    if (profile?.hasCompletedSetup && profile?.role) {
+      if (profile.role === 'buyer') {
+        const sellerOnlyViews: FreelanceView[] = ['dashboard', 'create_gig', 'payment_dashboard'];
+        if (sellerOnlyViews.includes(view)) {
+          setView('buyer_dashboard');
+        }
+      } else if (profile.role === 'seller') {
+        const buyerOnlyViews: FreelanceView[] = ['buyer_dashboard', 'explore', 'job_board', 'gig_detail'];
+        if (buyerOnlyViews.includes(view)) {
+          setView('dashboard');
+        }
+      }
+    }
+  }, [view, profile?.role, profile?.hasCompletedSetup]);
+
   // Synchronize view starting point when portalMode switches
   const handlePortalSwitch = (mode: 'buyer' | 'seller') => {
     setPortalMode(mode);
@@ -147,32 +184,14 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
 
     // Build unique reference
     const paystackRef = `CHIDON_ESC_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const userEmail = currentUser.email || 'escrow-buyer@chidoniq.com';
 
-    // Check if Paystack script is active
-    const paystackInstance = (window as any).PaystackPop;
-    if (paystackInstance) {
-      const handler = paystackInstance.setup({
-        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_4f9547d79b90c2eb710ca1c1e59e394b8e2195df', // default testing fallback key
-        email: userEmail,
-        amount: amount * 100 * 380, // Convert USD to NGN fallback mapping value
-        currency: 'NGN',
-        ref: paystackRef,
-        callback: async (response: any) => {
-          await completeEscrowOrderCreation(packageType, amount, paystackRef, 'success');
-        },
-        onClose: () => {
-          if (confirm("Paystack Checkout popup closed. Would you like to simulate successful escrow payment for this package sandbox?")) {
-            completeEscrowOrderCreation(packageType, amount, paystackRef, 'simulated_success');
-          }
-        }
-      });
-      handler.openIframe();
-    } else {
-      if (confirm(`Initializing Paystack Checkout for $${amount} (${packageType.toUpperCase()} package). Execute simulation bypass inside AI sandbox?`)) {
-        completeEscrowOrderCreation(packageType, amount, paystackRef, 'simulated_success');
-      }
-    }
+    setPaystackModalData({
+      packageType,
+      amount,
+      reference: paystackRef,
+      title: `${selectedGig.title.slice(0, 32)}...`
+    });
+    setPaystackModalOpen(true);
   };
 
   const completeEscrowOrderCreation = async (
@@ -234,6 +253,14 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
     }
   };
 
+  const handlePaystackModalSuccess = async (reference: string) => {
+    if (!paystackModalData) return;
+    const { packageType, amount } = paystackModalData;
+    await completeEscrowOrderCreation(packageType, amount, reference, 'success');
+    setPaystackModalOpen(false);
+    setPaystackModalData(null);
+  };
+
   // Open Chat thread helper
   const handleOpenChatWithSeller = (sellerId: string, sellerName: string) => {
     setInitialSellerChat({ sellerId, sellerName });
@@ -277,36 +304,38 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
               <span>ChidonFreelance</span>
             </h1>
             <p className="text-xs text-slate-500 font-mono">
-              Commission-Free Fiverr & Upwork Web3 Sandbox Mode • <span className={`font-bold ${theme.accentText}`}>{theme.title}</span>
+              Commission-Free Web3 Freelance Sandbox Mode • <span className={`font-bold ${theme.accentText}`}>{theme.title}</span>
             </p>
           </div>
 
           {/* The Two Visible Portal Swappers */}
-          <div className="flex items-center gap-2 p-1 bg-slate-200 dark:bg-slate-900 rounded-2xl border border-slate-350 dark:border-slate-800 self-start xl:self-center">
-            <button
-              onClick={() => handlePortalSwitch('buyer')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
-                portalMode === 'buyer' 
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-black' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white font-bold'
-              }`}
-            >
-              <Users size={14} />
-              <span>Buyer Portal</span>
-            </button>
-            
-            <button
-              onClick={() => handlePortalSwitch('seller')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
-                portalMode === 'seller' 
-                  ? 'bg-cyan-500 text-slate-950 shadow-md font-black' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white font-bold'
-              }`}
-            >
-              <TrendingUp size={14} />
-              <span>Seller Portal</span>
-            </button>
-          </div>
+          {!profile?.hasCompletedSetup && (
+            <div className="flex items-center gap-2 p-1 bg-slate-200 dark:bg-slate-900 rounded-2xl border border-slate-350 dark:border-slate-800 self-start xl:self-center">
+              <button
+                onClick={() => handlePortalSwitch('buyer')}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                  portalMode === 'buyer' 
+                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black' 
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white font-bold'
+                }`}
+              >
+                <Users size={14} />
+                <span>Buyer Portal</span>
+              </button>
+              
+              <button
+                onClick={() => handlePortalSwitch('seller')}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                  portalMode === 'seller' 
+                    ? 'bg-cyan-500 text-slate-950 shadow-md font-black' 
+                    : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white font-bold'
+                }`}
+              >
+                <TrendingUp size={14} />
+                <span>Seller Portal</span>
+              </button>
+            </div>
+          )}
 
           {/* Dynamic Nav Tabs Menu depending 100% on Portal Mode */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -402,6 +431,21 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
                   <Activity size={13} />
                   <span>Incoming Contracts</span>
                 </button>
+
+                <button
+                  onClick={() => {
+                    if (!currentUser) onTriggerAuth();
+                    else setView('payment_dashboard');
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                    view === 'payment_dashboard' 
+                      ? theme.tabActive 
+                      : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  <CreditCard size={13} />
+                  <span>Earned Funds & Receipts</span>
+                </button>
               </>
             )}
 
@@ -435,7 +479,7 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
                   : 'bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-black dark:hover:text-white'
               }`}
             >
-              <Sparkles size={13} />
+              <Cpu size={13} />
               <span>Chidon IQ AI Tools</span>
             </button>
 
@@ -555,6 +599,7 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
                   setView('order_detail');
                 }}
                 onNavigateToExplore={() => setView('explore')}
+                onRefreshProfile={fetchProfile}
               />
             )}
 
@@ -600,6 +645,7 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
                   setSelectedOrder(order);
                   setView('order_detail');
                 }}
+                onRefreshProfile={fetchProfile}
               />
             )}
 
@@ -676,16 +722,40 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
               />
             )}
 
+            {view === 'payment_dashboard' && (
+              <PaymentDashboardView 
+                profile={profile!}
+                onRefreshProfile={fetchProfile}
+              />
+            )}
+
             {view === 'admin' && (
               <AdminView profile={profile!} />
             )}
 
             {view === 'iq_tools' && (
-              <ChidonIqToolsView onBack={() => setView(portalMode === 'buyer' ? 'explore' : 'dashboard')} />
+              <ChidonIqToolsView 
+                onBack={() => setView(portalMode === 'buyer' ? 'explore' : 'dashboard')} 
+                onSendToNotepad={onSendToNotepad}
+              />
             )}
           </motion.div>
         )}
       </div>
+
+      <AnimatePresence>
+        {paystackModalOpen && paystackModalData && (
+          <PaystackGatewayModal
+            isOpen={paystackModalOpen}
+            onClose={() => { setPaystackModalOpen(false); setPaystackModalData(null); }}
+            onSuccess={handlePaystackModalSuccess}
+            email={currentUser?.email || 'buyer@chidoniq.com'}
+            amountUsd={paystackModalData.amount}
+            reference={paystackModalData.reference}
+            title={paystackModalData.title}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );

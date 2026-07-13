@@ -329,5 +329,9 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read, write: if true;
     }
+
+    match /blogs/{blogId} {
+      allow read, write: if true;
+    }
   }
 }

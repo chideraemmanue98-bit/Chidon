@@ -786,7 +786,7 @@ app.use(express.json({ limit: "15mb" }));
       const text = await queryClient.fetchQuery({
         queryKey: ["gemini-generate", prompt, language, targetModel],
         queryFn: async () => {
-          let systemInstruction = `You are a professional social media optimizer. Output your entire response exclusively in public human ${languageName}. Always maintain perfect native slang, correct localization, and natural phrasing appropriate for ${languageName}. NEVER output any part of your answer in English or any other language, unless the requested language name itself is English, or the user specifically requests translation to other tongues. All titles, scripts, hashtags, strategy documents, lists, schedules, analyses, and tables MUST be in ${languageName} completely. Keep formatting beautiful with clean markdown.`;
+          let systemInstruction = `You are a professional social media optimizer. Output your entire response exclusively in public human ${languageName}. Always maintain perfect native slang, correct localization, and natural phrasing appropriate for ${languageName}. NEVER output any part of your answer in English or any other language, unless the requested language name itself is English, or the user specifically requests translation to other tongues. All titles, scripts, hashtags, strategy documents, lists, schedules, analyses, and tables MUST be in ${languageName} completely. Keep formatting beautiful with clean markdown. ALWAYS use standard markdown for new paragraphs (using normal blank lines) instead of outputting raw text symbols like '\\n' or '/n' or '\\n\\n' or 'n/n/'. Let all paragraphs be separated by simple clean spacing.`;
 
           // If the prompt is requesting structured JSON output (e.g. from VideoContentAnalyzer), adjust systemInstruction to not break JSON formatting
           const isJsonRequest = typeof prompt === "string" && (
@@ -811,7 +811,20 @@ app.use(express.json({ limit: "15mb" }));
           if (!response || !response.text) {
             throw new Error("No text response received from Gemini.");
           }
-          return response.text;
+          
+          let responseText = response.text;
+          if (responseText && typeof responseText === "string") {
+            responseText = responseText
+              .replace(/\\n\\n/g, "\n\n")
+              .replace(/\\n/g, "\n")
+              .replace(/\\r/g, "")
+              .replace(/n\/n\//g, "\n\n")
+              .replace(/\/n\/n\//g, "\n\n")
+              .replace(/\/n\//g, "\n")
+              .replace(/\s*n\/n\s*/g, "\n\n")
+              .trim();
+          }
+          return responseText;
         }
       });
 

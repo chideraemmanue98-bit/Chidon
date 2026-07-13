@@ -144,8 +144,19 @@ export const PostScheduler = ({
       }
 
       const data = await response.json();
-      const text = data.text;
+      let text = data.text;
       if (text) {
+        if (typeof text === 'string') {
+          text = text
+            .replace(/\\n\\n/g, '\n\n')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '')
+            .replace(/n\/n\//g, '\n\n')
+            .replace(/\/n\/n\//g, '\n\n')
+            .replace(/\/n\//g, '\n')
+            .replace(/\s*n\/n\s*/g, '\n\n')
+            .trim();
+        }
         setCaption(text);
         setAiTopic('');
       } else {

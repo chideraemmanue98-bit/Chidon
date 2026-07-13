@@ -129,7 +129,18 @@ export const ChidonIqGuide = ({
       }
 
       const data = await res.ok ? await res.json() : { text: "Error connection" };
-      const aiResponse = data.text || "Direct uplink failed. Please re-initiate command.";
+      let aiResponse = data.text || "Direct uplink failed. Please re-initiate command.";
+      if (typeof aiResponse === 'string') {
+        aiResponse = aiResponse
+          .replace(/\\n\\n/g, '\n\n')
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '')
+          .replace(/n\/n\//g, '\n\n')
+          .replace(/\/n\/n\//g, '\n\n')
+          .replace(/\/n\//g, '\n')
+          .replace(/\s*n\/n\s*/g, '\n\n')
+          .trim();
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
       console.error("CHIDON IQ Uplink Error:", error);

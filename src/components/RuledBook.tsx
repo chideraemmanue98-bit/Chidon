@@ -14,7 +14,8 @@ import {
   ArrowLeft,
   Calendar,
   Layers,
-  FileText
+  FileText,
+  Cpu
 } from 'lucide-react';
 import { 
   collection, 
@@ -69,6 +70,8 @@ export const RuledBook: React.FC<RuledBookProps> = ({
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archivedToVaultSuccess, setArchivedToVaultSuccess] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -255,6 +258,44 @@ export const RuledBook: React.FC<RuledBookProps> = ({
     }
   };
 
+  // Archive sheet to Chidon Saved Intel Vault
+  const handleSaveToVault = async () => {
+    if (!title.trim() && !content.trim()) return;
+    setArchiving(true);
+    try {
+      const draftPayload: any = {
+        featureId: 'notepad',
+        title: (title || 'Uncharted Intelligence').slice(0, 199),
+        content: content.slice(0, 9999),
+        createdAt: serverTimestamp(),
+      };
+      
+      if (auth.currentUser) {
+        draftPayload.userId = auth.currentUser.uid;
+        await addDoc(collection(db, 'drafts'), draftPayload);
+      } else {
+        // If guest, save in a local storage fallback for drafts so that they don't lose it!
+        const guestDrafts = localStorage.getItem('guest_drafts');
+        const list = guestDrafts ? JSON.parse(guestDrafts) : [];
+        list.push({
+          id: 'guest_' + Date.now(),
+          featureId: 'notepad',
+          title: (title || 'Uncharted Intelligence').slice(0, 199),
+          content: content.slice(0, 9999),
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('guest_drafts', JSON.stringify(list));
+      }
+      
+      setArchivedToVaultSuccess(true);
+      setTimeout(() => setArchivedToVaultSuccess(false), 2000);
+    } catch (err) {
+      console.error("Error archiving to Vault:", err);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   // Discard page
   const handleDeletePage = async (indexToDelete: number) => {
     if (!window.confirm("Are you sure you want to rip this page out of your notebook?")) return;
@@ -437,6 +478,27 @@ export const RuledBook: React.FC<RuledBookProps> = ({
                 >
                   <FileDown className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Export Page</span>
+                </button>
+
+                <button
+                  onClick={handleSaveToVault}
+                  disabled={archiving}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer active:scale-95 duration-150 border",
+                    archivedToVaultSuccess
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                      : "bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20"
+                  )}
+                  title="Archive Sheet to CHIDON Saved Intel Vault"
+                >
+                  {archiving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : archivedToVaultSuccess ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <Cpu className="w-3.5 h-3.5" />
+                  )}
+                  <span>{archivedToVaultSuccess ? "Archived" : archiving ? "Archiving..." : "Save to Vault"}</span>
                 </button>
               </div>
             </div>

@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, Copy, Check, FileText, Globe, ShoppingBag, AlertCircle, 
-  RefreshCw, Sparkles, Wand2, Target, Briefcase, BookOpen, MessageSquare, Send
+  RefreshCw, Wand2, Target, Briefcase, BookOpen, MessageSquare, Send, Cpu
 } from 'lucide-react';
 import { SEOTool } from '../SEOTool';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../../firebase';
+import { cn } from '../../lib/utils';
 
 // Import newly generated high-fidelity asset images
 import contentWritingBannerImg from '../../assets/images/content_writing_banner_1783649293057.jpg';
@@ -12,15 +15,34 @@ import portfolioBannerImg from '../../assets/images/portfolio_case_study_banner_
 
 interface ChidonIqToolsViewProps {
   onBack?: () => void;
+  onSendToNotepad?: (content: string, title?: string) => void;
 }
 
-export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) => {
+export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack, onSendToNotepad }) => {
   const [activeTab, setActiveTab] = useState<'seo' | 'writing' | 'gig' | 'portfolio' | 'chat'>('seo');
 
   // --- 2. CONTENT WRITING FEATURE STATE ---
-  const [writingTopic, setWritingTopic] = useState('');
-  const [writingAudience, setWritingAudience] = useState('');
-  const [writingTone, setWritingTone] = useState('persuasive');
+  const [writingTopic, setWritingTopic] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_writingTopic') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [writingAudience, setWritingAudience] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_writingAudience') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [writingTone, setWritingTone] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_writingTone') || 'persuasive';
+    } catch {
+      return 'persuasive';
+    }
+  });
   const [writingLoading, setWritingLoading] = useState(false);
   const [writingError, setWritingError] = useState<string | null>(null);
   const [writingResult, setWritingResult] = useState<{
@@ -31,9 +53,27 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
   } | null>(null);
 
   // --- 3. GIG DESCRIPTION FEATURE STATE ---
-  const [gigName, setGigName] = useState('');
-  const [gigNiche, setGigNiche] = useState('');
-  const [gigUsp, setGigUsp] = useState('');
+  const [gigName, setGigName] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_gigName') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [gigNiche, setGigNiche] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_gigNiche') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [gigUsp, setGigUsp] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_gigUsp') || '';
+    } catch {
+      return '';
+    }
+  });
   const [gigLoading, setGigLoading] = useState(false);
   const [gigError, setGigError] = useState<string | null>(null);
   const [gigResult, setGigResult] = useState<{
@@ -46,10 +86,34 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
   } | null>(null);
 
   // --- 4. PORTFOLIO CASE STUDY STATE ---
-  const [portfolioName, setPortfolioName] = useState('');
-  const [portfolioNiche, setPortfolioNiche] = useState('');
-  const [portfolioRole, setPortfolioRole] = useState('');
-  const [portfolioOverview, setPortfolioOverview] = useState('');
+  const [portfolioName, setPortfolioName] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_portfolioName') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [portfolioNiche, setPortfolioNiche] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_portfolioNiche') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [portfolioRole, setPortfolioRole] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_portfolioRole') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [portfolioOverview, setPortfolioOverview] = useState(() => {
+    try {
+      return localStorage.getItem('chidon_fl_portfolioOverview') || '';
+    } catch {
+      return '';
+    }
+  });
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const [portfolioResult, setPortfolioResult] = useState<{
@@ -61,6 +125,38 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
     bulletPoints: string[];
   } | null>(null);
 
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+
+  // Periodic Auto-Save every 30 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        localStorage.setItem('chidon_fl_writingTopic', writingTopic);
+        localStorage.setItem('chidon_fl_writingAudience', writingAudience);
+        localStorage.setItem('chidon_fl_writingTone', writingTone);
+        localStorage.setItem('chidon_fl_gigName', gigName);
+        localStorage.setItem('chidon_fl_gigNiche', gigNiche);
+        localStorage.setItem('chidon_fl_gigUsp', gigUsp);
+        localStorage.setItem('chidon_fl_portfolioName', portfolioName);
+        localStorage.setItem('chidon_fl_portfolioNiche', portfolioNiche);
+        localStorage.setItem('chidon_fl_portfolioRole', portfolioRole);
+        localStorage.setItem('chidon_fl_portfolioOverview', portfolioOverview);
+        
+        setIsAutoSaving(true);
+        const timer = setTimeout(() => setIsAutoSaving(false), 2000);
+        return () => clearTimeout(timer);
+      } catch (e) {
+        console.error("ChidonIqToolsView auto-save failed:", e);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [
+    writingTopic, writingAudience, writingTone,
+    gigName, gigNiche, gigUsp,
+    portfolioName, portfolioNiche, portfolioRole, portfolioOverview
+  ]);
+
   // --- 5. CHAT/ASSISTANT FEATURE STATE ---
   const [chatQuestion, setChatQuestion] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ sender: 'user' | 'assistant'; text: string }>>([
@@ -71,6 +167,45 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
 
   // Copy success indicator
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Connection states
+  const [archiving, setArchiving] = useState(false);
+  const [vaultSuccessId, setVaultSuccessId] = useState<string | null>(null);
+
+  const saveToVault = async (title: string, content: string, sourceFeatureId: string) => {
+    setArchiving(true);
+    try {
+      const draftPayload: any = {
+        featureId: sourceFeatureId,
+        title: title.slice(0, 199),
+        content: content.slice(0, 9999),
+        createdAt: serverTimestamp(),
+      };
+      
+      if (auth.currentUser) {
+        draftPayload.userId = auth.currentUser.uid;
+        await addDoc(collection(db, 'drafts'), draftPayload);
+      } else {
+        const guestDrafts = localStorage.getItem('guest_drafts');
+        const list = guestDrafts ? JSON.parse(guestDrafts) : [];
+        list.push({
+          id: 'guest_' + Date.now(),
+          featureId: sourceFeatureId,
+          title: title.slice(0, 199),
+          content: content.slice(0, 9999),
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('guest_drafts', JSON.stringify(list));
+      }
+      
+      setVaultSuccessId(sourceFeatureId);
+      setTimeout(() => setVaultSuccessId(null), 2500);
+    } catch (err) {
+      console.error("Error archiving to Vault:", err);
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -125,7 +260,7 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
     const blockTriggers = ['blog post', 'blog article', 'seo article', 'code', 'story', 'novel', 'write a book'];
     for (const trigger of blockTriggers) {
       if (checkString.includes(trigger)) {
-        setGigError("I can only do high-converting Fiverr/Upwork Gig descriptions. Try the SEO Feature or Content Writing Feature instead.");
+        setGigError("I can only do high-converting freelance service descriptions. Try the SEO Feature or Content Writing Feature instead.");
         return;
       }
     }
@@ -225,31 +360,44 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
     <div className="space-y-6 text-left" id="chidon-iq-tools-view">
       
       {/* 1. HORIZONTAL NAVIGATION TABS FOR ALL 5 SPECIALIZED CHIDON IQ TOOLS */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-fit">
-        {[
-          { id: 'seo', label: 'SEO Optimizer', icon: Search },
-          { id: 'writing', label: 'Content Marketing', icon: Wand2 },
-          { id: 'gig', label: 'Gig Builder', icon: Target },
-          { id: 'portfolio', label: 'Portfolio Studies', icon: BookOpen },
-          { id: 'chat', label: 'Platform Assistant', icon: MessageSquare },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                isActive 
-                  ? 'bg-white dark:bg-slate-950 text-slate-950 dark:text-cyan-primary shadow-sm border border-slate-200/50 dark:border-white/10' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
-              }`}
-            >
-              <Icon size={13} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-fit">
+          {[
+            { id: 'seo', label: 'SEO Optimizer', icon: Search },
+            { id: 'writing', label: 'Content Marketing', icon: Wand2 },
+            { id: 'gig', label: 'Gig Builder', icon: Target },
+            { id: 'portfolio', label: 'Portfolio Studies', icon: BookOpen },
+            { id: 'chat', label: 'Platform Assistant', icon: MessageSquare },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isActive 
+                    ? 'bg-white dark:bg-slate-950 text-slate-950 dark:text-cyan-primary shadow-sm border border-slate-200/50 dark:border-white/10' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+                }`}
+              >
+                <Icon size={13} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5 self-start sm:self-auto px-1">
+          {isAutoSaving ? (
+            <span className="inline-flex items-center gap-1.5 text-emerald-500 dark:text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+              <span>Drafts auto-saved</span>
+            </span>
+          ) : (
+            <span>Auto-saves drafts every 30s</span>
+          )}
+        </div>
       </div>
 
       {/* 2. DYNAMIC WORKSPACE PANEL BASED ON THE SELECTED TIER */}
@@ -385,6 +533,48 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
                     </div>
                   ) : writingResult ? (
                     <div className="space-y-5">
+                      {/* Intelligence Integration Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/60 border border-purple-500/20 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-purple-400" />
+                          <span className="text-xs font-mono font-bold text-slate-300">Vault & Notepad Synced</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {onSendToNotepad && (
+                            <button
+                              onClick={() => {
+                                const payload = `[DIRECT RESPONSE COPYWRITING]\n\nHOOK:\n"${writingResult.hook}"\n\nBENEFITS:\n${writingResult.benefits.map(b => `• ${b}`).join('\n')}\n\nBODY COPY:\n${writingResult.content}\n\nCTA:\n${writingResult.cta}`;
+                                onSendToNotepad(payload, `Direct Response Copy: ${writingTopic || 'Marketing Draft'}`);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Send to Notepad</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const payload = `[DIRECT RESPONSE COPYWRITING]\n\nHOOK:\n"${writingResult.hook}"\n\nBENEFITS:\n${writingResult.benefits.map(b => `• ${b}`).join('\n')}\n\nBODY COPY:\n${writingResult.content}\n\nCTA:\n${writingResult.cta}`;
+                              saveToVault(`Direct Response Copy: ${writingTopic || 'Marketing Draft'}`, payload, 'content_writing');
+                            }}
+                            disabled={archiving}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border",
+                              vaultSuccessId === 'content_writing'
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                                : "bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                            )}
+                          >
+                            {vaultSuccessId === 'content_writing' ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <Cpu className="w-3.5 h-3.5" />
+                            )}
+                            <span>{vaultSuccessId === 'content_writing' ? 'Saved to Vault' : 'Save to Vault'}</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold uppercase tracking-wider text-purple-400">Magnetic Hook</span>
@@ -479,7 +669,7 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-500/20 text-teal-400 border border-teal-500/30 w-fit mb-2">
-                    Fiverr & Upwork Optimizer
+                    Freelance Service Optimizer
                   </div>
                   <h2 className="text-xl sm:text-2xl font-sans font-bold text-white tracking-tight">
                     High-Converting Gig Description Builder
@@ -573,6 +763,48 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
                     </div>
                   ) : gigResult ? (
                     <div className="space-y-5">
+                      {/* Intelligence Integration Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/60 border border-teal-500/20 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-teal-400" />
+                          <span className="text-xs font-mono font-bold text-slate-300">Vault & Notepad Synced</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {onSendToNotepad && (
+                            <button
+                              onClick={() => {
+                                const payload = `[GIG SERVICE INTEL DESCRIPTION: ${gigName || 'Freelance Niche Service'}]\n\nPROBLEM FOCUS:\n"${gigResult.problem}"\n\nSOLUTION ANCHOR:\n"${gigResult.solution}"\n\nWHAT IS INCLUDED:\n${gigResult.whatsIncluded.map(item => `• ${item}`).join('\n')}\n\nWHY COLLABORATE WITH ME:\n${gigResult.whyMe.map(item => `• ${item}`).join('\n')}\n\nCALL TO ACTION:\n${gigResult.cta}\n\nFULL MARKETING DESCRIPTION:\n${gigResult.fullDescription}`;
+                                onSendToNotepad(payload, `Gig Service Blueprint: ${gigName || 'Freelance Service'}`);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Send to Notepad</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const payload = `[GIG SERVICE INTEL DESCRIPTION: ${gigName || 'Freelance Niche Service'}]\n\nPROBLEM FOCUS:\n"${gigResult.problem}"\n\nSOLUTION ANCHOR:\n"${gigResult.solution}"\n\nWHAT IS INCLUDED:\n${gigResult.whatsIncluded.map(item => `• ${item}`).join('\n')}\n\nWHY COLLABORATE WITH ME:\n${gigResult.whyMe.map(item => `• ${item}`).join('\n')}\n\nCALL TO ACTION:\n${gigResult.cta}\n\nFULL MARKETING DESCRIPTION:\n${gigResult.fullDescription}`;
+                              saveToVault(`Gig Service Blueprint: ${gigName || 'Freelance Service'}`, payload, 'gig_description');
+                            }}
+                            disabled={archiving}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border",
+                              vaultSuccessId === 'gig_description'
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                                : "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
+                            )}
+                          >
+                            {vaultSuccessId === 'gig_description' ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <Cpu className="w-3.5 h-3.5" />
+                            )}
+                            <span>{vaultSuccessId === 'gig_description' ? 'Saved to Vault' : 'Save to Vault'}</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="p-3.5 bg-slate-950 border border-white/5 rounded-xl">
                           <span className="block text-[10px] font-bold uppercase tracking-wider text-red-400 mb-1">Buyer's Problem</span>
@@ -766,6 +998,48 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack }) 
                     </div>
                   ) : portfolioResult ? (
                     <div className="space-y-4">
+                      {/* Intelligence Integration Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/60 border border-amber-500/20 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-amber-400" />
+                          <span className="text-xs font-mono font-bold text-slate-300">Vault & Notepad Synced</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {onSendToNotepad && (
+                            <button
+                              onClick={() => {
+                                const payload = `[PORTFOLIO CASE STUDY: ${portfolioName || 'Creative Work'}]\n\nCASE STUDY TITLE:\n"${portfolioResult.title}"\n\nPROBLEM DISCOVERED:\n"${portfolioResult.problem}"\n\nSOLUTION DEVELOPED:\n"${portfolioResult.solution}"\n\nBUSINESS RESULT:\n"${portfolioResult.result}"\n\nTOOLS UTILIZED:\n${portfolioResult.toolsUsed.join(', ')}\n\nHIGHLIGHTS:\n${portfolioResult.bulletPoints.map(item => `• ${item}`).join('\n')}`;
+                                onSendToNotepad(payload, `Portfolio Case Study: ${portfolioName || 'Creative Work'}`);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Send to Notepad</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const payload = `[PORTFOLIO CASE STUDY: ${portfolioName || 'Creative Work'}]\n\nCASE STUDY TITLE:\n"${portfolioResult.title}"\n\nPROBLEM DISCOVERED:\n"${portfolioResult.problem}"\n\nSOLUTION DEVELOPED:\n"${portfolioResult.solution}"\n\nBUSINESS RESULT:\n"${portfolioResult.result}"\n\nTOOLS UTILIZED:\n${portfolioResult.toolsUsed.join(', ')}\n\nHIGHLIGHTS:\n${portfolioResult.bulletPoints.map(item => `• ${item}`).join('\n')}`;
+                              saveToVault(`Portfolio Case Study: ${portfolioName || 'Creative Work'}`, payload, 'portfolio_study');
+                            }}
+                            disabled={archiving}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border",
+                              vaultSuccessId === 'portfolio_study'
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                                : "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+                            )}
+                          >
+                            {vaultSuccessId === 'portfolio_study' ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <Cpu className="w-3.5 h-3.5" />
+                            )}
+                            <span>{vaultSuccessId === 'portfolio_study' ? 'Saved to Vault' : 'Save to Vault'}</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Case Study Title</span>

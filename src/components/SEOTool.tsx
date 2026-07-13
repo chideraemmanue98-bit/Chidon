@@ -25,7 +25,7 @@ interface SEOResultData {
 export const SEOTool: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [niche, setNiche] = useState('');
-  const [platform, setPlatform] = useState('fiverr');
+  const [platform, setPlatform] = useState('freelance');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export const SEOTool: React.FC = () => {
 
     for (const trigger of blockTriggers) {
       if (combined.includes(trigger)) {
-        return "I can only do real SEO work for Fiverr Gigs, Websites, and Blog posts. Try the Content Writing Feature instead.";
+        return "I can only do real SEO work for Freelance Gigs, Websites, and Blog posts. Try the Content Writing Feature instead.";
       }
     }
 
@@ -163,7 +163,7 @@ export const SEOTool: React.FC = () => {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'fiverr', label: 'Fiverr', icon: ShoppingBag },
+                  { id: 'freelance', label: 'Freelance', icon: ShoppingBag },
                   { id: 'website', label: 'Website', icon: Globe },
                   { id: 'blog', label: 'Blog Post', icon: FileText },
                 ].map((item) => {
@@ -339,7 +339,7 @@ export const SEOTool: React.FC = () => {
 
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-primary mb-2.5">
-                    Fiverr/SEO Tags
+                    Freelance/SEO Tags
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
                     {result.tags.map((tag, i) => (
