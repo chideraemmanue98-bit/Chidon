@@ -287,7 +287,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
     persona: 'Viral Producer AI',
-    imageUrl: '/src/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg'
+    imageUrl: '/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg'
   },
   { 
     id: 'scripts', 
@@ -298,7 +298,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-emerald-vibrant',
     glowColor: 'bg-emerald-vibrant/20',
     persona: 'Narrative Engine AI',
-    imageUrl: '/src/assets/images/content_writing_banner_1783649293057.jpg'
+    imageUrl: '/assets/images/content_writing_banner_1783649293057.jpg'
   },
   { 
     id: 'ai-script-outline', 
@@ -309,7 +309,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-purple-vibrant',
     glowColor: 'bg-purple-vibrant/20',
     persona: 'Narrative Architect AI',
-    imageUrl: '/src/assets/images/portfolio_case_study_banner_1783649308111.jpg'
+    imageUrl: '/assets/images/portfolio_case_study_banner_1783649308111.jpg'
   },
   { 
     id: 'headlines', 
@@ -320,7 +320,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-yellow-400',
     glowColor: 'bg-yellow-400/20',
     persona: 'Click Magnet AI',
-    imageUrl: '/src/assets/images/template_wireframe_1783490763717.jpg'
+    imageUrl: '/assets/images/template_wireframe_1783490763717.jpg'
   },
   { 
     id: 'ruled-book', 
@@ -331,7 +331,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
     persona: 'Lined Scribe AI',
-    imageUrl: '/src/assets/images/journal_ruled_cover_1783488617827.jpg'
+    imageUrl: '/assets/images/journal_ruled_cover_1783488617827.jpg'
   },
   { 
     id: 'keyword-research', 
@@ -342,7 +342,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-amber-500',
     glowColor: 'bg-amber-500/20',
     persona: 'Data Miner AI',
-    imageUrl: '/src/assets/images/keyword_intel_radar_1783488604768.jpg'
+    imageUrl: '/assets/images/keyword_intel_radar_1783488604768.jpg'
   },
   { 
     id: 'youtube-seo', 
@@ -353,7 +353,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-red-500',
     glowColor: 'bg-red-500/20',
     persona: 'Organic Quality Architect AI',
-    imageUrl: '/src/assets/images/seo_tool_banner_1783649274905.jpg'
+    imageUrl: '/assets/images/seo_tool_banner_1783649274905.jpg'
   },
   { 
     id: 'vseo-title-desc', 
@@ -364,7 +364,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-red-400',
     glowColor: 'bg-red-400/20',
     persona: 'Metadata Architect AI',
-    imageUrl: '/src/assets/images/seo_analytics_vector_1783490751280.jpg'
+    imageUrl: '/assets/images/seo_analytics_vector_1783490751280.jpg'
   },
   { 
     id: 'vseo-tags', 
@@ -408,7 +408,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-indigo-500',
     glowColor: 'bg-indigo-500/20',
     persona: 'Psychographic Architect AI',
-    imageUrl: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg'
+    imageUrl: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg'
   },
   { 
     id: 'thumbnails', 
@@ -452,7 +452,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
     persona: 'Omni-channel Strategist AI',
-    imageUrl: '/src/assets/images/chidon_iq_engine_v4_1783388111932.jpg'
+    imageUrl: '/assets/images/chidon_iq_engine_v4_1783388111932.jpg'
   },
   { 
     id: 'posting-schedule', 
@@ -463,7 +463,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-blue-500',
     glowColor: 'bg-blue-500/20',
     persona: 'Temporal Logistics AI',
-    imageUrl: '/src/assets/images/empty_scheduler_1781319203016.jpg'
+    imageUrl: '/assets/images/empty_scheduler_1781319203016.jpg'
   },
   { 
     id: 'post-scheduler', 
@@ -474,7 +474,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-white',
     glowColor: 'bg-white/10',
     persona: 'Operations Matrix AI',
-    imageUrl: '/src/assets/images/empty_scheduler_1781319203016.jpg'
+    imageUrl: '/assets/images/empty_scheduler_1781319203016.jpg'
   },
   { 
     id: 'post-optimizer', 
@@ -529,7 +529,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-red-500',
     glowColor: 'bg-red-500/20',
     persona: 'YouTube Policy Expert AI',
-    imageUrl: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg'
+    imageUrl: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg'
   },
   { 
     id: 'drafts', 
@@ -540,7 +540,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-brand',
     glowColor: 'bg-brand/20',
     persona: 'Vault Guardian AI',
-    imageUrl: '/src/assets/images/empty_vault_1781319190599.jpg'
+    imageUrl: '/assets/images/empty_vault_1781319190599.jpg'
   },
   { 
     id: 'template-library', 
@@ -551,7 +551,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
     persona: 'Architect copywriter AI',
-    imageUrl: '/src/assets/images/template_wireframe_1783490763717.jpg'
+    imageUrl: '/assets/images/template_wireframe_1783490763717.jpg'
   },
   { 
     id: 'engagement-calc', 
@@ -562,7 +562,7 @@ const FEATURES: Feature[] = [
     themeColor: 'text-emerald-400',
     glowColor: 'bg-emerald-400/20',
     persona: 'Growth Mathematician AI',
-    imageUrl: '/src/assets/images/empty_earned_1781319231364.jpg'
+    imageUrl: '/assets/images/empty_earned_1781319231364.jpg'
   },
 ];
 
@@ -2875,22 +2875,19 @@ const NeuralHub = ({
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       
-                      {/* Image header */}
-                      {f.imageUrl && (
-                        <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 border border-[var(--border-base)] shrink-0">
-                          <img 
-                            src={f.imageUrl} 
-                            alt={f.label} 
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className={cn(
-                            "absolute top-3 left-3 w-8 h-8 rounded-lg flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/60"
-                          )}>
-                            <f.icon size={16} />
-                          </div>
+                      {/* CSS-based card header */}
+                      <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3 border border-[var(--border-base)] shrink-0 bg-slate-950 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)]" />
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                        
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/40 z-10",
+                          f.themeColor
+                        )}>
+                          <f.icon size={20} />
                         </div>
-                      )}
+                      </div>
 
                       {f.id === 'shadowban-solutions' && (() => {
                         const riskInfo = getShadowbanRiskInfo(featureResults) || {
@@ -3213,14 +3210,11 @@ const Dashboard = ({
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="w-full max-w-lg h-36 rounded-2xl overflow-hidden border border-brand/15 shadow-2xl relative group mt-4 hidden sm:block"
+            className="w-full max-w-lg h-36 rounded-2xl overflow-hidden border border-brand/15 shadow-2xl relative group mt-4 hidden sm:block bg-slate-950"
           >
-            <img 
-              src="/src/assets/images/dashboard_hero_banner_1783488577319.jpg" 
-              alt="Chidon IQ Neural Dashboard Banner" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              referrerPolicy="no-referrer"
-            />
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.15),transparent)] animate-pulse" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:16px_16px]" />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex items-end p-4">
               <span className="text-[9px] font-mono font-bold text-yellow-400 bg-slate-950/80 px-2.5 py-0.5 rounded border border-yellow-500/25 uppercase tracking-wider">
                 Google AI Studio Node
@@ -3297,13 +3291,11 @@ const Dashboard = ({
               className="card-base hover:border-brand/40 group cursor-pointer overflow-hidden flex flex-col h-full"
             >
               {feat && (
-                <div className="relative w-full h-36 overflow-hidden border-b border-[var(--border-base)] shrink-0">
-                  <img 
-                    src={feat.imageUrl} 
-                    alt={p.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
-                  />
+                <div className="relative w-full h-24 overflow-hidden border-b border-[var(--border-base)] shrink-0 bg-slate-950 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)]" />
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                  
                   <div className="absolute top-3 left-3 w-8 h-8 rounded-lg bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
                     <p.icon size={16} />
                   </div>
@@ -3422,20 +3414,19 @@ const MatrixHub = ({
                   onClick={() => onNavigate('tools', f.id)}
                   className="p-4 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl text-left hover:border-brand/40 hover:shadow-lg transition-all group relative overflow-hidden flex flex-col h-full"
                 >
-                  {/* Feature Image Header */}
-                  {f.imageUrl && (
-                    <div className="relative w-full h-36 rounded-2xl overflow-hidden mb-4 border border-[var(--border-base)] shrink-0">
-                      <img 
-                        src={f.imageUrl} 
-                        alt={f.label} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute top-3 left-3 w-8 h-8 rounded-lg flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/60">
-                        <Icon size={16} />
-                      </div>
+                  {/* CSS-based card header */}
+                  <div className="relative w-full h-24 rounded-2xl overflow-hidden mb-4 border border-[var(--border-base)] shrink-0 bg-slate-950 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                    
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/40 z-10",
+                      f.themeColor
+                    )}>
+                      <Icon size={20} />
                     </div>
-                  )}
+                  </div>
 
                   {f.id === 'shadowban-solutions' && (() => {
                     const riskInfo = getShadowbanRiskInfo(featureResults) || {

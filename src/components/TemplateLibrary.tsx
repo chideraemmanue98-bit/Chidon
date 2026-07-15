@@ -794,15 +794,24 @@ ${paramsSummary}
                     animate={{ opacity: 1 }}
                     className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4"
                   >
-                    <div className="w-full max-w-sm h-28 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-lg">
-                      <img 
-                        src="/src/assets/images/template_wireframe_1783490763717.jpg" 
-                        alt="Template Framework Outline" 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        referrerPolicy="no-referrer"
-                      />
+                    <div className="w-full max-w-sm h-28 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-lg bg-slate-950 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-yellow-950/25" />
+                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:12px_12px]" />
+                      
+                      {/* Blueprint mock layout */}
+                      <div className="relative z-10 w-4/5 h-2/3 border border-yellow-500/20 rounded-lg p-2 flex flex-col justify-between bg-slate-900/60 backdrop-blur-sm">
+                        <div className="flex gap-1.5 items-center">
+                          <div className="w-2 h-2 rounded-full bg-yellow-500/40" />
+                          <div className="h-1.5 w-1/2 bg-yellow-500/10 rounded" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="h-1 w-full bg-slate-800 rounded" />
+                          <div className="h-1 w-3/4 bg-slate-800 rounded" />
+                        </div>
+                      </div>
+
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-2.5">
-                        <span className="text-[8px] font-mono font-bold text-yellow-400 bg-slate-950/80 px-2 py-0.5 rounded border border-yellow-500/25 uppercase tracking-wider">
+                        <span className="text-[8px] font-mono font-bold text-yellow-400 bg-slate-950/80 px-2 py-0.5 rounded border border-yellow-500/25 uppercase tracking-wider z-20">
                           Interactive Blueprint Outline
                         </span>
                       </div>

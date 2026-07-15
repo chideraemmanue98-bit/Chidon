@@ -581,109 +581,109 @@ const KeywordTrendGraph = ({ difficulty }: { difficulty: number }) => {
 // --- FEATURE DYNAMIC IMAGES MAPPING ---
 const FEATURE_IMAGES: Record<string, { src: string, alt: string, badge: string, subtitle: string }> = {
   'keyword-research': {
-    src: '/src/assets/images/keyword_intel_radar_1783488604768.jpg',
+    src: '/assets/images/keyword_intel_radar_1783488604768.jpg',
     alt: 'Keyword Intel Radar Core',
     badge: 'Radar Nodes Sync Active',
     subtitle: 'Volumetric Keyword Vector Map'
   },
   'vseo-keywords': {
-    src: '/src/assets/images/keyword_intel_radar_1783488604768.jpg',
+    src: '/assets/images/keyword_intel_radar_1783488604768.jpg',
     alt: 'Keyword Intel Radar Core',
     badge: 'Radar Nodes Sync Active',
     subtitle: 'Volumetric Keyword Vector Map'
   },
   'content-ideas': {
-    src: '/src/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg',
+    src: '/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg',
     alt: 'Creative Analytics Node Map',
     badge: 'Creative Engine Link Live',
     subtitle: 'High-Velocity Format Synthesizer'
   },
   'scripts': {
-    src: '/src/assets/images/template_wireframe_1783490763717.jpg',
+    src: '/assets/images/template_wireframe_1783490763717.jpg',
     alt: 'Script Outline Matrix Block',
     badge: 'Script Matrix Synthesizer',
     subtitle: 'Pattern-Interrupted Script Architecture'
   },
   'ai-script-outline': {
-    src: '/src/assets/images/template_wireframe_1783490763717.jpg',
+    src: '/assets/images/template_wireframe_1783490763717.jpg',
     alt: 'Script Outline Matrix Block',
     badge: 'Script Matrix Synthesizer',
     subtitle: 'Pattern-Interrupted Script Architecture'
   },
   'bio': {
-    src: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
+    src: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
     alt: 'Audience Psychographics Vector Map',
     badge: 'Bio Converter Protocol',
     subtitle: 'Identity Matrix Positioning Core'
   },
   'personas': {
-    src: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
+    src: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
     alt: 'Audience Psychographics Vector Map',
     badge: 'Psychographic Ingress Active',
     subtitle: 'Fictional Persona Matrix Constructor'
   },
   'thumbnails': {
-    src: '/src/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
+    src: '/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
     alt: 'High-Contrast Thumbnail Layout Preview',
     badge: 'Visual Psychology Core',
     subtitle: 'Click-Friction Concept Canvas'
   },
   'vseo-scorecard': {
-    src: '/src/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
+    src: '/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
     alt: 'High-Contrast Thumbnail Layout Preview',
     badge: 'Visual Psychology Core',
     subtitle: 'Click-Friction Concept Canvas'
   },
   'competitor-analysis': {
-    src: '/src/assets/images/seo_analytics_vector_1783490751280.jpg',
+    src: '/assets/images/seo_analytics_vector_1783490751280.jpg',
     alt: 'Global Node Market Matrix Analytics',
     badge: 'Market Lab Monitor',
     subtitle: 'Strategic Pillar Positioning Map'
   },
   'hashtags': {
-    src: '/src/assets/images/chidon_iq_dashboard_1783387455047.jpg',
+    src: '/assets/images/chidon_iq_dashboard_1783387455047.jpg',
     alt: 'Global Hashtag Rank Tiers Scanner',
     badge: 'Linguistic Engine Ingress',
     subtitle: 'Reach Tiers Compression Matrix'
   },
   'vseo-tags': {
-    src: '/src/assets/images/chidon_iq_dashboard_1783387455047.jpg',
+    src: '/assets/images/chidon_iq_dashboard_1783387455047.jpg',
     alt: 'Global Hashtag Rank Tiers Scanner',
     badge: 'Linguistic Engine Ingress',
     subtitle: 'Reach Tiers Compression Matrix'
   },
   'repurposing': {
-    src: '/src/assets/images/chidon_iq_engine_1783387464624.jpg',
+    src: '/assets/images/chidon_iq_engine_1783387464624.jpg',
     alt: 'Multi-Platform Repurpose Signal Matrix',
     badge: 'Signal Splitter Synced',
     subtitle: 'Multi-Channel Narrative Transformer'
   },
   'posting-schedule': {
-    src: '/src/assets/images/empty_scheduler_1781319203016.jpg',
+    src: '/assets/images/empty_scheduler_1781319203016.jpg',
     alt: 'Temporal Optimization Dispatch Calendar',
     badge: 'Temporal Grid Synthesizer',
     subtitle: 'Optimized Content Dispersion Matrix'
   },
   'vseo-best-time': {
-    src: '/src/assets/images/empty_scheduler_1781319203016.jpg',
+    src: '/assets/images/empty_scheduler_1781319203016.jpg',
     alt: 'Temporal Optimization Dispatch Calendar',
     badge: 'Temporal Grid Synthesizer',
     subtitle: 'Optimized Content Dispersion Matrix'
   },
   'engagement-calc': {
-    src: '/src/assets/images/chidon_iq_strategy_1783387475441.jpg',
+    src: '/assets/images/chidon_iq_strategy_1783387475441.jpg',
     alt: 'Sovereign Creator Growth Calculator Map',
     badge: 'Growth Calculus Model',
     subtitle: '30-Day Conversion Acceleration Curve'
   },
   'headlines': {
-    src: '/src/assets/images/dashboard_hero_banner_1783488577319.jpg',
+    src: '/assets/images/dashboard_hero_banner_1783488577319.jpg',
     alt: 'Catchy Headlines Click Matrix',
     badge: 'Attention Core Ingress',
     subtitle: 'Friction-Based Click Magnet Hook Formulas'
   },
   'shadowban-solutions': {
-    src: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
+    src: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
     alt: 'Anti-Shadowban Diagnostics Shield',
     badge: 'Shield Diagnostics Active',
     subtitle: 'Compliance Scan Visualizer Node'
@@ -917,22 +917,18 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
               </div>
             </div>
 
-            {/* Feature Banner Image */}
-            {feature.imageUrl && (
-              <div className="w-full h-32 rounded-2xl overflow-hidden border border-[var(--border-base)] relative group shadow-inner shrink-0">
-                <img 
-                  src={feature.imageUrl} 
-                  alt={getCleanFeatureLabel(feature.label)} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex items-end p-3">
-                  <span className="text-[8px] font-mono font-bold text-white uppercase tracking-widest bg-black/70 px-2 py-0.5 rounded border border-white/10">
-                    {feature.persona}
-                  </span>
-                </div>
+            {/* Feature Banner */}
+            <div className="w-full h-24 rounded-2xl overflow-hidden border border-[var(--border-base)] relative group shadow-inner shrink-0 bg-slate-950 flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)] animate-pulse" />
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex items-end p-3">
+                <span className="text-[8px] font-mono font-bold text-white uppercase tracking-widest bg-black/70 px-2 py-0.5 rounded border border-white/10">
+                  {feature.persona}
+                </span>
               </div>
-            )}
+            </div>
 
             {/* Field 1 */}
             <div className="space-y-2 text-left">
@@ -1056,13 +1052,18 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
           </div>
 
           {FEATURE_IMAGES[feature.id] && (
-            <div className="rounded-3xl overflow-hidden border border-[var(--border-base)] shadow-sm bg-slate-900 aspect-[4/3] relative group">
-              <img 
-                src={FEATURE_IMAGES[feature.id].src} 
-                alt={FEATURE_IMAGES[feature.id].alt} 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
+            <div className="rounded-3xl overflow-hidden border border-[var(--border-base)] shadow-sm bg-slate-950 aspect-[4/3] relative group flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.1),transparent)] animate-pulse" />
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              
+              <div className={cn(
+                "relative z-10 p-5 rounded-full bg-slate-900/60 border border-white/5 group-hover:scale-110 transition-transform duration-500 shadow-inner",
+                feature.themeColor
+              )}>
+                <feature.icon size={44} />
+              </div>
+
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-5 text-left">
                 <div className="space-y-1">
                   <span className={cn(

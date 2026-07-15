@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
-  Plus, Trash, Save, Info, Zap, Upload, Eye, FileText, CheckCircle
+  Plus, Trash, Save, Info, Zap, Upload, Eye, FileText, CheckCircle, Image
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -301,12 +301,13 @@ export const CreateGigView: React.FC<CreateGigViewProps> = ({
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {images.map((img, i) => (
-                <div key={i} className="aspect-video bg-slate-950 rounded-2xl overflow-hidden relative border border-slate-800 group">
-                  <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
+                <div key={i} className="aspect-video bg-slate-950 rounded-2xl overflow-hidden relative border border-slate-800 group flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+                  <Image className="text-brand/40 relative z-10" size={24} />
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
-                    className="absolute right-2 top-2 p-1.5 bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute right-2 top-2 p-1.5 bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity z-20"
                   >
                     <Trash size={12} />
                   </button>

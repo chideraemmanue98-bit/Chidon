@@ -36,7 +36,6 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
 import { ConfirmationDialog } from './ConfirmationDialog';
-import emptyVaultImg from '../assets/images/empty_vault_1781319190599.jpg';
 
 interface SavedDraft {
   id: string;
@@ -562,13 +561,10 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
             </div>
           ) : filteredDrafts.length === 0 ? (
             <div className="text-center py-12 px-6 bg-[var(--card-bg)] border border-[var(--border-base)] rounded-3xl space-y-5 flex flex-col items-center justify-center overflow-hidden">
-              <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-[var(--border-base)]/50 bg-slate-900/40">
-                <img 
-                  src={emptyVaultImg} 
-                  alt="Empty Vault State" 
-                  className="w-full h-full object-cover select-none pointer-events-none" 
-                  referrerPolicy="no-referrer"
-                />
+              <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-[var(--border-base)]/50 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 flex items-center justify-center group">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.1),transparent)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                <Lock size={48} className="text-indigo-400 relative z-10 transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
               </div>
               <div className="max-w-md space-y-2">

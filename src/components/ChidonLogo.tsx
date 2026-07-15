@@ -52,16 +52,14 @@ export const ChidonLogo: React.FC<ChidonLogoProps> = ({
 
   return (
     <div className={cn("flex items-center select-none font-sans", gapClass, className)}>
-      {/* Scalable Glowing Brand Icon from generated asset */}
-      <div className={cn("relative shrink-0 flex items-center justify-center overflow-hidden rounded-[24%] border border-slate-200/10 dark:border-white/10 shadow-lg bg-[#23222d]", iconSizeClass)}>
-        <img
-          src="/src/assets/images/chidon_iq_logo_1783910164800.jpg"
-          alt="Chidon IQ Logo"
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+      {/* Stagnant Cropped Brand Icon from image */}
+      <div className={cn("relative shrink-0 flex items-center justify-center overflow-hidden rounded-[24%] border border-slate-200/10 dark:border-white/10 shadow bg-slate-950", iconSizeClass)}>
+        <img 
+          src="/assets/images/chidon_iq_logo_1783910164800.jpg" 
+          alt="Chidon IQ Logo" 
+          className="w-full h-full object-cover scale-[1.5] origin-[50%_35%] select-none pointer-events-none"
           referrerPolicy="no-referrer"
         />
-        {/* Ambient background glow orb */}
-        <div className="absolute inset-0 bg-blue-500/10 rounded-full filter blur-xl -z-10 animate-pulse" />
       </div>
 
       {/* Brand Typography */}

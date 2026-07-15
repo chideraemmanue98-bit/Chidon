@@ -29,6 +29,9 @@ export const ChidonAuth: React.FC<ChidonAuthProps> = ({ onAuthSuccess, onClose, 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isNameFocused, setIsNameFocused] = useState(false);
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   // Is the current session a Guest? (either null, anonymous, or offline guest ID)
   const isGuestSession = !currentUser || currentUser.isAnonymous || currentUser.uid === 'offline_sandbox_user_id';
@@ -245,13 +248,23 @@ export const ChidonAuth: React.FC<ChidonAuthProps> = ({ onAuthSuccess, onClose, 
             >
               <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 block">Full Name</label>
               <div className="relative">
-                <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input 
+                <User size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${isNameFocused ? 'text-cyan-400' : 'text-slate-500'}`} />
+                <motion.input 
                   type="text" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  onFocus={() => setIsNameFocused(true)}
+                  onBlur={() => setIsNameFocused(false)}
+                  animate={{
+                    borderColor: isNameFocused ? "rgb(6, 182, 212)" : "rgb(30, 41, 59)",
+                    boxShadow: isNameFocused 
+                      ? "0 0 16px rgba(6, 182, 212, 0.25)" 
+                      : "0 0 0px rgba(6, 182, 212, 0)",
+                    scale: isNameFocused ? 1.015 : 1,
+                  }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                   placeholder="Chidon IQ Operator"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 transition-all font-sans font-medium"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border rounded-xl text-xs text-white focus:outline-none font-sans font-medium"
                   required
                 />
               </div>
@@ -262,13 +275,23 @@ export const ChidonAuth: React.FC<ChidonAuthProps> = ({ onAuthSuccess, onClose, 
         <div className="space-y-1">
           <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 block">Email Address</label>
           <div className="relative">
-            <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input 
+            <Mail size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${isEmailFocused ? 'text-cyan-400' : 'text-slate-500'}`} />
+            <motion.input 
               type="email" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setIsEmailFocused(true)}
+              onBlur={() => setIsEmailFocused(false)}
+              animate={{
+                borderColor: isEmailFocused ? "rgb(6, 182, 212)" : "rgb(30, 41, 59)",
+                boxShadow: isEmailFocused 
+                  ? "0 0 16px rgba(6, 182, 212, 0.25)" 
+                  : "0 0 0px rgba(6, 182, 212, 0)",
+                scale: isEmailFocused ? 1.015 : 1,
+              }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               placeholder="operator@chidoniq.com"
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 transition-all font-sans font-medium"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border rounded-xl text-xs text-white focus:outline-none font-sans font-medium"
               required
             />
           </div>
@@ -277,13 +300,23 @@ export const ChidonAuth: React.FC<ChidonAuthProps> = ({ onAuthSuccess, onClose, 
         <div className="space-y-1">
           <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 block">Password</label>
           <div className="relative">
-            <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input 
+            <Lock size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${isPasswordFocused ? 'text-cyan-400' : 'text-slate-500'}`} />
+            <motion.input 
               type={showPassword ? "text" : "password"} 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setIsPasswordFocused(true)}
+              onBlur={() => setIsPasswordFocused(false)}
+              animate={{
+                borderColor: isPasswordFocused ? "rgb(6, 182, 212)" : "rgb(30, 41, 59)",
+                boxShadow: isPasswordFocused 
+                  ? "0 0 16px rgba(6, 182, 212, 0.25)" 
+                  : "0 0 0px rgba(6, 182, 212, 0)",
+                scale: isPasswordFocused ? 1.015 : 1,
+              }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               placeholder="••••••••••••"
-              className="w-full pl-10 pr-10 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 transition-all font-mono"
+              className="w-full pl-10 pr-10 py-2.5 bg-slate-900 border rounded-xl text-xs text-white focus:outline-none font-mono"
               required={!isSignUp}
             />
             <button

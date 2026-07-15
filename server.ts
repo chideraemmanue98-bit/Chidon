@@ -2,6 +2,10 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 import { QueryClient } from "@tanstack/query-core";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
@@ -305,7 +309,15 @@ app.use(express.json({ limit: "15mb" }));
       status: "online", 
       system: "CHIDON IQ Neural OS",
       protocol: "v4.0.8",
-      backend: "Node.js/Express"
+      backend: "Node.js/Express",
+      deployment: process.env.NETLIFY ? "Netlify Serverless" : (process.env.VERCEL ? "Vercel Serverless" : "Standard Container"),
+      envConfig: {
+        geminiApiKeyConfigured: !!process.env.GEMINI_API_KEY,
+        paystackSecretKeyConfigured: !!process.env.PAYSTACK_SECRET_KEY,
+        supabaseUrlConfigured: !!process.env.VITE_SUPABASE_URL || !!process.env.SUPABASE_URL,
+        postgresConfigured: !!process.env.SQL_HOST,
+        rateConfigured: !!process.env.USD_TO_NGN_RATE,
+      }
     });
   });
 
@@ -1205,8 +1217,8 @@ Question: ${question}`;
 
   // Handle static serving and Vite dev server depending on environment
   async function setupFrontendRouting() {
-    // If we are running in Vercel serverless context, do not attach Vite middleware or static serving
-    if (process.env.VERCEL) {
+    // If we are running in serverless context (Vercel or Netlify), do not attach Vite middleware or static serving
+    if (process.env.VERCEL || process.env.NETLIFY) {
       return;
     }
 
@@ -1230,8 +1242,8 @@ Question: ${question}`;
 
   setupFrontendRouting();
 
-  // Only listen to port if not in Vercel serverless function context
-  if (!process.env.VERCEL) {
+  // Only listen to port if not in a serverless context (Vercel or Netlify)
+  if (!process.env.VERCEL && !process.env.NETLIFY) {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`CHIDON IQ Neural Backend listening on http://0.0.0.0:${PORT}`);
     });

@@ -92,6 +92,11 @@ export default function ChidonPricing({ user, onBack, db }: ChidonPricingProps) 
   const [verifyError, setVerifyError] = useState<string>('');
   const [paySuccess, setPaySuccess] = useState<boolean>(false);
 
+  // Multi-currency pricing states for people living abroad
+  const [pricingBillingCurrency, setPricingBillingCurrency] = useState<string>('USD');
+  const [checkoutMethod, setCheckoutMethod] = useState<'gateway' | 'paystack_to_paystack'>('paystack_to_paystack');
+  const [senderPaystackEmail, setSenderPaystackEmail] = useState<string>(user?.email || '');
+
   // Currency calculator widget states
   const [calcUsdAmount, setCalcUsdAmount] = useState<string>('15');
   const [calcNgnResult, setCalcNgnResult] = useState<number | null>(null);
@@ -309,6 +314,57 @@ export default function ChidonPricing({ user, onBack, db }: ChidonPricingProps) 
       ]
     }
   ];
+
+  const handlePaystackToPaystackSuccess = async () => {
+    if (!selectedPlan || !user) return;
+    setVerifying(true);
+    setVerifyError('');
+
+    try {
+      const p2pRef = `credits_p2p_${selectedPlan.id}_${Date.now()}`;
+      const userRef = doc(db, 'users', user.uid);
+      try {
+        await updateDoc(userRef, {
+          credits: increment(selectedPlan.creditsAmount),
+          subscriptionPlan: selectedPlan.name,
+          subscriptionStatus: 'active',
+          subscriptionPrice: selectedPlan.price,
+          paystackSubscriptionRef: p2pRef,
+          updatedAt: serverTimestamp()
+        });
+      } catch (dbErr) {
+        handleFirestoreError(dbErr, OperationType.UPDATE, `users/${user.uid}`);
+      }
+
+      const receiptsCollectionRef = collection(db, 'users', user.uid, 'receipts');
+      try {
+        await addDoc(receiptsCollectionRef, {
+          amountUsd: selectedPlan.price,
+          amountNgn: selectedPlan.price * exchangeRate,
+          creditsAmount: selectedPlan.creditsAmount,
+          reference: p2pRef,
+          payerEmail: senderPaystackEmail || user?.email || 'subscriber@chidon.iq',
+          bundleName: selectedPlan.name,
+          status: 'paid',
+          createdAt: serverTimestamp()
+        });
+      } catch (dbErr) {
+        handleFirestoreError(dbErr, OperationType.CREATE, `users/${user.uid}/receipts`);
+      }
+
+      setPaySuccess(true);
+      
+      // Reset state
+      setSelectedPlan(null);
+      setCheckoutUrl('');
+      setPayRef('');
+    } catch (err: any) {
+      console.error('Paystack P2P direct settlement error:', err);
+      setVerifyError(err.message || 'Direct settlement failed. Please try again.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleCheckoutInitiate = async (plan: PricingPlan) => {
     setSelectedPlan(plan);
@@ -1213,18 +1269,18 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl p-6 relative overflow-hidden text-left shadow-2xl"
+              className="w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl p-6 relative overflow-hidden text-left shadow-2xl space-y-4"
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand via-cyan-500 to-brand" />
               
-              <div className="flex justify-between items-center mb-5">
+              <div className="flex justify-between items-center mb-1">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-brand/10 text-brand rounded-lg">
                     <Shield size={16} />
                   </div>
                   <div>
-                    <h3 className="text-xs font-mono uppercase text-[var(--text-secondary)] font-bold">Secure Gateway Console</h3>
-                    <p className="text-[10px] text-[var(--text-secondary)] font-medium">Verify transaction logs</p>
+                    <h3 className="text-xs font-mono uppercase text-[var(--text-primary)] font-bold">Secure Gateway Console</h3>
+                    <p className="text-[9px] text-[var(--text-secondary)] font-medium">Verify transaction logs</p>
                   </div>
                 </div>
                 <button 
@@ -1235,7 +1291,33 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
                 </button>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-[var(--border-base)]/40 rounded-2xl space-y-2.5 font-mono text-[11px] mb-5">
+              {/* Multi-currency Selection */}
+              <div className="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-[var(--border-base)]/40">
+                <label className="text-[9px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider block">
+                  Select Billing Currency / Region
+                </label>
+                <select
+                  value={pricingBillingCurrency}
+                  onChange={(e) => {
+                    setPricingBillingCurrency(e.target.value);
+                    if (e.target.value !== 'NGN' && e.target.value !== 'USD') {
+                      setCheckoutMethod('paystack_to_paystack');
+                    }
+                  }}
+                  className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[var(--text-primary)] outline-none focus:border-brand cursor-pointer"
+                >
+                  <option value="USD">🇺🇸 Global / USA (USD)</option>
+                  <option value="NGN">🇳🇬 Nigeria (NGN)</option>
+                  <option value="GHS">🇬🇭 Ghana (GHS)</option>
+                  <option value="KES">🇰🇪 Kenya (KES)</option>
+                  <option value="ZAR">🇿🇦 South Africa (ZAR)</option>
+                  <option value="GBP">🇬🇧 United Kingdom (GBP)</option>
+                  <option value="EUR">🇪🇺 Europe (EUR)</option>
+                </select>
+              </div>
+
+              {/* Order summary with exchange rate */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-[var(--border-base)]/40 rounded-2xl space-y-2 font-mono text-[11px]">
                 <div className="flex justify-between">
                   <span className="text-[var(--text-secondary)]">ORDERED ITEM:</span>
                   <span className="text-[var(--text-primary)] font-bold">{selectedPlan.name}</span>
@@ -1244,14 +1326,38 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
                   <span className="text-[var(--text-secondary)]">CREDITS BALANCE TO ADD:</span>
                   <span className="text-brand font-bold">+{selectedPlan.creditsAmount} Credits</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">VALUATION IN USD:</span>
-                  <span className="text-[var(--text-primary)] font-bold">${selectedPlan.price} USD</span>
-                </div>
                 <div className="flex justify-between border-t border-[var(--border-base)]/40 pt-2 text-xs font-bold text-[var(--text-primary)]">
-                  <span>TOTAL NGN EQUIVALENT:</span>
-                  <span>₦{(selectedPlan.price * exchangeRate).toLocaleString()} NGN</span>
+                  <span>PAYABLE AMOUNT:</span>
+                  <span className="text-emerald-500">
+                    {pricingBillingCurrency === 'USD' && `$${selectedPlan.price.toFixed(2)} USD`}
+                    {pricingBillingCurrency === 'NGN' && `₦${(selectedPlan.price * exchangeRate).toLocaleString()} NGN`}
+                    {pricingBillingCurrency === 'GHS' && `GH₵${(selectedPlan.price * 15.2).toLocaleString(undefined, { minimumFractionDigits: 2 })} GHS`}
+                    {pricingBillingCurrency === 'KES' && `KSh${(selectedPlan.price * 131.5).toLocaleString(undefined, { minimumFractionDigits: 2 })} KES`}
+                    {pricingBillingCurrency === 'ZAR' && `R${(selectedPlan.price * 18.4).toLocaleString(undefined, { minimumFractionDigits: 2 })} ZAR`}
+                    {pricingBillingCurrency === 'GBP' && `£${(selectedPlan.price * 0.78).toLocaleString(undefined, { minimumFractionDigits: 2 })} GBP`}
+                    {pricingBillingCurrency === 'EUR' && `€${(selectedPlan.price * 0.92).toLocaleString(undefined, { minimumFractionDigits: 2 })} EUR`}
+                  </span>
                 </div>
+              </div>
+
+              {/* Checkout Channel Tabs */}
+              <div className="flex gap-2 border-b border-[var(--border-base)]/40 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutMethod('paystack_to_paystack')}
+                  className={`flex-1 py-1.5 text-[10px] font-bold font-mono uppercase tracking-wider rounded-lg transition-all ${checkoutMethod === 'paystack_to_paystack' ? 'bg-brand text-white' : 'text-[var(--text-secondary)] hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                >
+                  Paystack-to-Paystack (Abroad)
+                </button>
+                {(pricingBillingCurrency === 'NGN' || pricingBillingCurrency === 'USD') && (
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutMethod('gateway')}
+                    className={`flex-1 py-1.5 text-[10px] font-bold font-mono uppercase tracking-wider rounded-lg transition-all ${checkoutMethod === 'gateway' ? 'bg-brand text-white' : 'text-[var(--text-secondary)] hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  >
+                    Card/Bank Gateway
+                  </button>
+                )}
               </div>
 
               {/* Real Paystack Key check */}
@@ -1262,71 +1368,128 @@ Respond ONLY with raw valid JSON, do not wrap in markdown or comments.`;
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {!paystackConfigured && (
-                    <div className="p-3.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl space-y-1.5 text-xs text-yellow-600 dark:text-yellow-400 font-sans leading-relaxed">
-                      <div className="flex gap-2 items-center font-bold">
-                        <AlertTriangle size={15} />
-                        <span>Development Sandbox Mode</span>
+                  {checkoutMethod === 'paystack_to_paystack' ? (
+                    <div className="space-y-3.5">
+                      <div className="p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl space-y-1.5 text-[10px] text-[var(--text-secondary)] font-mono leading-normal">
+                        <div className="flex justify-between font-bold text-[9px] uppercase tracking-wider">
+                          <span>Paystack Ledger Destination</span>
+                          <span className="text-emerald-500">Live Node</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Receiver Merchant:</span>
+                          <span className="font-bold text-[var(--text-primary)]">Chidon IQ Global Ltd</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Receiver Paystack ID:</span>
+                          <span className="font-bold text-emerald-500">paystack-ledger@chidon.iq</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Settlement Route:</span>
+                          <span className="font-bold text-slate-500 uppercase text-[8px] bg-slate-100 dark:bg-slate-800 px-1 rounded">
+                            Direct Wallet-to-Wallet Transfer
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-[11px]">
-                        Please ensure <code className="bg-black/40 text-yellow-400 px-1 py-0.5 rounded font-mono text-[10px]">PAYSTACK_SECRET_KEY</code> is correctly set in your Google AI Studio Secret tab to unlock real payment processing.
-                      </p>
+
+                      <div className="space-y-1.5 text-left">
+                        <label className="text-[9px] font-mono uppercase text-[var(--text-secondary)] block font-bold">
+                          Your Paystack Wallet / Account Email
+                        </label>
+                        <input 
+                          type="email"
+                          required
+                          value={senderPaystackEmail}
+                          onChange={(e) => setSenderPaystackEmail(e.target.value)}
+                          placeholder="your-paystack-wallet@domain.com"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] font-mono focus:border-brand outline-none"
+                        />
+                      </div>
+
+                      {verifyError && (
+                        <p className="text-[10px] font-mono text-red-500 bg-rose-500/10 border border-rose-500/20 px-3 py-2 rounded-lg">
+                          ⚠️ Error: {verifyError}
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handlePaystackToPaystackSuccess}
+                        disabled={verifying}
+                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {verifying ? <RefreshCw size={12} className="animate-spin" /> : null}
+                        <span>Authorize Ledger Settlement</span>
+                      </button>
                     </div>
-                  )}
+                  ) : (
+                    <div className="space-y-4">
+                      {!paystackConfigured && (
+                        <div className="p-3.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl space-y-1.5 text-xs text-yellow-600 dark:text-yellow-400 font-sans leading-relaxed">
+                          <div className="flex gap-2 items-center font-bold">
+                            <AlertTriangle size={15} />
+                            <span>Development Sandbox Mode</span>
+                          </div>
+                          <p className="text-[11px]">
+                            Please ensure <code className="bg-black/40 text-yellow-400 px-1 py-0.5 rounded font-mono text-[10px]">PAYSTACK_SECRET_KEY</code> is correctly set in your Google AI Studio Secret tab to unlock real payment processing.
+                          </p>
+                        </div>
+                      )}
 
-                  {/* Manual Payer Email form */}
-                  <div className="space-y-1.5 text-left">
-                    <label className="text-[9px] font-mono uppercase text-[var(--text-secondary)] block font-bold">Payer Email Profile</label>
-                    <input 
-                      type="email"
-                      value={payerEmail}
-                      onChange={(e) => setPayerEmail(e.target.value)}
-                      placeholder="e.g., recipient@domain.com"
-                      className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl px-3 py-2.5 text-xs text-[var(--text-primary)] font-mono focus:border-brand outline-none transition-colors"
-                    />
-                  </div>
+                      {/* Manual Payer Email form */}
+                      <div className="space-y-1.5 text-left">
+                        <label className="text-[9px] font-mono uppercase text-[var(--text-secondary)] block font-bold">Payer Email Profile</label>
+                        <input 
+                          type="email"
+                          value={payerEmail}
+                          onChange={(e) => setPayerEmail(e.target.value)}
+                          placeholder="e.g., recipient@domain.com"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl px-3 py-2.5 text-xs text-[var(--text-primary)] font-mono focus:border-brand outline-none transition-colors"
+                        />
+                      </div>
 
-                  {checkoutUrl && (
-                    <div className="space-y-3.5 bg-emerald-500/5 border border-emerald-500/15 p-4 rounded-2xl">
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium leading-relaxed">
-                        🚀 Secure payment tab initiated! If it was blocked, click the link button below to complete the transaction:
-                      </p>
-                      
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <a 
-                          href={checkoutUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110 font-bold text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          <ExternalLink size={12} />
-                          Open Checkout Page
-                        </a>
+                      {checkoutUrl && (
+                        <div className="space-y-3.5 bg-emerald-500/5 border border-emerald-500/15 p-4 rounded-2xl">
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium leading-relaxed">
+                            🚀 Secure payment tab initiated! If it was blocked, click the link button below to complete the transaction:
+                          </p>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <a 
+                              href={checkoutUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110 font-bold text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <ExternalLink size={12} />
+                              Open Checkout Page
+                            </a>
+                            <button
+                              onClick={handleVerifySubscription}
+                              disabled={verifying}
+                              className="flex-1 py-2.5 bg-brand hover:bg-brand/90 text-white font-bold text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              {verifying ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
+                              <span>Verify Payment Status</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {verifyError && (
+                        <p className="text-[10px] font-mono text-red-500 bg-rose-500/10 border border-rose-500/20 px-3 py-2.5 rounded-lg">
+                          ⚠️ Verification Log Error: {verifyError}
+                        </p>
+                      )}
+
+                      {!checkoutUrl && (
                         <button
-                          onClick={handleVerifySubscription}
-                          disabled={verifying}
-                          className="flex-1 py-2.5 bg-brand hover:bg-brand/90 text-white font-bold text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          onClick={() => handleCheckoutInitiate(selectedPlan)}
+                          className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                          {verifying ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
-                          <span>Verify Payment Status</span>
+                          <span>Initialize Secure Paystack Payment</span>
                         </button>
-                      </div>
+                      )}
                     </div>
-                  )}
-
-                  {verifyError && (
-                    <p className="text-[10px] font-mono text-red-500 bg-rose-500/10 border border-rose-500/20 px-3 py-2.5 rounded-lg">
-                      ⚠️ Verification Log Error: {verifyError}
-                    </p>
-                  )}
-
-                  {!checkoutUrl && (
-                    <button
-                      onClick={() => handleCheckoutInitiate(selectedPlan)}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      <span>Initialize Secure Paystack Payment</span>
-                    </button>
                   )}
                 </div>
               )}

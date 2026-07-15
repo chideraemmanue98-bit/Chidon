@@ -2,13 +2,8 @@ import React, { useState } from 'react';
 import { ChidonLogo } from './ChidonLogo';
 import { 
   Zap, ArrowRight, CheckCircle, CircleDot, 
-  Terminal, Activity
+  Terminal, Activity, Network, Cpu, Layers, Globe, Sparkles, TrendingUp
 } from 'lucide-react';
-
-// Import high-fidelity generated images
-import dashboardImg from '../assets/images/chidon_iq_dashboard_v4_1783388097105.jpg';
-import engineImg from '../assets/images/chidon_iq_engine_v4_1783388111932.jpg';
-import strategyImg from '../assets/images/chidon_iq_strategy_v4_1783388126590.jpg';
 
 interface WelcomePageProps {
   onEnter: () => void;
@@ -30,7 +25,6 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
       tag: "ALGORITHMIC DISRUPTION",
       title: "Neural Feed Ingress & Trend Scanning",
       desc: "Chidon IQ scans organic noise, bypasses recommendation loops, and filters content signals before saturation occurs. It acts as an active intelligence buffer for real-time social metrics.",
-      image: dashboardImg,
       stats: [
         { label: "Data Nodes Swept", value: "24,800/min" },
         { label: "Signal Precision", value: "98.4%" },
@@ -49,7 +43,6 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
       tag: "DYNAMIC GENERATION",
       title: "Omni-Channel Content Refiner",
       desc: "Chidon IQ turns a single seed concept into optimized, hyper-converting content streams tailored specifically for YouTube SEO, TikTok hooks, and LinkedIn growth loops simultaneously.",
-      image: engineImg,
       stats: [
         { label: "Hook Optimization", value: "x3.4 Ratio" },
         { label: "Text Compression", value: "Dynamic" },
@@ -68,7 +61,6 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
       tag: "EXPONENTIAL REACH",
       title: "Strategic Growth Acceleration",
       desc: "Move past standard recommendation algorithms. Chidon IQ's strategy matrices provide calculated psychological hooks and growth-hacking patterns to scale organic viewer retention past the 3-second attention gate.",
-      image: strategyImg,
       stats: [
         { label: "Reach Multiplier", value: "240% Boost" },
         { label: "Retention Index", value: "92.8%" },
@@ -187,15 +179,122 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
             </div>
           </div>
 
-          {/* Right Block: Image Presentation */}
+          {/* Right Block: Interactive CSS Mock Interfaces */}
           <div className="lg:col-span-7 w-full h-full flex items-center justify-center relative z-10">
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.6)]">
-              <img 
-                src={currentTab.image} 
-                alt={currentTab.title} 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.6)] bg-slate-950 flex flex-col p-4 font-mono text-[10px] text-slate-300">
+              {/* Grid Background */}
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+              
+              {activeTab === 'dashboard' && (
+                <div className="flex-1 flex flex-col justify-between h-full relative">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-cyan-500/5 rounded-full filter blur-2xl animate-pulse" />
+                  
+                  {/* Mock Trend Chart */}
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-cyan-400 font-bold uppercase tracking-wider">NEURAL FEED INGRESS STATE</span>
+                    <span className="text-[9px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded">SWEEPING FORWARD_NODES...</span>
+                  </div>
+                  
+                  <div className="flex-1 flex items-end gap-1.5 py-4 border-b border-white/5 relative h-32">
+                    {/* Animated chart bars */}
+                    {[40, 65, 45, 80, 55, 95, 70, 85, 60, 75, 50, 90].map((h, i) => (
+                      <div key={i} className="flex-1 bg-slate-900 rounded-t overflow-hidden relative" style={{ height: '100%' }}>
+                        <div 
+                          className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-cyan-600 via-cyan-400 to-cyan-300 rounded-t transition-all duration-1000 ease-in-out" 
+                          style={{ height: `${h}%`, animation: `pulse 2s infinite ${i * 150}ms` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 text-[9px] text-slate-400">
+                    <div className="flex justify-between border-r border-white/5 pr-2">
+                      <span>CTR SIGNATURES</span>
+                      <span className="text-emerald-400 font-bold">VERIFIED</span>
+                    </div>
+                    <div className="flex justify-between pl-1">
+                      <span>BYPASS SIGNALS</span>
+                      <span className="text-cyan-400 font-bold">STABILIZED</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'engine' && (
+                <div className="flex-1 flex flex-col justify-between h-full relative">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-purple-500/5 rounded-full filter blur-2xl animate-pulse" />
+
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-purple-400 font-bold uppercase tracking-wider">OMNI-CHANNEL CONTENT REFINER</span>
+                    <span className="text-[9px] text-emerald-400 font-bold">LIVE_COMPRESSION</span>
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-2 py-3 justify-center text-left text-[9px]">
+                    <div className="p-2 bg-slate-900/60 border border-white/5 rounded-lg space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-purple-300 font-bold uppercase">[YOUTUBE SEO]</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      </div>
+                      <p className="text-slate-400 truncate font-mono">Title: I analyzed 400 creators before discovering this 12-word bio layout modification...</p>
+                    </div>
+
+                    <div className="p-2 bg-slate-900/60 border border-white/5 rounded-lg space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-pink-300 font-bold uppercase">[TIKTOK HOOK]</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      </div>
+                      <p className="text-slate-400 truncate font-mono">Hook: "They burn $10,000 trying to scale, but bypass recommendation loops with this..."</p>
+                    </div>
+
+                    <div className="p-2 bg-slate-900/60 border border-white/5 rounded-lg space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-blue-300 font-bold uppercase">[LINKEDIN PROTOCOL]</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      </div>
+                      <p className="text-slate-400 truncate font-mono">Body: "The follow graph is dead. Interest recommendation is the new neuromorphic core..."</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'strategy' && (
+                <div className="flex-1 flex flex-col justify-between h-full relative text-left">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/5 rounded-full filter blur-2xl animate-pulse" />
+
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-emerald-400 font-bold uppercase tracking-wider">STRATEGIC ACCELERATION PIPELINE</span>
+                    <span className="text-[9px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded">FLOWCHECK: ACTIVE</span>
+                  </div>
+
+                  <div className="flex-1 flex items-center justify-between gap-2 px-4 py-6 relative z-10">
+                    <div className="flex flex-col items-center gap-1.5 bg-slate-900/80 border border-white/10 p-2 rounded-xl w-[28%] text-center shadow-lg">
+                      <span className="text-[8px] font-bold text-emerald-400 uppercase">Attention Gate</span>
+                      <span className="text-[12px] font-bold text-white font-mono">0.0s - 3.0s</span>
+                      <span className="text-[7px] text-slate-400 uppercase font-bold">Negative Hook</span>
+                    </div>
+
+                    <div className="h-0.5 flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-40 relative">
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-emerald-400 rounded-full animate-ping" />
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1.5 bg-slate-900/80 border border-white/10 p-2 rounded-xl w-[28%] text-center shadow-lg">
+                      <span className="text-[8px] font-bold text-teal-400 uppercase">Retention Ramp</span>
+                      <span className="text-[12px] font-bold text-white font-mono">12s - 24s</span>
+                      <span className="text-[7px] text-slate-400 uppercase font-bold">Pattern Interrupt</span>
+                    </div>
+
+                    <div className="h-0.5 flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 opacity-40 relative">
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-teal-400 rounded-full animate-ping" />
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1.5 bg-slate-900/80 border border-white/10 p-2 rounded-xl w-[28%] text-center shadow-lg">
+                      <span className="text-[8px] font-bold text-cyan-400 uppercase">CTA Gateway</span>
+                      <span className="text-[12px] font-bold text-white font-mono">End-of-Loop</span>
+                      <span className="text-[7px] text-slate-400 uppercase font-bold">Single-Link</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Micro tech terminal label layer */}
               <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
@@ -205,7 +304,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onEnter }) => {
 
               <div className="absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
                 <Activity size={11} className="text-purple-400" />
-                <span className="text-[8px] font-mono text-slate-300 uppercase tracking-widest font-black">HIGH_FIDELITY_SIM</span>
+                <span className="text-[8px] font-mono text-slate-300 uppercase tracking-widest font-black">DYNAMIC_SYS_RENDER</span>
               </div>
             </div>
           </div>

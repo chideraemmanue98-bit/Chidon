@@ -242,15 +242,17 @@ export const DirectoryExample: React.FC = () => {
             key={idx} 
             className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all text-left flex flex-col justify-between"
           >
-            {/* Top Image: Aspect-ratio locked, no-stretch cover */}
-            <div className="relative aspect-video w-full overflow-hidden bg-slate-900 border-b border-[var(--border-base)]">
-              <img 
-                src={dev.img} 
-                alt={dev.name} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-                referrerPolicy="no-referrer"
-              />
-              <span className="absolute bottom-3 right-3 px-2 py-1 bg-black/75 backdrop-blur-md rounded-lg font-mono text-[9px] text-white tracking-wider uppercase font-black">
+            {/* Custom geometric visual banner */}
+            <div className="relative aspect-video w-full overflow-hidden bg-slate-950 border-b border-[var(--border-base)] flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-brand/25" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.08),transparent)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              
+              <div className="w-16 h-16 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md flex items-center justify-center font-black text-lg text-white relative z-10">
+                {dev.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
+
+              <span className="absolute bottom-3 right-3 px-2 py-1 bg-black/75 backdrop-blur-md rounded-lg font-mono text-[9px] text-white tracking-wider uppercase font-black z-20">
                 {dev.country}
               </span>
             </div>

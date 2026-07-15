@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Search, Copy, Check, FileText, Globe, ShoppingBag, AlertCircle, RefreshCw } from 'lucide-react';
-import seoBannerImg from '../assets/images/seo_tool_banner_1783649274905.jpg';
 
 interface SEOKeyword {
   keyword: string;
@@ -102,12 +101,10 @@ export const SEOTool: React.FC = () => {
     <div className="w-full max-w-5xl mx-auto space-y-6" id="seo-tool-container">
       {/* Visual Header Banner */}
       <div className="relative rounded-2xl overflow-hidden border border-white/10 h-48 sm:h-64 bg-slate-950">
-        <img 
-          src={seoBannerImg} 
-          alt="SEO Analytics Vector" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
-          referrerPolicy="no-referrer"
-        />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/40" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.1),transparent)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-cyan-500/5 rounded-full filter blur-2xl animate-pulse" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-cyan-primary/20 text-cyan-primary border border-cyan-primary/30 w-fit mb-2">

@@ -36,10 +36,10 @@ interface BlogPost {
 }
 
 const IMAGE_PRESETS = [
-  { name: 'Algorithmic Feeds', url: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg' },
-  { name: 'Neuromorphic Design', url: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg' },
-  { name: 'Creative Escrow', url: '/src/assets/images/empty_earned_1781319231364.jpg' },
-  { name: 'Semantic Analytics', url: '/src/assets/images/seo_analytics_vector_1783490751280.jpg' }
+  { name: 'Algorithmic Feeds', color: 'from-cyan-950 via-slate-950 to-blue-950/40', icon: 'Brain' },
+  { name: 'Neuromorphic Design', color: 'from-purple-950 via-slate-950 to-pink-950/40', icon: 'Zap' },
+  { name: 'Creative Escrow', color: 'from-emerald-950 via-slate-950 to-teal-950/40', icon: 'BookOpen' },
+  { name: 'Semantic Analytics', color: 'from-amber-950 via-slate-950 to-red-950/40', icon: 'Target' }
 ];
 
 const PRE_CURATED_BLOGS: BlogPost[] = [
@@ -52,7 +52,7 @@ const PRE_CURATED_BLOGS: BlogPost[] = [
     date: 'June 10, 2026',
     author: 'Chief Intelligence Architect',
     tags: ['Algorithms', 'Neuromorphic', 'Feeds', 'CTR'],
-    image: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
+    image: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
     content: `### The Collapse of the Follower Graph
 
 For over a decade, social platforms thrived on the traditional follower model. You followed a brand, and your feed displayed their content. Today, that graph is virtually dead. It has been replaced by **Interest-based Recommendation Core engines (neuromorphic sorting vectors)**.
@@ -81,7 +81,7 @@ By injecting strategic contrast ratios, exact typography guides, and tailored ni
     date: 'June 08, 2026',
     author: 'Visual Cognition Expert',
     tags: ['Psychology', 'Audience Retention', 'Visual Design'],
-    image: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
+    image: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
     content: `### The Neurological Gatekeepers
     
 The modern human attention span does not suffer from simple exhaustion; it has evolved a highly sensitive **redundant-content filter**. The visual cortex processes visual layout cues in less than 80 milliseconds. If it recognizes a standard recycled frame pattern or overproduced corporate format, it forces the user to flick upwards instinctively.
@@ -116,7 +116,7 @@ A common failure in viral growth is call-to-action dispersion. Requesting likes,
     date: 'June 02, 2026',
     author: 'Freelance Logistics Officer',
     tags: ['Gigs', 'Decentralization', 'Earn', 'Wealth'],
-    image: '/src/assets/images/empty_earned_1781319231364.jpg',
+    image: '/assets/images/empty_earned_1781319231364.jpg',
     content: `### The Creator Deliverable Redefined
 
 Over 70% of businesses actively seek custom creative positioning, yet they lack the specialized technical knowledge to execute high-retention video formats or SEO matrices themselves. Simply offering to "write captions" or "make posts" is a race to bottom-tier pricing.
@@ -142,7 +142,7 @@ By operating with professional, clinical precision rather than guesswork, freela
     date: 'May 28, 2026',
     author: 'Chief of Algorithmic Safety',
     tags: ['Safety', 'Shadowban', 'Optimization', 'Feeds'],
-    image: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
+    image: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
     content: `### Understanding Algorithmic Suppression
 
 Many creators suspect their accounts are "shadowbanned" due to poor luck, but the reality is strictly mathematical. Social algorithms employ **Dynamic Moderation Engines (DMEs)** that score content in real-time before releasing it to wider distribution rings. 
@@ -172,7 +172,7 @@ To guarantee your creative assets remain unrestricted and command healthy, persi
     date: 'May 22, 2026',
     author: 'Freelance Relations Advisor',
     tags: ['Contracts', 'Escrow', 'Freelance', 'Milestones'],
-    image: '/src/assets/images/empty_earned_1781319231364.jpg',
+    image: '/assets/images/empty_earned_1781319231364.jpg',
     content: `### The Hourly Trap
 
 Most freelancers operate on hourly tracking models, exposing themselves to client micromanagement and infinite scope creep. More importantly, hourly billing actively punishes you for efficiency. If you write an elite retention campaign in 20 minutes because of your specialized intelligence, you are paid next to nothing.
@@ -204,7 +204,7 @@ For a standard $5,000 retainer, break down your workflow into three secure, inde
     date: 'May 15, 2026',
     author: 'Principal Designer',
     tags: ['Design', 'Typography', 'Minimalism', 'Trust'],
-    image: '/src/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
+    image: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
     content: `### The Saturation of AI Noise
 
 As generative AI tools flood the internet with highly saturated, flashy, and over-engineered visuals, a strange counter-trend has emerged. High-profile decision makers, enterprise clients, and sophisticated buyers are experiencing profound **visual fatigue**.
@@ -233,7 +233,7 @@ Limit your visual brand to one premium accent color (such as Cyan Primary) again
     date: 'May 09, 2026',
     author: 'Linguistic Strategist',
     tags: ['Hooks', 'Psychology', 'Copywriting', 'Viral'],
-    image: '/src/assets/images/seo_analytics_vector_1783490751280.jpg',
+    image: '/assets/images/seo_analytics_vector_1783490751280.jpg',
     content: `### Beyond the Generic Templates
 
 We have all seen the recycled copywriting advice: "Top 3 tools you need to survive..." or "How I made $X doing Y...". While these might capture high initial impressions from low-intent users, they produce abysmal **retention and share ratios**. 
@@ -259,7 +259,7 @@ To create content that users don't just consume, but actively save, share, and d
     date: 'April 30, 2026',
     author: 'Core Engineering Lead',
     tags: ['Tech', 'React', 'Firestore', 'Offline-First'],
-    image: '/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
+    image: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
     content: `### Offline-First Resiliency
 
 A common failure in modern full-stack web apps is a total reliance on active network connections. If a developer goes into a subway or has a brief packet loss, the entire workspace freezes, forms crash, and creative drafts are lost forever.
@@ -297,7 +297,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
   const [newCategory, setNewCategory] = useState('Algorithms & Core Strategy');
   const [newAuthor, setNewAuthor] = useState('');
   const [newTagsString, setNewTagsString] = useState('');
-  const [newImagePreset, setNewImagePreset] = useState('/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg');
+  const [newImagePreset, setNewImagePreset] = useState('Algorithmic Feeds');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -409,7 +409,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
       date: todayStr,
       author: newAuthor.trim() || auth.currentUser?.displayName || auth.currentUser?.email || "Guest Creator",
       tags: blogTags.length > 0 ? blogTags : ['Community', 'ChidonIQ'],
-      image: newImagePreset || '/src/assets/images/seo_analytics_vector_1783490751280.jpg',
+      image: newImagePreset || '/assets/images/seo_analytics_vector_1783490751280.jpg',
     };
 
     try {
@@ -664,13 +664,15 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
                 
                 {/* Beautiful Banner Image */}
-                <div className="w-full h-48 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-md mb-4">
-                  <img 
-                    src={selectedPost.image || "/src/assets/images/seo_analytics_vector_1783490751280.jpg"} 
-                    alt={selectedPost.title} 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
-                  />
+                <div className="w-full h-48 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-md mb-4 bg-slate-950 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/40" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.15),transparent)] animate-pulse" />
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                  
+                  <div className="relative z-10 p-3 bg-slate-900/80 border border-white/5 rounded-2xl text-cyan-400">
+                    <BookOpen size={32} />
+                  </div>
+
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
                     <span className="text-[9px] font-mono font-bold text-cyan-400 bg-slate-950/80 px-2.5 py-0.5 rounded border border-cyan-500/25 uppercase tracking-wider">
                       Neural Analytics Hub Stream
@@ -780,13 +782,11 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 >
                   <div>
                     {/* Card Banner Image */}
-                    <div className="w-full h-32 overflow-hidden border-b border-[var(--border-base)] relative">
-                      <img 
-                        src={blog.image || "/src/assets/images/seo_analytics_vector_1783490751280.jpg"} 
-                        alt={blog.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        referrerPolicy="no-referrer"
-                      />
+                    <div className="w-full h-32 overflow-hidden border-b border-[var(--border-base)] relative bg-slate-950 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-cyan-950/40" />
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.1),transparent)]" />
+                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                      <BookOpen size={20} className="text-cyan-400/80 relative z-10 transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute top-2 left-2">
                         <span className="text-[8px] font-mono font-bold text-cyan-400 bg-slate-950/80 px-2 py-0.5 rounded border border-cyan-500/25 uppercase tracking-wider">
                           {blog.category}
@@ -1123,21 +1123,26 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
 
                   {/* Cover Image Presets */}
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Select Cover Image</label>
+                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Select Cover Style</label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {IMAGE_PRESETS.map((p) => (
                         <button
                           key={p.name}
                           type="button"
-                          onClick={() => setNewImagePreset(p.url)}
+                          onClick={() => setNewImagePreset(p.name)}
                           className={`group flex flex-col p-1.5 rounded-xl border-2 bg-[var(--bg-app)] text-left transition-all overflow-hidden ${
-                            newImagePreset === p.url
+                            newImagePreset === p.name
                               ? 'border-cyan-500 shadow-sm'
                               : 'border-[var(--border-base)] hover:border-slate-300 dark:hover:border-zinc-700'
                           }`}
                         >
-                          <div className="w-full h-14 rounded-lg overflow-hidden mb-1 border border-[var(--border-base)]/45">
-                            <img src={p.url} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <div className={`w-full h-14 rounded-lg overflow-hidden mb-1 border border-[var(--border-base)]/45 bg-gradient-to-br ${p.color} flex items-center justify-center`}>
+                            <div className="text-cyan-400/80">
+                              {p.icon === 'Brain' && <Brain size={16} />}
+                              {p.icon === 'Zap' && <Zap size={16} />}
+                              {p.icon === 'BookOpen' && <BookOpen size={16} />}
+                              {p.icon === 'Target' && <Target size={16} />}
+                            </div>
                           </div>
                           <span className="text-[9px] font-mono font-bold text-slate-400 group-hover:text-[var(--text-primary)] truncate block w-full">{p.name}</span>
                         </button>

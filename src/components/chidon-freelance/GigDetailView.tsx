@@ -88,7 +88,9 @@ export const GigDetailView: React.FC<GigDetailViewProps> = ({
             {/* Seller Quick Info */}
             <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-400">
               <div className="flex items-center gap-2">
-                <img src={gig.sellerAvatar} alt={gig.sellerName} className="w-6 h-6 rounded-lg object-cover" />
+                <div className="w-6 h-6 rounded-lg bg-slate-950 border border-slate-850 flex items-center justify-center font-extrabold text-[9px] text-slate-300 shrink-0">
+                  {gig.sellerName ? gig.sellerName.slice(0, 2).toUpperCase() : 'SE'}
+                </div>
                 <span className="font-bold text-white">@{gig.sellerName}</span>
               </div>
               <div className="text-slate-600">|</div>
@@ -105,30 +107,20 @@ export const GigDetailView: React.FC<GigDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Photo Showcase */}
+          {/* Photo Showcase (Vector CSS Design) */}
           <div className="space-y-3">
-            <div className="aspect-video bg-slate-950 rounded-3xl overflow-hidden border border-slate-800">
-              <img 
-                src={gig.images[activePhoto] || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=60'} 
-                alt={`Showcase ${activePhoto}`} 
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            {/* Thumbnails list */}
-            {gig.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {gig.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActivePhoto(idx)}
-                    className={`w-20 aspect-video rounded-xl overflow-hidden border-2 transition-all cursor-pointer flex-shrink-0 ${activePhoto === idx ? 'border-brand' : 'border-slate-850 opacity-60'}`}
-                  >
-                    <img src={img} alt="Thumb" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+            <div className="aspect-video bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 relative flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/20" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.1),transparent)] animate-pulse" />
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:24px_24px]" />
+              
+              <div className="text-center space-y-2 z-10">
+                <div className="p-4 rounded-full bg-slate-900/60 border border-white/5 text-brand animate-bounce inline-block">
+                  <Star size={36} className="text-brand fill-brand" />
+                </div>
+                <div className="text-xs font-mono font-bold text-slate-300 uppercase tracking-widest">PRO SERVICE INTERFACE ACTIVE</div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* About This Gig Description */}
@@ -185,7 +177,9 @@ export const GigDetailView: React.FC<GigDetailViewProps> = ({
                   <div key={rev.id} className="p-4 bg-slate-950/40 border border-slate-850 rounded-2xl space-y-3">
                     <div className="flex justify-between items-center border-b border-slate-850 pb-2">
                       <div className="flex items-center gap-2">
-                        <img src={rev.buyerAvatar} alt={rev.buyerName} className="w-5 h-5 rounded-md object-cover" />
+                        <div className="w-5 h-5 rounded-md bg-slate-900 border border-slate-850 flex items-center justify-center font-extrabold text-[8px] text-slate-300 shrink-0">
+                          {rev.buyerName ? rev.buyerName.slice(0, 2).toUpperCase() : 'BU'}
+                        </div>
                         <span className="text-xs font-black text-white">{rev.buyerName}</span>
                       </div>
                       <div className="flex items-center gap-0.5">

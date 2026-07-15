@@ -211,7 +211,9 @@ export const ChatsView: React.FC<ChatsViewProps> = ({ profile, initialSellerCont
                 onClick={() => setActiveChat(c)}
                 className={`w-full p-4 rounded-2xl border text-left cursor-pointer flex items-center gap-3 transition-all ${activeChat?.chatId === c.chatId ? 'bg-brand/10 border-brand' : 'bg-slate-950 border-slate-850 hover:bg-slate-950'}`}
               >
-                <img src={c.partnerAvatar} alt={c.partnerName} className="w-8 h-8 rounded-xl object-cover" />
+                <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-850 flex items-center justify-center font-extrabold text-[10px] text-slate-300 shrink-0">
+                  {c.partnerName ? c.partnerName.slice(0, 2).toUpperCase() : 'U'}
+                </div>
                 <div className="flex-1 leading-normal overflow-hidden">
                   <div className="text-xs font-black text-white truncate">@{c.partnerName}</div>
                   <p className="text-[10px] text-slate-500 truncate">{c.lastMessage}</p>
@@ -258,7 +260,9 @@ export const ChatsView: React.FC<ChatsViewProps> = ({ profile, initialSellerCont
           <>
             {/* Header Partner Info bar */}
             <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-4">
-              <img src={activeChat.partnerAvatar} alt={activeChat.partnerName} className="w-8 h-8 rounded-xl object-cover" />
+              <div className="w-8 h-8 rounded-xl bg-slate-950 border border-slate-850 flex items-center justify-center font-extrabold text-[10px] text-slate-300 shrink-0">
+                {activeChat.partnerName ? activeChat.partnerName.slice(0, 2).toUpperCase() : 'U'}
+              </div>
               <div>
                 <h4 className="text-xs font-black text-white">@{activeChat.partnerName}</h4>
                 <span className="text-[8px] font-mono text-emerald-400 uppercase tracking-widest flex items-center gap-1">

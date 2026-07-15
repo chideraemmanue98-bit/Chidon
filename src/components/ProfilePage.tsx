@@ -196,13 +196,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         <div className="px-6 pb-6 relative">
           <div className="flex flex-col md:flex-row md:items-end justify-between -mt-16 md:-mt-20 mb-6 gap-4">
             <div className="flex flex-col md:flex-row items-center md:items-end gap-4 text-center md:text-left">
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl border-4 border-[var(--bg-card)] shadow-lg overflow-hidden bg-slate-900 relative group">
-                <img 
-                  src={profile?.avatarURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${currentUser.email}`}
-                  alt="User Avatar"
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl border-4 border-[var(--bg-card)] shadow-lg overflow-hidden bg-slate-950 relative group flex items-center justify-center font-extrabold text-2xl text-slate-300">
+                {(profile?.fullName || currentUser.displayName || 'Anonymous').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
               <div className="space-y-1">
                 <h2 className="text-2xl font-black text-[var(--text-primary)] flex items-center justify-center md:justify-start gap-2">

@@ -1120,13 +1120,23 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
           {/* POLICY NOTES RETAILER (4 cols) */}
           <div className="space-y-6 lg:col-span-4">
             {/* Professional Diagnostic Graphic Banner */}
-            <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-900 aspect-[4/3] relative group">
-              <img 
-                src="/src/assets/images/shadowban_diagnostic_vector_1783488589558.jpg" 
-                alt="Shadowban Diagnostic System Core" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
+            <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-950 aspect-[4/3] relative group flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-red-950/40" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(239,68,68,0.1),transparent)] animate-pulse" />
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              
+              {/* Radar Sweeper */}
+              <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/30 to-transparent top-1/3 animate-pulse pointer-events-none" />
+              
+              {/* Shield Vector */}
+              <div className="relative z-10 p-4 rounded-full bg-red-950/40 border border-red-500/20 text-red-400 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                <svg viewBox="0 0 100 100" className="w-16 h-16" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 22s8-4 38-4 38 4 38 4v34c0 22-38 34-38 34s-38-12-38-34V22z" />
+                  <line x1="50" y1="36" x2="50" y2="56" strokeWidth="8" />
+                  <circle cx="50" cy="72" r="4" fill="currentColor" />
+                </svg>
+              </div>
+
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
                 <div className="space-y-1">
                   <span className="text-[9px] font-mono font-bold text-red-400 bg-red-950/80 px-2 py-0.5 rounded border border-red-500/25 uppercase tracking-wider">

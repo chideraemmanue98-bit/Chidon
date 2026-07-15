@@ -577,7 +577,9 @@ export const ChidonFreelance: React.FC<ChidonFreelanceProps> = ({
               </div>
 
               <div className="flex items-center gap-3">
-                <img src={profile.avatarURL} alt="Avatar" className="w-10 h-10 rounded-xl object-cover border border-slate-300 dark:border-slate-700" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 shrink-0">
+                  {profile.fullName ? profile.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US'}
+                </div>
                 <div className="text-left">
                   <div className="text-xs font-extrabold text-slate-900 dark:text-white">{profile.fullName}</div>
                   <button 

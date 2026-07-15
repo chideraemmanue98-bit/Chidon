@@ -212,7 +212,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ profile }) => {
                 {users.map((u) => (
                   <div key={u.uid} className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <img src={u.avatarURL} alt={u.fullName} className="w-8 h-8 rounded-xl object-cover" />
+                      <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-850 flex items-center justify-center font-extrabold text-[10px] text-slate-300 shrink-0">
+                        {(u.fullName || u.username || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
                       <div>
                         <div className="text-xs font-black text-white flex items-center gap-1.5">
                           {u.fullName || u.username}

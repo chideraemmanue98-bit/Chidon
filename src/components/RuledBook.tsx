@@ -34,7 +34,6 @@ import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
-import emptyRuledBookImg from '../assets/images/journal_ruled_cover_1783488617827.jpg';
 
 interface NotePage {
   id: string;
@@ -580,13 +579,10 @@ export const RuledBook: React.FC<RuledBookProps> = ({
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
-            <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-slate-900/40">
-              <img 
-                src={emptyRuledBookImg} 
-                alt="No active sheet loaded" 
-                className="w-full h-full object-cover select-none pointer-events-none"
-                referrerPolicy="no-referrer"
-              />
+            <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/40 flex items-center justify-center group">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.1),transparent)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px]" />
+              <Book size={48} className="text-cyan-400 relative z-10 transition-transform duration-500 group-hover:scale-110" />
               <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
             </div>
             <div className="max-w-md">

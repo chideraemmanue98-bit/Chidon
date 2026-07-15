@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Compass, Briefcase, MessageSquare, Shield, User, Camera, Upload, 
   Trash, Save, CheckCircle, ArrowRight, Sparkles, Check, Globe, 
-  Cpu, Award, BookOpen, Layers, X, Star, Zap, ShieldAlert
+  Cpu, Award, BookOpen, Layers, X, Star, Zap, ShieldAlert, Image
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -184,8 +184,8 @@ export const OnboardingSetupView: React.FC<OnboardingSetupViewProps> = ({
   const [fullName, setFullName] = useState(profile.fullName || currentUser?.displayName || '');
   const [username, setUsername] = useState(profile.username || currentUser?.email?.split('@')[0] || '');
   const [bio, setBio] = useState(profile.bio || '');
-  const [avatarURL, setAvatarURL] = useState(profile.avatarURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${currentUser?.uid || 'guest'}`);
-  const [coverURL, setCoverURL] = useState(profile.coverURL || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&auto=format&fit=crop&q=60');
+  const [avatarURL, setAvatarURL] = useState(profile.avatarURL || '');
+  const [coverURL, setCoverURL] = useState(profile.coverURL || '');
   
   // Tag fields
   const [skills, setSkills] = useState<string[]>(profile.skills || []);
@@ -518,8 +518,12 @@ export const OnboardingSetupView: React.FC<OnboardingSetupViewProps> = ({
               
               {/* Media Card (Cover & Avatar Uploads) */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl overflow-hidden shadow-sm">
-                <div className="h-28 w-full relative group bg-slate-100 dark:bg-slate-950">
-                  <img src={coverURL} alt="Cover Preview" className="w-full h-full object-cover" />
+                <div className="h-28 w-full relative group bg-gradient-to-br from-slate-900 via-slate-950 to-purple-950/20 flex items-center justify-center">
+                  {coverURL ? (
+                    <img src={coverURL} alt="Cover Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-950/20" />
+                  )}
                   <label className="absolute right-3 bottom-3 p-1.5 bg-slate-950/70 hover:bg-slate-950 text-white rounded-full transition-all cursor-pointer">
                     <Camera size={13} />
                     <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
@@ -530,8 +534,14 @@ export const OnboardingSetupView: React.FC<OnboardingSetupViewProps> = ({
                 </div>
 
                 <div className="px-6 pb-6 pt-2 flex flex-col items-center text-center space-y-3">
-                  <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-950 border-4 border-white dark:border-slate-900 relative overflow-hidden -mt-10 shadow-lg group">
-                    <img src={avatarURL} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-950 border-4 border-white dark:border-slate-900 relative overflow-hidden -mt-10 shadow-lg group flex items-center justify-center">
+                    {avatarURL ? (
+                      <img src={avatarURL} alt="Avatar Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-950 flex items-center justify-center font-extrabold text-sm text-slate-300">
+                        {fullName ? fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US'}
+                      </div>
+                    )}
                     <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer">
                       <Camera size={14} />
                       <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
@@ -750,8 +760,9 @@ export const OnboardingSetupView: React.FC<OnboardingSetupViewProps> = ({
                       <label className="text-[9px] font-mono text-slate-500 uppercase">Screenshot or Deliverable Image</label>
                       <div className="flex items-center gap-4">
                         {projImage ? (
-                          <div className="w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-                            <img src={projImage} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative flex items-center justify-center bg-slate-950">
+                            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+                            <Image size={16} className="text-brand/40" />
                             <button 
                               onClick={() => setProjImage('')}
                               className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center text-red-500 transition-opacity font-bold"
@@ -802,13 +813,18 @@ export const OnboardingSetupView: React.FC<OnboardingSetupViewProps> = ({
                       className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl overflow-hidden group flex flex-col justify-between"
                     >
                       <div className="h-28 w-full relative">
-                        <img src={project.imageUrl} alt={project.title} className="w-full h-full object-cover" />
-                        <button 
-                          onClick={() => removeProject(project.id)}
-                          className="absolute right-2 top-2 p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all cursor-pointer shadow"
-                        >
-                          <Trash size={10} />
-                        </button>
+                        <div className="w-full h-full bg-slate-950 flex items-center justify-center relative">
+                          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)] animate-pulse" />
+                          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:12px_12px]" />
+                          <Image size={24} className="text-brand/40 relative z-10" />
+                          <button 
+                            onClick={() => removeProject(project.id)}
+                            className="absolute right-2 top-2 p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all cursor-pointer shadow z-20"
+                          >
+                            <Trash size={10} />
+                          </button>
+                        </div>
                       </div>
                       
                       <div className="p-3 space-y-1">

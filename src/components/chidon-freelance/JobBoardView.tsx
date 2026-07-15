@@ -203,11 +203,9 @@ export const JobBoardView: React.FC<JobBoardViewProps> = ({ profile, onOpenChat,
                   {/* Top Row: Buyer Avatar + Info */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={job.buyerAvatar} 
-                        alt={job.buyerName} 
-                        className="w-8 h-8 rounded-xl object-cover bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
-                      />
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-center font-extrabold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
+                        {job.buyerName ? job.buyerName.slice(0, 2).toUpperCase() : 'CL'}
+                      </div>
                       <div className="leading-tight">
                         <h4 className="text-xs font-black text-slate-950 dark:text-white">@{job.buyerName}</h4>
                         <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">Client</span>

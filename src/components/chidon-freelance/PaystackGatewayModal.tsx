@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   CreditCard, ShieldCheck, Landmark, Phone, Key, Clock, 
-  HelpCircle, AlertCircle, CheckCircle, RefreshCw, X, ArrowRight, Copy 
+  HelpCircle, AlertCircle, CheckCircle, RefreshCw, X, ArrowRight, Copy, Globe, Send
 } from 'lucide-react';
 
 interface PaystackGatewayModalProps {
@@ -15,6 +15,23 @@ interface PaystackGatewayModalProps {
   title: string;
 }
 
+interface CurrencyConfig {
+  symbol: string;
+  rate: number;
+  label: string;
+  flag: string;
+}
+
+const CURRENCIES: Record<string, CurrencyConfig> = {
+  NGN: { symbol: '₦', rate: 1500, label: 'Nigeria (NGN)', flag: '🇳🇬' },
+  USD: { symbol: '$', rate: 1.0, label: 'Global / USA (USD)', flag: '🇺🇸' },
+  GHS: { symbol: 'GH₵', rate: 15.2, label: 'Ghana (GHS)', flag: '🇬🇭' },
+  KES: { symbol: 'KSh', rate: 131.5, label: 'Kenya (KES)', flag: '🇰🇪' },
+  ZAR: { symbol: 'R', rate: 18.4, label: 'South Africa (ZAR)', flag: '🇿🇦' },
+  GBP: { symbol: '£', rate: 0.78, label: 'United Kingdom (GBP)', flag: '🇬🇧' },
+  EUR: { symbol: '€', rate: 0.92, label: 'Europe (EUR)', flag: '🇪🇺' },
+};
+
 export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
   isOpen,
   onClose,
@@ -24,9 +41,12 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
   reference,
   title
 }) => {
-  const [activeTab, setActiveTab] = useState<'card' | 'transfer' | 'ussd' | 'phone'>('card');
-  const [exchangeRate] = useState(1500); // 1 USD = 1500 NGN
-  const amountNgn = amountUsd * exchangeRate;
+  // Let people living abroad select their local currency/country
+  const [billingCurrency, setBillingCurrency] = useState<string>('USD');
+  const [activeTab, setActiveTab] = useState<'card' | 'transfer' | 'ussd' | 'phone' | 'paystack_to_paystack'>('paystack_to_paystack');
+
+  const selectedConfig = CURRENCIES[billingCurrency] || CURRENCIES.USD;
+  const activeAmount = amountUsd * selectedConfig.rate;
 
   // Form states
   const [cardNumber, setCardNumber] = useState('');
@@ -36,6 +56,7 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [selectedBank, setSelectedBank] = useState('GTBank');
+  const [senderPaystackEmail, setSenderPaystackEmail] = useState(email);
 
   // Interactive flow states
   const [paymentState, setPaymentState] = useState<'idle' | 'submitting_pin' | 'submitting_otp' | 'verifying' | 'success'>('idle');
@@ -60,6 +81,12 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText('9920192837');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyMerchantEmail = () => {
+    navigator.clipboard.writeText('paystack-ledger@chidon.iq');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -141,6 +168,22 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
     }, 2500);
   };
 
+  const handlePaystackToPaystackSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!senderPaystackEmail.trim() || !senderPaystackEmail.includes('@')) {
+      setErrorMessage('Please enter a valid Paystack account email address.');
+      return;
+    }
+    setErrorMessage(null);
+    setPaymentState('verifying');
+    setTimeout(() => {
+      setPaymentState('success');
+      setTimeout(() => {
+        onSuccess(reference);
+      }, 1500);
+    }, 2000);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -159,14 +202,14 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col md:flex-row text-slate-800"
+        className="relative w-full max-w-xl bg-white rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col md:flex-row text-slate-800 border border-slate-200"
       >
         
         {/* Left Side: Paystack payment channels menu */}
         <div className="w-full md:w-2/5 bg-slate-50 border-r border-slate-100 p-4 flex flex-col justify-between">
-          <div className="space-y-4">
+          <div className="space-y-4 text-left">
             {/* Paystack Logo & amount info */}
-            <div className="text-left">
+            <div>
               <span className="text-[10px] font-mono font-black text-slate-400 block tracking-widest uppercase">Paystack Secures</span>
               <div className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
@@ -175,51 +218,100 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
               <p className="text-[9px] text-slate-500 font-mono mt-0.5 truncate">{email}</p>
             </div>
 
+            {/* Currency Selector for People Living Abroad */}
+            <div className="space-y-1">
+              <label className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Globe size={10} className="text-emerald-500" />
+                <span>BILLING LOCATION</span>
+              </label>
+              <select
+                value={billingCurrency}
+                onChange={(e) => {
+                  setBillingCurrency(e.target.value);
+                  // Default tab based on currency
+                  if (e.target.value !== 'NGN' && activeTab !== 'paystack_to_paystack' && activeTab !== 'card') {
+                    setActiveTab('paystack_to_paystack');
+                  } else if (e.target.value === 'NGN' && activeTab === 'paystack_to_paystack') {
+                    setActiveTab('card');
+                  }
+                }}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-emerald-500 cursor-pointer"
+              >
+                {Object.entries(CURRENCIES).map(([code, cfg]) => (
+                  <option key={code} value={code}>
+                    {cfg.flag} {cfg.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Price Box */}
             <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-left">
               <span className="text-[9px] font-mono text-emerald-600 font-bold uppercase block">Payable Amount</span>
               <div className="flex items-baseline gap-1 font-mono">
-                <span className="text-sm font-bold text-slate-900">₦</span>
-                <span className="text-lg font-black text-slate-950">{amountNgn.toLocaleString()}</span>
+                <span className="text-sm font-bold text-slate-900">{selectedConfig.symbol}</span>
+                <span className="text-lg font-black text-slate-950">
+                  {activeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
-              <div className="text-[8px] text-slate-400 font-mono mt-0.5">Approx. ${amountUsd} USD (1$ = ₦1500)</div>
+              {billingCurrency !== 'USD' && (
+                <div className="text-[8px] text-slate-400 font-mono mt-0.5">Approx. ${amountUsd} USD (1$ = {selectedConfig.symbol}{selectedConfig.rate})</div>
+              )}
             </div>
 
             {/* Menu options list */}
-            <div className="space-y-1.5 pt-2">
+            <div className="space-y-1 pt-1">
+              <span className="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest block mb-1">Select Channel</span>
+              
+              <button
+                onClick={() => { setActiveTab('paystack_to_paystack'); setPaymentState('idle'); setErrorMessage(null); }}
+                className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-bold text-left transition-all flex items-center justify-between ${activeTab === 'paystack_to_paystack' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Send size={11} className="text-emerald-500" />
+                  <span>Paystack-to-Paystack</span>
+                </span>
+                <span className="bg-emerald-500/10 text-emerald-600 text-[8px] px-1 rounded-sm uppercase tracking-wider scale-90">ABROAD</span>
+              </button>
+
               <button
                 onClick={() => { setActiveTab('card'); setPaymentState('idle'); setErrorMessage(null); }}
-                className={`w-full py-2 px-3 rounded-lg text-[11px] font-bold text-left transition-all flex items-center gap-2 ${activeTab === 'card' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
+                className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-bold text-left transition-all flex items-center gap-1.5 ${activeTab === 'card' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
               >
-                <CreditCard size={12} />
+                <CreditCard size={11} />
                 <span>Pay with Card</span>
               </button>
-              <button
-                onClick={() => { setActiveTab('transfer'); setPaymentState('idle'); setErrorMessage(null); }}
-                className={`w-full py-2 px-3 rounded-lg text-[11px] font-bold text-left transition-all flex items-center gap-2 ${activeTab === 'transfer' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
-              >
-                <Landmark size={12} />
-                <span>Bank Transfer</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('ussd'); setPaymentState('idle'); setErrorMessage(null); }}
-                className={`w-full py-2 px-3 rounded-lg text-[11px] font-bold text-left transition-all flex items-center gap-2 ${activeTab === 'ussd' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
-              >
-                <Key size={12} />
-                <span>USSD Dial</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('phone'); setPaymentState('idle'); setErrorMessage(null); }}
-                className={`w-full py-2 px-3 rounded-lg text-[11px] font-bold text-left transition-all flex items-center gap-2 ${activeTab === 'phone' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
-              >
-                <Phone size={12} />
-                <span>Mobile Account</span>
-              </button>
+
+              {billingCurrency === 'NGN' && (
+                <>
+                  <button
+                    onClick={() => { setActiveTab('transfer'); setPaymentState('idle'); setErrorMessage(null); }}
+                    className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-bold text-left transition-all flex items-center gap-1.5 ${activeTab === 'transfer' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
+                  >
+                    <Landmark size={11} />
+                    <span>Bank Transfer (NGN)</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('ussd'); setPaymentState('idle'); setErrorMessage(null); }}
+                    className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-bold text-left transition-all flex items-center gap-1.5 ${activeTab === 'ussd' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
+                  >
+                    <Key size={11} />
+                    <span>USSD Dial (NGN)</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('phone'); setPaymentState('idle'); setErrorMessage(null); }}
+                    className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-bold text-left transition-all flex items-center gap-1.5 ${activeTab === 'phone' ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'}`}
+                  >
+                    <Phone size={11} />
+                    <span>Mobile Account (NGN)</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
           {/* Secure lock footer */}
-          <div className="flex items-center gap-1.5 text-slate-400 text-[8px] font-mono mt-6 text-left">
+          <div className="flex items-center gap-1.5 text-slate-400 text-[8px] font-mono mt-4 text-left">
             <ShieldCheck size={12} className="text-emerald-500 flex-shrink-0" />
             <span>Secured by Paystack Escrow Integration.</span>
           </div>
@@ -267,6 +359,81 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
 
             {paymentState === 'idle' && (
               <>
+                {/* 0. Paystack-to-Paystack direct cross-border transfer */}
+                {activeTab === 'paystack_to_paystack' && (
+                  <form onSubmit={handlePaystackToPaystackSubmit} className="space-y-3.5 text-left">
+                    {errorMessage && (
+                      <div className="p-2.5 bg-red-500/5 border border-red-500/10 text-red-500 rounded-xl text-[10px] font-semibold leading-relaxed flex items-center gap-2">
+                        <AlertCircle size={13} className="shrink-0" />
+                        <span>{errorMessage}</span>
+                      </div>
+                    )}
+
+                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/15 rounded-xl space-y-2 text-slate-600">
+                      <div className="flex justify-between text-[9px] font-mono text-slate-400 uppercase font-black">
+                        <span>Merchant Account Node</span>
+                        <span className="text-emerald-500">Live Payout Node</span>
+                      </div>
+                      
+                      <div className="space-y-1 font-mono text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Receiver Merchant:</span>
+                          <span className="font-bold text-slate-800">Chidon IQ Global Ltd</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Settlement Currency:</span>
+                          <span className="font-bold text-slate-800">{selectedConfig.label}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Merchant Paystack ID:</span>
+                          <div className="flex items-center gap-1 text-[9px]">
+                            <span className="font-black text-slate-800">paystack-ledger@chidon.iq</span>
+                            <button
+                              type="button"
+                              onClick={handleCopyMerchantEmail}
+                              className="p-0.5 hover:bg-slate-200 rounded text-slate-500"
+                            >
+                              <Copy size={10} className={copied ? "text-emerald-500" : ""} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Gateway Route:</span>
+                          <span className="font-black text-emerald-600 bg-emerald-50 px-1 rounded-sm uppercase tracking-wider text-[8px]">
+                            Paystack-to-Paystack direct ledger transfer
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                        Your Paystack Account / Registered Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={senderPaystackEmail}
+                        onChange={(e) => setSenderPaystackEmail(e.target.value)}
+                        placeholder="e.g. sender-paystack@domain.com"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-xs tracking-wider rounded-xl cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-md mt-2"
+                    >
+                      <Send size={12} />
+                      <span>Settle {selectedConfig.symbol}{activeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </button>
+
+                    <p className="text-[8px] font-mono text-slate-400 leading-relaxed text-center">
+                      * Cross-border Paystack merchant accounts auto-resolve instantly. Foreign currencies are credited securely in real-time.
+                    </p>
+                  </form>
+                )}
+
                 {/* 1. Pay with Credit Card Form */}
                 {activeTab === 'card' && (
                   <form onSubmit={handlePaymentInitiate} className="space-y-3.5 text-left">
@@ -332,7 +499,7 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
                       type="submit"
                       className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-xs tracking-wider rounded-xl cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-md mt-4"
                     >
-                      <span>Pay ₦{amountNgn.toLocaleString()}</span>
+                      <span>Pay {selectedConfig.symbol}{activeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       <ArrowRight size={13} />
                     </button>
                   </form>
@@ -351,7 +518,7 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 font-mono text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-400">Amount:</span>
-                        <span className="font-black text-slate-900 text-sm">₦{amountNgn.toLocaleString()}</span>
+                        <span className="font-black text-slate-900 text-sm">₦{activeAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-400">Bank Name:</span>
@@ -407,7 +574,7 @@ export const PaystackGatewayModal: React.FC<PaystackGatewayModalProps> = ({
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
                       <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Dial USSD Code on Mobile</span>
                       <div className="text-lg font-mono font-black text-slate-950 select-all py-1">
-                        {selectedBank === 'GTBank' && `*737*1*2*9920192837*${amountNgn}#`}
+                        {selectedBank === 'GTBank' && `*737*1*2*9920192837*${Math.round(activeAmount)}#`}
                         {selectedBank === 'Zenith' && `*966*000#`}
                         {selectedBank === 'Access' && `*901#`}
                         {selectedBank === 'UBA' && `*919#`}

@@ -9,10 +9,6 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 import { cn } from '../../lib/utils';
 
-// Import newly generated high-fidelity asset images
-import contentWritingBannerImg from '../../assets/images/content_writing_banner_1783649293057.jpg';
-import portfolioBannerImg from '../../assets/images/portfolio_case_study_banner_1783649308111.jpg';
-
 interface ChidonIqToolsViewProps {
   onBack?: () => void;
   onSendToNotepad?: (content: string, title?: string) => void;
@@ -427,12 +423,9 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack, on
             >
               {/* Content Writing Custom Visual Banner */}
               <div className="relative rounded-2xl overflow-hidden border border-white/10 h-48 bg-slate-950">
-                <img 
-                  src={contentWritingBannerImg} 
-                  alt="Content Writing Banner" 
-                  className="absolute inset-0 w-full h-full object-cover opacity-60"
-                  referrerPolicy="no-referrer"
-                />
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-purple-950/40" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.1),transparent)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:24px_24px]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-purple-500/20 text-purple-400 border border-purple-500/30 w-fit mb-2">
@@ -660,12 +653,9 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack, on
             >
               {/* Gig Description Visual Banner */}
               <div className="relative rounded-2xl overflow-hidden border border-white/10 h-44 bg-slate-950">
-                <img 
-                  src={portfolioBannerImg} 
-                  alt="Gig Description Banner" 
-                  className="absolute inset-0 w-full h-full object-cover opacity-60"
-                  referrerPolicy="no-referrer"
-                />
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-teal-950/40" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.1),transparent)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:24px_24px]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-500/20 text-teal-400 border border-teal-500/30 w-fit mb-2">
@@ -881,12 +871,9 @@ export const ChidonIqToolsView: React.FC<ChidonIqToolsViewProps> = ({ onBack, on
             >
               {/* Portfolio Case Studies Visual Banner */}
               <div className="relative rounded-2xl overflow-hidden border border-white/10 h-44 bg-slate-950">
-                <img 
-                  src={portfolioBannerImg} 
-                  alt="Portfolio Case Study Banner" 
-                  className="absolute inset-0 w-full h-full object-cover opacity-60"
-                  referrerPolicy="no-referrer"
-                />
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/40" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,0.1),transparent)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:24px_24px]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30 w-fit mb-2">
