@@ -1104,8 +1104,8 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
 
   setupFrontendRouting();
 
-  // Only listen to port if not in Vercel serverless function context
-  if (!process.env.VERCEL) {
+  // Only listen to port if not in Vercel or Netlify serverless function context
+  if (!process.env.VERCEL && !process.env.NETLIFY) {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`CHIDON IQ Neural Backend listening on http://0.0.0.0:${PORT}`);
     });
