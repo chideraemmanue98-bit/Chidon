@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { 
@@ -25,8 +24,6 @@ interface ShadowbanSolutionsProps {
     glowColor: string;
   };
   onBack: () => void;
-  onDeleteMessage?: (featureId: string, messageId: string) => void;
-  onClearAllChatData?: (featureId: string) => void;
 }
 
 // SAMPLE CHANNELS PRESETS FOR INCREDIBLE USER EXPERIENCE (No typing 10 videos)
@@ -224,101 +221,29 @@ export const ShadowbanSolutions = ({
   onGenerateFeedback,
   onSaveDraft,
   feature,
-  onBack,
-  onDeleteMessage,
-  onClearAllChatData
+  onBack
 }: ShadowbanSolutionsProps) => {
-  const { i18n } = useTranslation();
-  const [channelUrl, setChannelUrl] = useState(() => {
-    try {
-      return localStorage.getItem('chidon_shb_channelUrl') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [impressions, setImpressions] = useState(() => {
-    try {
-      return localStorage.getItem('chidon_shb_impressions') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [ctr, setCtr] = useState(() => {
-    try {
-      return localStorage.getItem('chidon_shb_ctr') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [avd, setAvd] = useState(() => {
-    try {
-      return localStorage.getItem('chidon_shb_avd') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [retention, setRetention] = useState(() => {
-    try {
-      return localStorage.getItem('chidon_shb_retention') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [strikes, setStrikes] = useState(() => {
-    try {
-      return localStorage.getItem('chidon_shb_strikes') || 'None';
-    } catch {
-      return 'None';
-    }
-  });
+  const [channelUrl, setChannelUrl] = useState('');
+  const [impressions, setImpressions] = useState('');
+  const [ctr, setCtr] = useState('');
+  const [avd, setAvd] = useState('');
+  const [retention, setRetention] = useState('');
+  const [strikes, setStrikes] = useState('None');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [activePresetIndex, setActivePresetIndex] = useState(-1);
   const [isEditingCustom, setIsEditingCustom] = useState(false);
   const [activeTab, setActiveTab] = useState<'diagnosis' | 'audit' | 'timeline' | 'myths' | 'dossier'>('diagnosis');
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
   
   // Last 10 videos state
-  const [videosList, setVideosList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('chidon_shb_videosList');
-      return saved ? JSON.parse(saved) : Array.from({ length: 10 }, (_, i) => ({
-        title: '',
-        thumbnail: '',
-        description: ''
-      }));
-    } catch {
-      return Array.from({ length: 10 }, (_, i) => ({
-        title: '',
-        thumbnail: '',
-        description: ''
-      }));
-    }
-  });
-
-  // Periodic Auto-Save every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      try {
-        localStorage.setItem('chidon_shb_channelUrl', channelUrl);
-        localStorage.setItem('chidon_shb_impressions', impressions);
-        localStorage.setItem('chidon_shb_ctr', ctr);
-        localStorage.setItem('chidon_shb_avd', avd);
-        localStorage.setItem('chidon_shb_retention', retention);
-        localStorage.setItem('chidon_shb_strikes', strikes);
-        localStorage.setItem('chidon_shb_videosList', JSON.stringify(videosList));
-        
-        setIsAutoSaving(true);
-        const timer = setTimeout(() => setIsAutoSaving(false), 2000);
-        return () => clearTimeout(timer);
-      } catch (e) {
-        console.error("ShadowbanSolutions auto-save failed:", e);
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [channelUrl, impressions, ctr, avd, retention, strikes, videosList]);
+  const [videosList, setVideosList] = useState<any[]>(
+    Array.from({ length: 10 }, (_, i) => ({
+      title: '',
+      thumbnail: '',
+      description: ''
+    }))
+  );
 
   // Parse last assistant response from messages
   const lastResponse = [...messages].reverse().find(m => m.role === 'assistant');
@@ -336,86 +261,6 @@ export const ShadowbanSolutions = ({
   useEffect(() => {
     localStorage.setItem('chidon_shadowban_checklist', JSON.stringify(checklist));
   }, [checklist]);
-
-  // Proactive Mitigation States
-  const [isMitigationOpen, setIsMitigationOpen] = useState(false);
-  const [mitigationContent, setMitigationContent] = useState<string | null>(null);
-  const [mitigationLoading, setMitigationLoading] = useState(false);
-  const [mitigationError, setMitigationError] = useState<string | null>(null);
-
-  // Risk level badge info helper
-  const getRiskLevelBadge = (score: number | null) => {
-    if (score === null) return null;
-    if (score > 60) {
-      return {
-        label: 'High Risk',
-        className: 'bg-red-500/10 text-red-500 border border-red-500/20 dark:border-red-500/30',
-        dotColor: 'bg-red-500'
-      };
-    } else if (score > 30) {
-      return {
-        label: 'Medium Risk',
-        className: 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30',
-        dotColor: 'bg-amber-500'
-      };
-    } else {
-      return {
-        label: 'Low Risk',
-        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30',
-        dotColor: 'bg-emerald-500'
-      };
-    }
-  };
-
-  const handleTriggerMitigation = async () => {
-    if (isMitigationOpen) {
-      setIsMitigationOpen(false);
-      return;
-    }
-
-    if (mitigationContent) {
-      setIsMitigationOpen(true);
-      return;
-    }
-
-    setMitigationLoading(true);
-    setMitigationError(null);
-    setIsMitigationOpen(true); // Open the panel while loading to show progress
-
-    try {
-      const riskRating = riskScore !== null ? `${riskScore}%` : "Calculating";
-      const riskText = riskScore !== null && riskScore > 60 ? "High Risk" : riskScore !== null && riskScore > 30 ? "Medium Risk" : "Low Risk";
-      
-      const prompt = `Formulate a highly professional, tactical set of proactive best practices to mitigate future search suppression, CTR bottlenecks, and shadowban risk.
-This is for a creator whose current YouTube Channel Audit results show:
-- Compliance Risk Rating: ${riskRating} (${riskText})
-- 28 Days Net Impressions Volume: ${impressions || "14.5K"}
-- Impression Click-Through Rate: ${ctr || "2.1"}%
-
-Provide exactly 5 highly specific, actionable mitigation strategies tailored for these metrics. Each strategy should have a strong, bold title followed by a 2-3 sentence tactical instruction. Ensure you use direct, action-oriented growth coaching language with subtle motivating slang (e.g., "no cap", "dey play", "vibe check", "no dulling"). Keep the output compact, organized with bullet points, and styled nicely for markdown rendering.`;
-
-      const res = await fetch("/api/gemini/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt, language: i18n.language }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Mitigation generation failed with status ${res.status}`);
-      }
-
-      const data = await res.json();
-      const aiResponse = data.text || "Could not retrieve mitigation advice. Please try again.";
-      setMitigationContent(aiResponse);
-    } catch (err: any) {
-      console.error("Failed to generate proactive mitigation:", err);
-      setMitigationError(err.message || "An error occurred while generating best practices.");
-    } finally {
-      setMitigationLoading(false);
-    }
-  };
 
   // Handle Preset selection
   const selectPreset = (idx: number) => {
@@ -481,22 +326,6 @@ Provide exactly 5 highly specific, actionable mitigation strategies tailored for
     setUploadedFileName('');
     setActivePresetIndex(-1);
     setVideosList(Array.from({ length: 10 }, (_, i) => ({ title: '', thumbnail: '', description: '' })));
-    setIsMitigationOpen(false);
-    setMitigationContent(null);
-    setMitigationLoading(false);
-    setMitigationError(null);
-
-    try {
-      localStorage.removeItem('chidon_shb_channelUrl');
-      localStorage.removeItem('chidon_shb_impressions');
-      localStorage.removeItem('chidon_shb_ctr');
-      localStorage.removeItem('chidon_shb_avd');
-      localStorage.removeItem('chidon_shb_retention');
-      localStorage.removeItem('chidon_shb_strikes');
-      localStorage.removeItem('chidon_shb_videosList');
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   // Generate Audit
@@ -562,12 +391,6 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
   };
 
   const riskScore = lastResponse ? parseRiskScore(lastResponse.content) : null;
-
-  useEffect(() => {
-    if (riskScore !== null) {
-      localStorage.setItem('chidon_shadowban_risk_score', riskScore.toString());
-    }
-  }, [riskScore]);
 
   // Extract table rows dynamically for a custom table view!
   const parseTableRows = (text: string) => {
@@ -657,100 +480,23 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
 
   const parsedTimeline = lastResponse ? parseTimelineSteps(lastResponse.content) : [];
 
-  const [editableTable, setEditableTable] = useState<any[]>([]);
-  const [editableTimeline, setEditableTimeline] = useState<string[]>([]);
-  const [editableMyths, setEditableMyths] = useState<string[]>([]);
-  const [editableRealities, setEditableRealities] = useState<string[]>([]);
-
-  const [editingTableCell, setEditingTableCell] = useState<{ rowIdx: number; field: 'title' | 'risk' | 'why' | 'fix' } | null>(null);
-  const [editingTimelineIdx, setEditingTimelineIdx] = useState<number | null>(null);
-  const [editingMythIdx, setEditingMythIdx] = useState<number | null>(null);
-  const [editingRealityIdx, setEditingRealityIdx] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (lastResponse) {
-      setEditableTable(parseTableRows(lastResponse.content));
-      setEditableTimeline(parseTimelineSteps(lastResponse.content));
-      const { myths, realities } = parseMythsAndRealities(lastResponse.content);
-      setEditableMyths(myths.length > 0 ? myths : [
-        "Re-uploading Deleted Videos", 
-        "Sub-Genre Swearing", 
-        "YouTube Hates My Accent"
-      ]);
-      setEditableRealities(realities.length > 0 ? realities : [
-        "Sensitive Filter Triggers (YMYL)", 
-        "Drop under 20% Retention", 
-        "Repetitive Metadata Spam"
-      ]);
-    } else {
-      setEditableTable([]);
-      setEditableTimeline([]);
-      setEditableMyths([]);
-      setEditableRealities([]);
-    }
-  }, [lastResponse]);
-
-  // Local calculation of checklist completeness using editable timeline
+  // Local calculation of checklist completeness
   const completedCount = Object.values(checklist).filter(Boolean).length;
-  const progressPercent = Math.round((completedCount / (editableTimeline.length || 7)) * 100);
-
-  const getUpdatedReportContent = () => {
-    if (!lastResponse) return '';
-    
-    let updatedReport = `## CHIDON IQ COMPLIANCE AUDIT REPORT: ${channelUrl || 'Self-Audit'}\n\n`;
-    
-    // Try to extract original Section 1 diagnosis if available
-    const sec1Index = lastResponse.content.indexOf('## SECTION 2');
-    if (sec1Index !== -1) {
-      updatedReport += lastResponse.content.substring(0, sec1Index).trim() + '\n\n';
-    } else {
-      updatedReport += `### SECTION 1: SYSTEMIC DIAGNOSTICS & THREAT ASSESSMENT\n`;
-      updatedReport += `Risk score evaluation complete. Verified active shadowban indicator flags.\n\n`;
-    }
-    
-    updatedReport += `## SECTION 2: VIDEO COMPLIANCE ACTION LEDGER\n`;
-    updatedReport += `| Index | Video Title / Assets | Risk rating | Core Violation Cause | Algorithmic Safety Fix |\n`;
-    updatedReport += `|---|---|---|---|---|\n`;
-    editableTable.forEach((row, i) => {
-      updatedReport += `| ${i+1} | ${row.title} | ${row.risk} | ${row.why} | ${row.fix} |\n`;
-    });
-    updatedReport += `\n`;
-    
-    updatedReport += `## SECTION 3: TACTICAL 30-DAY RECOVERY TIMELINE\n`;
-    editableTimeline.forEach((step, i) => {
-      updatedReport += `- [ ] Phase ${i+1}: ${step}\n`;
-    });
-    updatedReport += `\n`;
-
-    updatedReport += `## SECTION 4: SHADOWBAN MYTHS\n`;
-    editableMyths.forEach((myth, i) => {
-      updatedReport += `- Myth ${i+1}: ${myth}\n`;
-    });
-    updatedReport += `\n`;
-
-    updatedReport += `## SECTION 5: HARSH REALITIES (ALGORITHMIC SUPPRESSORS)\n`;
-    editableRealities.forEach((real, i) => {
-      updatedReport += `- Reality ${i+1}: ${real}\n`;
-    });
-    
-    return updatedReport;
-  };
+  const progressPercent = Math.round((completedCount / (parsedTimeline.length || 7)) * 100);
 
   // Copy blueprint to clipboard
   const copyBlueprint = () => {
     if (!lastResponse) return;
-    const finalReport = getUpdatedReportContent();
-    navigator.clipboard.writeText(finalReport || lastResponse.content);
-    alert("Full (Edited) Audit Report copied to clipboard!");
+    navigator.clipboard.writeText(lastResponse.content);
+    alert("Full Audit Report copied to clipboard!");
   };
 
   // Save report to Vault draft standard
   const handleSaveToVault = () => {
     if (!lastResponse) return;
-    const finalReport = getUpdatedReportContent();
     onSaveDraft(
       'shadowban-solutions',
-      finalReport || lastResponse.content,
+      lastResponse.content,
       `Channel Audit: ${channelUrl ? channelUrl.replace('https://', '') : 'Self-Audit'}`
     );
   };
@@ -779,44 +525,14 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
         </div>
         
         {lastResponse && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <button 
-              id="shb_re_audit_btn"
-              onClick={resetForm}
-              className="px-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-red-500/30 text-xs font-mono font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 text-slate-700 dark:text-slate-300"
-            >
-              <RefreshCcw size={13} />
-              <span>Audit Another Channel</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (onDeleteMessage) {
-                  onDeleteMessage('shadowban-solutions', lastResponse.id);
-                }
-                resetForm();
-              }}
-              className="px-4 py-2 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 text-xs font-mono font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2"
-              title="Delete this audit session"
-            >
-              <Trash2 size={13} />
-              <span>Delete Report</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (onClearAllChatData) {
-                  onClearAllChatData('shadowban-solutions');
-                }
-                resetForm();
-              }}
-              className="px-4 py-2 bg-red-600/15 hover:bg-red-600 hover:text-white border border-red-600/20 text-red-600 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer flex items-center gap-2"
-              title="Clear all saved audit sessions"
-            >
-              <Trash2 size={13} />
-              <span>Clear All Data</span>
-            </button>
-          </div>
+          <button 
+            id="shb_re_audit_btn"
+            onClick={resetForm}
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-red-500/30 text-xs font-mono font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 text-slate-700 dark:text-slate-300"
+          >
+            <RefreshCcw size={13} />
+            <span>Audit Another Channel</span>
+          </button>
         )}
       </div>
 
@@ -829,7 +545,7 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
 
             <div className="flex justify-between items-center border-b border-slate-200 dark:border-white/[0.04] pb-4">
               <h3 className="text-sm font-mono font-black text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <Zap size={14} className="text-red-400" />
+                <Zap size={14} className="text-red-400 animate-pulse" />
                 <span>Diagnostic Configuration Console</span>
               </h3>
               <p className="text-[10px] text-slate-600 dark:text-slate-500 font-mono">STEP 1 OF 2</p>
@@ -1080,73 +796,38 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
 
             {/* ACTION FOOTER */}
             <div className="pt-4 border-t border-slate-200 dark:border-white/[0.04] flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex flex-col gap-1 items-start w-full md:w-auto">
-                <span className="text-[10px] text-slate-500 dark:text-slate-500 font-mono flex items-center gap-1.5">
-                  <Shield size={12} className="text-cyan-primary" /> Supported by Chidon Neural Engine
-                </span>
-                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-550 flex items-center gap-1.5">
-                  {isAutoSaving ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-500 dark:text-emerald-400">
-                      <span className="w-1 h-1 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                      <span>Draft auto-saved progress</span>
-                    </span>
-                  ) : (
-                    <span>Auto-saves drafts every 30s</span>
-                  )}
-                </span>
-              </div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-500 font-mono flex items-center gap-1.5">
+                <Shield size={12} className="text-cyan-primary" /> Supported by Chidon Neural Engine
+              </span>
 
-              <button
-                id="shb_trigger_audit_btn"
-                onClick={triggerAudit}
-                disabled={loading}
-                className="w-full md:w-auto px-6 py-3 bg-red-500 text-white hover:bg-red-400 disabled:opacity-50 font-mono font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Analyzing DNA...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play size={13} fill="currentColor" />
-                    <span>Run Deep Diagnostics Audit</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                <span className="text-[11px] font-mono font-bold text-red-500 dark:text-red-400 uppercase tracking-wider">
+                  Cost: 4 Credits
+                </span>
+                <button
+                  id="shb_trigger_audit_btn"
+                  onClick={triggerAudit}
+                  disabled={loading}
+                  className="px-6 py-3 bg-red-500 text-white hover:bg-red-400 disabled:opacity-50 font-mono font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Analyzing DNA...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play size={13} fill="currentColor" />
+                      <span>Run Deep Diagnostics Audit</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* POLICY NOTES RETAILER (4 cols) */}
           <div className="space-y-6 lg:col-span-4">
-            {/* Professional Diagnostic Graphic Banner */}
-            <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-950 aspect-[4/3] relative group flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-red-950/40" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(239,68,68,0.1),transparent)] animate-pulse" />
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:16px_16px]" />
-              
-              {/* Radar Sweeper */}
-              <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/30 to-transparent top-1/3 animate-pulse pointer-events-none" />
-              
-              {/* Shield Vector */}
-              <div className="relative z-10 p-4 rounded-full bg-red-950/40 border border-red-500/20 text-red-400 group-hover:scale-110 transition-transform duration-500 shadow-inner">
-                <svg viewBox="0 0 100 100" className="w-16 h-16" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22s8-4 38-4 38 4 38 4v34c0 22-38 34-38 34s-38-12-38-34V22z" />
-                  <line x1="50" y1="36" x2="50" y2="56" strokeWidth="8" />
-                  <circle cx="50" cy="72" r="4" fill="currentColor" />
-                </svg>
-              </div>
-
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
-                <div className="space-y-1">
-                  <span className="text-[9px] font-mono font-bold text-red-400 bg-red-950/80 px-2 py-0.5 rounded border border-red-500/25 uppercase tracking-wider">
-                    Shield Diagnostics Active
-                  </span>
-                  <p className="text-[10px] text-slate-300 font-medium">Compliance Scan Visualizer Node</p>
-                </div>
-              </div>
-            </div>
-
             <div className="card-base p-5 rounded-2xl space-y-4">
               <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
                 <ShieldAlert size={16} />
@@ -1184,117 +865,19 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
         /* AUDIT REPORT VIEW ACTIVE */
         <div className="space-y-6">
           {/* TOP SUMMARY OVERVIEW CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Risk Gauge */}
-            <div className={cn(
-              "card-base p-5 relative overflow-hidden transition-all duration-300 flex flex-col justify-between",
-              isMitigationOpen ? "md:col-span-4" : "md:col-span-1"
-            )}>
-              {/* Animated Risk Level badge on the top right */}
-              {(() => {
-                const badgeInfo = getRiskLevelBadge(riskScore);
-                if (!badgeInfo) return null;
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.6, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
-                    className={cn(
-                      "absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[8px] font-black uppercase tracking-widest border bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm z-20 shadow-sm",
-                      badgeInfo.className
-                    )}
-                  >
-                    <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", badgeInfo.dotColor)} />
-                    <span>{badgeInfo.label}</span>
-                  </motion.div>
-                );
-              })()}
-
-              {isMitigationOpen ? (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 z-10">
-                    <div className="space-y-1 text-left">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-bold">Compliance Risk Rating</span>
-                      <div className="flex items-baseline gap-3">
-                        <span className="text-3xl font-display font-black text-red-500 tracking-tight block">
-                          {riskScore !== null ? `${riskScore}%` : "CALCULATING"}
-                        </span>
-                        <span className="text-[10px] font-bold text-red-400/90 block font-mono uppercase">
-                          {riskScore !== null && riskScore > 60 ? "CRITICAL POLICY ALERT" : riskScore !== null && riskScore > 30 ? "MODERATE ENGAGEMENT FLAG" : "OPTIMAL HEALTH"}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleTriggerMitigation}
-                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 font-mono text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-red-500/20 flex items-center gap-1.5 cursor-pointer z-30"
-                      >
-                        {mitigationLoading ? (
-                          <RefreshCcw className="animate-spin" size={12} />
-                        ) : (
-                          <Zap size={12} />
-                        )}
-                        <span>Collapse Mitigation</span>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Collapsible panel with animate-presence */}
-                  <AnimatePresence>
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="border-t border-slate-200 dark:border-white/[0.04] pt-4 mt-1 overflow-hidden text-left"
-                    >
-                      {mitigationLoading ? (
-                        <div className="py-6 flex flex-col items-center justify-center gap-3 text-slate-500 font-mono text-xs">
-                          <RefreshCcw className="animate-spin text-red-500" size={24} />
-                          <span className="animate-pulse font-bold text-red-500">Formulating custom proactive mitigation blueprint...</span>
-                        </div>
-                      ) : mitigationError ? (
-                        <div className="py-4 text-center text-red-500 font-mono text-xs">
-                          Error generating mitigation blueprint: {mitigationError}
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
-                            <Shield className="animate-pulse" size={14} />
-                            <h4 className="text-[10px] font-mono font-black uppercase tracking-wider">AI-Generated Proactive Mitigation Blueprint</h4>
-                          </div>
-                          <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium prose prose-invert max-w-none prose-xs bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
-                            <ReactMarkdown>{mitigationContent || ""}</ReactMarkdown>
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <div className="flex flex-col h-full justify-between gap-4 z-10 text-left">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-bold">Compliance Risk Rating</span>
-                    <span className="text-3xl font-display font-black text-red-500 tracking-tight block">
-                      {riskScore !== null ? `${riskScore}%` : "CALCULATING"}
-                    </span>
-                    <span className="text-[10px] font-bold text-red-400/90 block font-mono">
-                      {riskScore !== null && riskScore > 60 ? "CRITICAL POLICY ALERT" : riskScore !== null && riskScore > 30 ? "MODERATE ENGAGEMENT FLAG" : "OPTIMAL HEALTH"}
-                    </span>
-                  </div>
-                  
-                  <button
-                    onClick={handleTriggerMitigation}
-                    className="mt-2 w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 font-mono text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border border-red-500/20 flex items-center justify-center gap-1.5 cursor-pointer z-30"
-                  >
-                    <Zap size={11} />
-                    <span>View Recovery Mitigation</span>
-                  </button>
-                </div>
-              )}
-              
-              <div className="absolute right-3 bottom-0 top-0 flex items-center justify-center opacity-5 pointer-events-none">
+            <div className="card-base p-5 flex items-center justify-between relative overflow-hidden">
+              <div className="space-y-1 z-10 text-left">
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-bold">Compliance Risk Rating</span>
+                <span className="text-3xl font-display font-black text-red-500 tracking-tight block">
+                  {riskScore !== null ? `${riskScore}%` : "CALCULATING"}
+                </span>
+                <span className="text-[10px] font-bold text-red-400/90 block font-mono">
+                  {riskScore !== null && riskScore > 60 ? "CRITICAL POLICY ALERT" : riskScore !== null && riskScore > 30 ? "MODERATE ENGAGEMENT FLAG" : "OPTIMAL HEALTH"}
+                </span>
+              </div>
+              <div className="absolute right-3 bottom-0 top-0 flex items-center justify-center opacity-10">
                 <ShieldAlert size={80} className="text-red-500" />
               </div>
             </div>
@@ -1457,153 +1040,41 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
                       <p className="text-xs text-slate-500 mt-1">Direct safety threat assessment mapping the YouTube compliance index for each item from your submitted video registry.</p>
                     </div>
 
-                    {editableTable.length > 0 ? (
+                    {parsedTable.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                           <thead>
                             <tr className="border-b border-slate-250 dark:border-white/[0.03] bg-slate-100/50 dark:bg-slate-900/40 text-[9px] font-mono text-slate-600 dark:text-slate-500 uppercase tracking-widest font-black text-left">
                               <th className="p-4 pl-6 w-12 text-slate-500">Index</th>
-                              <th className="p-4 min-w-[200px]">Video Title / Assets (Click to Edit)</th>
-                              <th className="p-4 w-32">Risk rating (Click)</th>
-                              <th className="p-4 min-w-[180px]">Core Violation Cause (Click)</th>
-                              <th className="p-4 pr-6 min-w-[200px]">Algorithmic Safety Fix (Click)</th>
+                              <th className="p-4 min-w-[200px]">Video Title / Assets</th>
+                              <th className="p-4 w-32">Risk rating</th>
+                              <th className="p-4">Core Violation Cause</th>
+                              <th className="p-4 pr-6">Algorithmic Safety Fix</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200 dark:divide-white/[0.02]">
-                            {editableTable.map((row, rIdx) => {
+                            {parsedTable.map((row, rIdx) => {
                               const isHigh = row.risk?.toLowerCase().includes('high') || row.risk?.includes('🔴');
                               const isMed = row.risk?.toLowerCase().includes('med') || row.risk?.includes('🟡');
                               
                               return (
                                 <tr key={rIdx} className="hover:bg-slate-100/30 dark:hover:bg-slate-900/30 transition-colors text-xs">
                                   <td className="p-4 pl-6 font-mono text-slate-500 dark:text-slate-600 font-extrabold">{rIdx + 1}</td>
-                                  
-                                  {/* Title Cell */}
-                                  <td 
-                                    className="p-4 cursor-pointer hover:bg-slate-500/5 group relative min-w-[200px]" 
-                                    onClick={() => setEditingTableCell({ rowIdx: rIdx, field: 'title' })}
-                                  >
-                                    {editingTableCell?.rowIdx === rIdx && editingTableCell?.field === 'title' ? (
-                                      <input
-                                        type="text"
-                                        autoFocus
-                                        value={row.title}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditableTable(prev => {
-                                            const copy = [...prev];
-                                            copy[rIdx].title = val;
-                                            return copy;
-                                          });
-                                        }}
-                                        onBlur={() => setEditingTableCell(null)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') setEditingTableCell(null); }}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-2 py-1 text-xs text-slate-850 dark:text-slate-150 outline-none focus:border-red-500"
-                                      />
-                                    ) : (
-                                      <div className="flex items-center gap-1.5 justify-between">
-                                        <span className="font-extrabold text-slate-800 dark:text-slate-200 block max-w-sm line-clamp-2 leading-snug">{row.title}</span>
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                                      </div>
-                                    )}
+                                  <td className="p-4">
+                                    <span className="font-extrabold text-slate-800 dark:text-slate-200 block max-w-sm line-clamp-2 leading-snug">{row.title}</span>
                                   </td>
-
-                                  {/* Risk Cell */}
-                                  <td 
-                                    className="p-4 cursor-pointer hover:bg-slate-500/5 group relative w-32" 
-                                    onClick={() => setEditingTableCell({ rowIdx: rIdx, field: 'risk' })}
-                                  >
-                                    {editingTableCell?.rowIdx === rIdx && editingTableCell?.field === 'risk' ? (
-                                      <select
-                                        autoFocus
-                                        value={row.risk}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditableTable(prev => {
-                                            const copy = [...prev];
-                                            copy[rIdx].risk = val;
-                                            return copy;
-                                          });
-                                        }}
-                                        onBlur={() => setEditingTableCell(null)}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-1.5 py-1 text-[10px] text-slate-850 dark:text-slate-150 outline-none font-mono focus:border-red-500"
-                                      >
-                                        <option value="🔴 High Policy-Risk">🔴 High Risk</option>
-                                        <option value="🟡 Med Policy-Risk">🟡 Med Risk</option>
-                                        <option value="🟢 Low Policy-Risk">🟢 Low Risk</option>
-                                      </select>
-                                    ) : (
-                                      <div className="flex items-center gap-1.5 justify-between">
-                                        <span className={cn(
-                                          "px-2.5 py-0.5 rounded-full font-mono text-[9px] font-black tracking-wide inline-block whitespace-nowrap",
-                                          isHigh ? "bg-red-500/10 text-red-500" :
-                                          isMed ? "bg-amber-500/10 text-amber-500" :
-                                          "bg-emerald-500/10 text-emerald-550 dark:text-emerald-400"
-                                        )}>
-                                          {row.risk || "Evaluating"}
-                                        </span>
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                                      </div>
-                                    )}
+                                  <td className="p-4">
+                                    <span className={cn(
+                                      "px-2.5 py-0.5 rounded-full font-mono text-[9px] font-black tracking-wide inline-block",
+                                      isHigh ? "bg-red-500/10 text-red-500" :
+                                      isMed ? "bg-amber-500/10 text-amber-500" :
+                                      "bg-emerald-500/10 text-emerald-550 dark:text-emerald-400"
+                                    )}>
+                                      {row.risk || "Evaluating"}
+                                    </span>
                                   </td>
-
-                                  {/* Why Cell */}
-                                  <td 
-                                    className="p-4 cursor-pointer hover:bg-slate-500/5 group relative min-w-[180px]" 
-                                    onClick={() => setEditingTableCell({ rowIdx: rIdx, field: 'why' })}
-                                  >
-                                    {editingTableCell?.rowIdx === rIdx && editingTableCell?.field === 'why' ? (
-                                      <textarea
-                                        autoFocus
-                                        value={row.why}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditableTable(prev => {
-                                            const copy = [...prev];
-                                            copy[rIdx].why = val;
-                                            return copy;
-                                          });
-                                        }}
-                                        onBlur={() => setEditingTableCell(null)}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-250 outline-none resize-y focus:border-red-500"
-                                        rows={3}
-                                      />
-                                    ) : (
-                                      <div className="flex items-center gap-1.5 justify-between">
-                                        <p className="text-slate-600 dark:text-slate-400 leading-normal font-medium max-w-xs">{row.why}</p>
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                                      </div>
-                                    )}
-                                  </td>
-
-                                  {/* Fix Cell */}
-                                  <td 
-                                    className="p-4 pr-6 cursor-pointer hover:bg-slate-500/5 group relative min-w-[200px]" 
-                                    onClick={() => setEditingTableCell({ rowIdx: rIdx, field: 'fix' })}
-                                  >
-                                    {editingTableCell?.rowIdx === rIdx && editingTableCell?.field === 'fix' ? (
-                                      <textarea
-                                        autoFocus
-                                        value={row.fix}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditableTable(prev => {
-                                            const copy = [...prev];
-                                            copy[rIdx].fix = val;
-                                            return copy;
-                                          });
-                                        }}
-                                        onBlur={() => setEditingTableCell(null)}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-250 outline-none resize-y focus:border-red-500"
-                                        rows={3}
-                                      />
-                                    ) : (
-                                      <div className="flex items-center gap-1.5 justify-between">
-                                        <p className="text-slate-700 dark:text-slate-300 leading-normal max-w-sm font-semibold">{row.fix}</p>
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                                      </div>
-                                    )}
-                                  </td>
+                                  <td className="p-4 text-slate-600 dark:text-slate-400 leading-normal font-medium max-w-xs">{row.why}</td>
+                                  <td className="p-4 pr-6 text-slate-700 dark:text-slate-300 leading-normal max-w-sm font-semibold">{row.fix}</td>
                                 </tr>
                               );
                             })}
@@ -1648,31 +1119,29 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between border border-slate-200 dark:border-white/[0.02]">
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-slate-550 dark:text-slate-500 uppercase block font-extrabold">Active Status</span>
-                        <span className="text-xs text-slate-700 dark:text-slate-300 font-bold block">{completedCount} of {editableTimeline.length} protocols executed successfully</span>
+                        <span className="text-xs text-slate-700 dark:text-slate-300 font-bold block">{completedCount} of {parsedTimeline.length} protocols executed successfully</span>
                       </div>
                       <span className="text-xl font-mono font-black text-cyan-primary">{progressPercent}% DONE</span>
                     </div>
 
                     {/* TIMELINE STEPS INTERACTIVE CHECKLIST */}
                     <div className="space-y-3">
-                      {editableTimeline.map((step, idx) => {
+                      {parsedTimeline.map((step, idx) => {
                         const stepId = `step-${idx}`;
                         const isChecked = !!checklist[stepId];
                         return (
                           <div 
                             key={idx}
                             id={`shb_checklist_item_${idx}`}
+                            onClick={() => setChecklist(prev => ({ ...prev, [stepId]: !isChecked }))}
                             className={cn(
-                              "p-4 rounded-2xl border text-xs leading-relaxed transition-all flex items-start gap-3.5 select-none",
+                              "p-4 rounded-2xl border text-xs leading-relaxed transition-all flex items-start gap-3.5 cursor-pointer select-none",
                               isChecked 
                                 ? "bg-slate-50/50 dark:bg-slate-900/30 border-cyan-500/20 text-slate-400 dark:text-slate-500" 
                                 : "bg-white dark:bg-slate-900 border-slate-205 dark:border-slate-850 text-slate-800 dark:text-slate-200 hover:border-slate-405 dark:hover:border-slate-800"
                             )}
                           >
-                            <div 
-                              className="mt-0.5 shrink-0 cursor-pointer"
-                              onClick={() => setChecklist(prev => ({ ...prev, [stepId]: !isChecked }))}
-                            >
+                            <div className="mt-0.5 shrink-0">
                               <div className={cn(
                                 "w-4 h-4 rounded-md border flex items-center justify-center transition-all",
                                 isChecked ? "bg-cyan-primary border-cyan-primary text-black" : "border-slate-300 dark:border-slate-650"
@@ -1680,43 +1149,19 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
                                 {isChecked && <Check size={11} strokeWidth={3} />}
                               </div>
                             </div>
-                            <div 
-                              className="space-y-1 flex-1 cursor-pointer hover:bg-slate-500/5 group p-1 rounded"
-                              onClick={() => setEditingTimelineIdx(idx)}
-                            >
+                            <div className="space-y-1">
                               <span className={cn(
                                 "font-mono text-[9px] uppercase tracking-wider font-extrabold block mb-0.5",
                                 isChecked ? "text-cyan-primary/50" : "text-cyan-primary"
                               )}>
-                                Protocol Phase {idx + 1} (Click to Edit)
+                                Protocol Phase {idx + 1}
                               </span>
-                              {editingTimelineIdx === idx ? (
-                                <textarea
-                                  autoFocus
-                                  value={step}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setEditableTimeline(prev => {
-                                      const copy = [...prev];
-                                      copy[idx] = val;
-                                      return copy;
-                                    });
-                                  }}
-                                  onBlur={() => setEditingTimelineIdx(null)}
-                                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-2 py-1 text-xs text-slate-850 dark:text-slate-200 outline-none resize-none focus:border-red-500 font-medium"
-                                  rows={2}
-                                />
-                              ) : (
-                                <div className="flex items-center gap-1.5 justify-between">
-                                  <p className={cn(
-                                    "font-medium leading-relaxed leading-snug",
-                                    isChecked ? "line-through text-slate-400 dark:text-slate-500" : ""
-                                  )}>
-                                    {step}
-                                  </p>
-                                  <span className="text-[10px] text-slate-400 dark:text-slate-650 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                                </div>
-                              )}
+                              <p className={cn(
+                                "font-medium leading-relaxed leading-snug",
+                                isChecked ? "line-through text-slate-400 dark:text-slate-500" : ""
+                              )}>
+                                {step}
+                              </p>
                             </div>
                           </div>
                         );
@@ -1744,36 +1189,11 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
                       <p className="text-xs text-slate-500 font-medium">These actions or criteria do not trigger systemic reach suppression under current algorithm rules:</p>
                       
                       <div className="space-y-3 pt-2">
-                        {editableMyths.length > 0 ? (
-                          editableMyths.map((myth, mIdx) => (
-                            <div 
-                              key={mIdx} 
-                              className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.01] rounded-xl space-y-1 cursor-pointer hover:bg-slate-500/5 group"
-                              onClick={() => setEditingMythIdx(mIdx)}
-                            >
-                              <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-mono text-cyan-primary font-black uppercase">MYTH {mIdx + 1} (Click to Edit)</span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-650 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                              </div>
-                              {editingMythIdx === mIdx ? (
-                                <textarea
-                                  autoFocus
-                                  value={myth}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setEditableMyths(prev => {
-                                      const copy = [...prev];
-                                      copy[mIdx] = val;
-                                      return copy;
-                                    });
-                                  }}
-                                  onBlur={() => setEditingMythIdx(null)}
-                                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none resize-none focus:border-red-500 font-medium"
-                                  rows={2}
-                                />
-                              ) : (
-                                <p className="text-xs text-slate-700 dark:text-slate-350 leading-relaxed font-semibold">{myth}</p>
-                              )}
+                        {parsedMyths.myths.length > 0 ? (
+                          parsedMyths.myths.map((myth, mIdx) => (
+                            <div key={mIdx} className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.01] rounded-xl space-y-1">
+                              <span className="text-[10px] font-mono text-cyan-primary font-black uppercase">MYTH {mIdx + 1}</span>
+                              <p className="text-xs text-slate-700 dark:text-slate-350 leading-relaxed font-semibold">{myth}</p>
                             </div>
                           ))
                         ) : (
@@ -1794,7 +1214,7 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
                         )}
                       </div>
                     </div>
- 
+
                     {/* HARSH REALITIES */}
                     <div className="card-base p-6 rounded-3xl space-y-4">
                       <div className="flex items-center gap-2 text-red-500 dark:text-red-400">
@@ -1802,38 +1222,13 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
                         <h4 className="text-sm font-mono font-black uppercase tracking-wider">Harsh Realities (Suppressors)</h4>
                       </div>
                       <p className="text-xs text-slate-500 font-medium">These critical factors are mathematically proven to trigger recommendation blocks across standard social indices:</p>
- 
+
                       <div className="space-y-3 pt-2">
-                        {editableRealities.length > 0 ? (
-                          editableRealities.map((real, rIdx) => (
-                            <div 
-                              key={rIdx} 
-                              className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.01] rounded-xl space-y-1 cursor-pointer hover:bg-slate-500/5 group"
-                              onClick={() => setEditingRealityIdx(rIdx)}
-                            >
-                              <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-mono text-red-500 dark:text-red-400 font-black uppercase">REALITY {rIdx + 1} (Click to Edit)</span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-650 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✎</span>
-                              </div>
-                              {editingRealityIdx === rIdx ? (
-                                <textarea
-                                  autoFocus
-                                  value={real}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setEditableRealities(prev => {
-                                      const copy = [...prev];
-                                      copy[rIdx] = val;
-                                      return copy;
-                                    });
-                                  }}
-                                  onBlur={() => setEditingRealityIdx(null)}
-                                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none resize-none focus:border-red-500 font-medium"
-                                  rows={2}
-                                />
-                              ) : (
-                                <p className="text-xs text-slate-700 dark:text-slate-350 leading-relaxed font-semibold">{real}</p>
-                              )}
+                        {parsedMyths.realities.length > 0 ? (
+                          parsedMyths.realities.map((real, rIdx) => (
+                            <div key={rIdx} className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.01] rounded-xl space-y-1">
+                              <span className="text-[10px] font-mono text-red-500 dark:text-red-400 font-black uppercase">REALITY {rIdx + 1}</span>
+                              <p className="text-xs text-slate-700 dark:text-slate-350 leading-relaxed font-semibold">{real}</p>
                             </div>
                           ))
                         ) : (

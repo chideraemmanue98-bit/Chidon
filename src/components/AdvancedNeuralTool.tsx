@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   MessageSquare, 
   BookOpen, 
@@ -24,7 +24,10 @@ import {
   Copy,
   Check,
   History as HistoryIcon,
-  Trash2
+  Trash2,
+  Sparkles,
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -36,8 +39,9 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
-import { cn, getCleanFeatureLabel } from '../lib/utils';
-import { BookContext } from '../lib/contexts';
+import { cn } from '../lib/utils';
+import { BookContext } from '../context/BookContext';
+import HistorySidebar from './HistorySidebar';
 
 import { 
   ScriptPrompterWidget, 
@@ -47,16 +51,7 @@ import {
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
   RepurposePipelineWidget,
-  ViralIdeaCardDeckWidget,
-  NarrativeArchitectBlueprintWidget,
-  HeadlineCTRVisualizerWidget,
-  KeywordIntelligenceMatrixWidget,
-  LiveVideoFeedPreviewWidget,
-  MetadataAABenchmarkWidget,
-  SemanticTagCloudWidget,
-  WeeklyPostingHeatmapWidget,
-  GlobalPostingTimeClockWidget,
-  DynamicAuditScorecardWidget
+  GoogleBrowserEngineWidget
 } from './SpecializedWidgets';
 
 // --- FORMATTING PROTOCOL ---
@@ -578,120 +573,25 @@ const KeywordTrendGraph = ({ difficulty }: { difficulty: number }) => {
   );
 };
 
-// --- FEATURE DYNAMIC IMAGES MAPPING ---
-const FEATURE_IMAGES: Record<string, { src: string, alt: string, badge: string, subtitle: string }> = {
-  'keyword-research': {
-    src: '/assets/images/keyword_intel_radar_1783488604768.jpg',
-    alt: 'Keyword Intel Radar Core',
-    badge: 'Radar Nodes Sync Active',
-    subtitle: 'Volumetric Keyword Vector Map'
-  },
-  'vseo-keywords': {
-    src: '/assets/images/keyword_intel_radar_1783488604768.jpg',
-    alt: 'Keyword Intel Radar Core',
-    badge: 'Radar Nodes Sync Active',
-    subtitle: 'Volumetric Keyword Vector Map'
-  },
-  'content-ideas': {
-    src: '/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg',
-    alt: 'Creative Analytics Node Map',
-    badge: 'Creative Engine Link Live',
-    subtitle: 'High-Velocity Format Synthesizer'
-  },
-  'scripts': {
-    src: '/assets/images/template_wireframe_1783490763717.jpg',
-    alt: 'Script Outline Matrix Block',
-    badge: 'Script Matrix Synthesizer',
-    subtitle: 'Pattern-Interrupted Script Architecture'
-  },
-  'ai-script-outline': {
-    src: '/assets/images/template_wireframe_1783490763717.jpg',
-    alt: 'Script Outline Matrix Block',
-    badge: 'Script Matrix Synthesizer',
-    subtitle: 'Pattern-Interrupted Script Architecture'
-  },
-  'bio': {
-    src: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
-    alt: 'Audience Psychographics Vector Map',
-    badge: 'Bio Converter Protocol',
-    subtitle: 'Identity Matrix Positioning Core'
-  },
-  'personas': {
-    src: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
-    alt: 'Audience Psychographics Vector Map',
-    badge: 'Psychographic Ingress Active',
-    subtitle: 'Fictional Persona Matrix Constructor'
-  },
-  'thumbnails': {
-    src: '/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
-    alt: 'High-Contrast Thumbnail Layout Preview',
-    badge: 'Visual Psychology Core',
-    subtitle: 'Click-Friction Concept Canvas'
-  },
-  'vseo-scorecard': {
-    src: '/assets/images/chidon_iq_engine_v4_1783388111932.jpg',
-    alt: 'High-Contrast Thumbnail Layout Preview',
-    badge: 'Visual Psychology Core',
-    subtitle: 'Click-Friction Concept Canvas'
-  },
-  'competitor-analysis': {
-    src: '/assets/images/seo_analytics_vector_1783490751280.jpg',
-    alt: 'Global Node Market Matrix Analytics',
-    badge: 'Market Lab Monitor',
-    subtitle: 'Strategic Pillar Positioning Map'
-  },
-  'hashtags': {
-    src: '/assets/images/chidon_iq_dashboard_1783387455047.jpg',
-    alt: 'Global Hashtag Rank Tiers Scanner',
-    badge: 'Linguistic Engine Ingress',
-    subtitle: 'Reach Tiers Compression Matrix'
-  },
-  'vseo-tags': {
-    src: '/assets/images/chidon_iq_dashboard_1783387455047.jpg',
-    alt: 'Global Hashtag Rank Tiers Scanner',
-    badge: 'Linguistic Engine Ingress',
-    subtitle: 'Reach Tiers Compression Matrix'
-  },
-  'repurposing': {
-    src: '/assets/images/chidon_iq_engine_1783387464624.jpg',
-    alt: 'Multi-Platform Repurpose Signal Matrix',
-    badge: 'Signal Splitter Synced',
-    subtitle: 'Multi-Channel Narrative Transformer'
-  },
-  'posting-schedule': {
-    src: '/assets/images/empty_scheduler_1781319203016.jpg',
-    alt: 'Temporal Optimization Dispatch Calendar',
-    badge: 'Temporal Grid Synthesizer',
-    subtitle: 'Optimized Content Dispersion Matrix'
-  },
-  'vseo-best-time': {
-    src: '/assets/images/empty_scheduler_1781319203016.jpg',
-    alt: 'Temporal Optimization Dispatch Calendar',
-    badge: 'Temporal Grid Synthesizer',
-    subtitle: 'Optimized Content Dispersion Matrix'
-  },
-  'engagement-calc': {
-    src: '/assets/images/chidon_iq_strategy_1783387475441.jpg',
-    alt: 'Sovereign Creator Growth Calculator Map',
-    badge: 'Growth Calculus Model',
-    subtitle: '30-Day Conversion Acceleration Curve'
-  },
-  'headlines': {
-    src: '/assets/images/dashboard_hero_banner_1783488577319.jpg',
-    alt: 'Catchy Headlines Click Matrix',
-    badge: 'Attention Core Ingress',
-    subtitle: 'Friction-Based Click Magnet Hook Formulas'
-  },
-  'shadowban-solutions': {
-    src: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
-    alt: 'Anti-Shadowban Diagnostics Shield',
-    badge: 'Shield Diagnostics Active',
-    subtitle: 'Compliance Scan Visualizer Node'
-  }
-};
-
 // --- MAIN UNIFIED COMPONENT ---
-export default function AdvancedNeuralTool({ feature, onGenerate, messages, loading, error, onGenerateFeedback, onSaveDraft, onBack, onDeleteMessage, onClearAllChatData }: any) {
+export default function AdvancedNeuralTool({
+  feature,
+  onGenerate,
+  messages,
+  loading,
+  error,
+  onGenerateFeedback,
+  onSaveDraft,
+  onBack,
+  credits = null,
+  activeDocId = null,
+  chatMessages = [],
+  loadingHistory = false,
+  onLoadHistoryItem,
+  onWrapUpMessage,
+  onDeleteMessage,
+  onNewChat
+}: any) {
   const { t } = useTranslation();
   const bookContext = useContext(BookContext);
   
@@ -699,89 +599,94 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
   const schema = SCHEMAS[feature.id] || {
     p1Label: 'Neural Directive',
     p2Label: 'Additional Context',
-    p1Placeholder: `Describe your target for ${getCleanFeatureLabel(feature.label).toLowerCase()}...`,
+    p1Placeholder: `Describe your target for ${feature.label.toLowerCase()}...`,
     p2Placeholder: 'Optional tactical focus notes...',
     suggestions: [],
-    buildPrompt: (p1, p2) => `Analyze and provide expert social media advice for: "${p1}" in the context of ${getCleanFeatureLabel(feature.label)}. Additional detail: "${p2}".`
+    buildPrompt: (p1, p2) => `Analyze and provide expert social media advice for: "${p1}" in the context of ${feature.label}. Additional detail: "${p2}".`
   };
 
-  const [input1, setInput1] = useState(() => {
-    try {
-      return localStorage.getItem(`chidon_draft_input1_${feature.id}`) || '';
-    } catch {
-      return '';
-    }
-  });
-  const [input2, setInput2] = useState(() => {
-    try {
-      return localStorage.getItem(`chidon_draft_input2_${feature.id}`) || '';
-    } catch {
-      return '';
-    }
-  });
-  const [input3, setInput3] = useState(() => {
-    try {
-      return localStorage.getItem(`chidon_draft_input3_${feature.id}`) || '';
-    } catch {
-      return '';
-    }
-  });
+  const [input1, setInput1] = useState('');
+  const [input2, setInput2] = useState('');
+  const [input3, setInput3] = useState('');
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
   const [activeTierFilter, setActiveTierFilter] = useState<'all' | 'tier1' | 'tier2' | 'tier3'>('all');
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [followUpInput, setFollowUpInput] = useState('');
 
-  // Load states on feature switch
-  useEffect(() => {
+  // History & Wrap-Up states
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isWrapping, setIsWrapping] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showDeductionAnim, setShowDeductionAnim] = useState(false);
+
+  const currentMessageFromHistory = useMemo(() => {
+    if (!activeDocId || !chatMessages) return null;
+    return chatMessages.find((m: any) => m.id === activeDocId) || null;
+  }, [activeDocId, chatMessages]);
+
+  const handleCopyAction = () => {
+    const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+    if (!lastResponse?.content) return;
+    navigator.clipboard.writeText(lastResponse.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleWrapUpAction = async () => {
+    const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+    if (!activeDocId || !lastResponse?.content) return;
+    setIsWrapping(true);
+    setShowDeductionAnim(true);
+    setTimeout(() => setShowDeductionAnim(false), 2000);
+
     try {
-      const saved1 = localStorage.getItem(`chidon_draft_input1_${feature.id}`) || '';
-      const saved2 = localStorage.getItem(`chidon_draft_input2_${feature.id}`) || (schema.p2Type === 'select' && schema.p2Options ? schema.p2Options[0] : '');
-      const saved3 = localStorage.getItem(`chidon_draft_input3_${feature.id}`) || (schema.p3Type === 'select' && schema.p3Options ? schema.p3Options[0] : '');
-      setInput1(saved1);
-      setInput2(saved2);
-      setInput3(saved3);
-    } catch (e) {
-      console.error(e);
+      await onWrapUpMessage(feature.id, activeDocId, lastResponse.content, credits);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsWrapping(false);
     }
-  }, [feature.id]);
+  };
 
-  // Periodic Auto-Save every 30 seconds
+  // Reset states on feature switch
   useEffect(() => {
-    const interval = setInterval(() => {
-      try {
-        localStorage.setItem(`chidon_draft_input1_${feature.id}`, input1);
-        localStorage.setItem(`chidon_draft_input2_${feature.id}`, input2);
-        localStorage.setItem(`chidon_draft_input3_${feature.id}`, input3);
-        
-        setIsAutoSaving(true);
-        const timer = setTimeout(() => setIsAutoSaving(false), 2000);
-        return () => clearTimeout(timer);
-      } catch (e) {
-        console.error("AdvancedNeuralTool auto-save failed:", e);
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [input1, input2, input3, feature.id]);
-
-  const handleClearInputs = () => {
     setInput1('');
     setInput2(schema.p2Type === 'select' && schema.p2Options ? schema.p2Options[0] : '');
     setInput3(schema.p3Type === 'select' && schema.p3Options ? schema.p3Options[0] : '');
-    try {
-      localStorage.removeItem(`chidon_draft_input1_${feature.id}`);
-      localStorage.removeItem(`chidon_draft_input2_${feature.id}`);
-      localStorage.removeItem(`chidon_draft_input3_${feature.id}`);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+    setFollowUpInput('');
+  }, [feature.id]);
 
   const handleAction = () => {
     if (!input1.trim()) return;
     let prompt = schema.buildPrompt(input1, input2, input3);
     prompt += FORMATTING_PROTOCOL;
-    onGenerate(prompt, `${getCleanFeatureLabel(feature.label)} scan for: ${input1.slice(0, 30)}...`);
+    onGenerate(prompt, `${feature.label} scan for: ${input1.slice(0, 30)}...`);
+  };
+
+  const handleFollowUpSend = (customPrompt?: string) => {
+    const queryText = customPrompt || followUpInput.trim();
+    if (!queryText) return;
+
+    // Construct clean list of prior messages
+    const chatContext = (messages || []).map((m: any) => {
+      const roleStr = m.role === 'user' ? 'USER' : 'AI (' + (feature.persona || 'ChidonIQ Agent') + ')';
+      return `${roleStr}: ${m.content}`;
+    }).join('\n\n');
+
+    const finalPrompt = `You are continuing an interactive conversational dialogue session as the specialized authority "${feature.persona || 'ChidonIQ Artificial Strategist'}".
+Below is the history of this session's conversation. Review it to understand previous context and answers.
+
+--- CONVERSATION HISTORY ---
+${chatContext}
+
+--- NEW USER DIRECTIVE OR FOLLOW-UP ---
+${queryText}
+
+Please respond to the new user directive directly and fully. Sound highly authoritative, technical, and strategic. Keep your response in appropriate language. Maintain the following formatting protocol:
+${FORMATTING_PROTOCOL}`;
+
+    onGenerate(finalPrompt, `Dialogue: ${queryText.slice(0, 30)}...`);
+    setFollowUpInput('');
   };
 
   const actions = (msg: any) => (
@@ -793,7 +698,7 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
         <MessageSquare size={14} /> Profile
       </button>
       <button 
-        onClick={() => onSaveDraft(feature.id, msg.content, `${getCleanFeatureLabel(feature.label)}: ${input1.slice(0, 20)}`)}
+        onClick={() => onSaveDraft(feature.id, msg.content, `${feature.label}: ${input1.slice(0, 20)}`)}
         className={cn("flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-full text-slate-400 hover:text-white transition-all text-[10px] uppercase tracking-[0.2em] font-black cursor-pointer")}
       >
         <BookOpen size={14} /> Vault
@@ -802,31 +707,6 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
   );
 
   const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
-
-  // Group messages into pairs (User query + Assistant response)
-  const chatSessions = useMemo(() => {
-    if (!messages || messages.length === 0) return [];
-    const sessions: { id: string; userMsg: any; assistantMsg: any }[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      if (messages[i].role === 'user') {
-        const next = messages[i + 1];
-        if (next && next.role === 'assistant') {
-          sessions.push({
-            id: next.id,
-            userMsg: messages[i],
-            assistantMsg: next
-          });
-        } else {
-          sessions.push({
-            id: messages[i].id,
-            userMsg: messages[i],
-            assistantMsg: null
-          });
-        }
-      }
-    }
-    return sessions.reverse();
-  }, [messages]);
 
   // Hashtag specific parser helper
   const tagsList = useMemo(() => {
@@ -895,11 +775,24 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
           <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           <span>Exit protocol</span>
         </button>
-        <span className={cn("text-[9px] font-mono uppercase tracking-[0.2em]", feature.themeColor)}>
-          {feature.persona || 'ChidonIQ Artificial Strategist'}
-        </span>
+        
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            className="flex items-center gap-1.5 text-slate-400 hover:text-brand transition-all font-mono text-[10px] font-bold uppercase tracking-widest cursor-pointer bg-slate-50 dark:bg-slate-900/40 px-3 py-1.5 border border-[var(--border-base)] rounded-xl hover:border-brand/20 shadow-sm"
+          >
+            <HistoryIcon size={12} className="text-brand" />
+            <span>History ({chatMessages?.length || 0})</span>
+          </button>
+          
+          <span className={cn("text-[9px] font-mono uppercase tracking-[0.2em] hidden sm:inline", feature.themeColor)}>
+            {feature.persona || 'ChidonIQ Artificial Strategist'}
+          </span>
+        </div>
       </div>
-      
+
+      {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         
         {/* INPUT PANEL CARD */}
@@ -912,21 +805,8 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
                 <feature.icon size={20} />
               </div>
               <div className="text-left">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-tight">{getCleanFeatureLabel(feature.label)}</h3>
+                <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-tight">{feature.label}</h3>
                 <p className="text-[10px] text-[var(--text-secondary)] font-mono tracking-wider">NODE CONTROL</p>
-              </div>
-            </div>
-
-            {/* Feature Banner */}
-            <div className="w-full h-24 rounded-2xl overflow-hidden border border-[var(--border-base)] relative group shadow-inner shrink-0 bg-slate-950 flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)] animate-pulse" />
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex items-end p-3">
-                <span className="text-[8px] font-mono font-bold text-white uppercase tracking-widest bg-black/70 px-2 py-0.5 rounded border border-white/10">
-                  {feature.persona}
-                </span>
               </div>
             </div>
 
@@ -1017,6 +897,18 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
               </div>
             )}
 
+            <div className="flex items-center justify-between px-1 text-[11px] font-mono uppercase font-bold text-slate-400 dark:text-slate-500">
+              <span>Required Energy</span>
+              <span className="text-brand dark:text-cyan-400">
+                Cost: {
+                  feature.id === 'ai-script-outline' ? 5 :
+                  feature.id === 'shadowban-solutions' ? 4 :
+                  ['scripts', 'competitor-analysis', 'trending', 'trending-topics', 'trend-alerts'].includes(feature.id) ? 3 :
+                  ['content-ideas', 'thumbnails', 'daily-ideas'].includes(feature.id) ? 2 : 1
+                } Credits
+              </span>
+            </div>
+
             <button 
               onClick={handleAction} 
               disabled={loading || !input1.trim()}
@@ -1027,57 +919,7 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
             >
               {loading ? 'Synthesizing...' : `EXECUTE MODULE`}
             </button>
-
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500 pt-1">
-              <span className="flex items-center gap-1.5">
-                {isAutoSaving ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-500 dark:text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                    <span>Auto-saved progress</span>
-                  </span>
-                ) : (
-                  <span>Auto-saves every 30s</span>
-                )}
-              </span>
-              {(input1 || input2 || input3) && (
-                <button
-                  type="button"
-                  onClick={handleClearInputs}
-                  className="text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors font-bold cursor-pointer uppercase text-[9px] tracking-wider"
-                >
-                  Clear Draft
-                </button>
-              )}
-            </div>
           </div>
-
-          {FEATURE_IMAGES[feature.id] && (
-            <div className="rounded-3xl overflow-hidden border border-[var(--border-base)] shadow-sm bg-slate-950 aspect-[4/3] relative group flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.1),transparent)] animate-pulse" />
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px]" />
-              
-              <div className={cn(
-                "relative z-10 p-5 rounded-full bg-slate-900/60 border border-white/5 group-hover:scale-110 transition-transform duration-500 shadow-inner",
-                feature.themeColor
-              )}>
-                <feature.icon size={44} />
-              </div>
-
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-5 text-left">
-                <div className="space-y-1">
-                  <span className={cn(
-                    "text-[9px] font-mono font-bold bg-slate-950/80 px-2 py-0.5 rounded border uppercase tracking-wider",
-                    feature.themeColor,
-                    feature.themeColor.replace('text-', 'border-').concat('/25')
-                  )}>
-                    {FEATURE_IMAGES[feature.id].badge}
-                  </span>
-                  <p className="text-[10px] text-slate-300 font-medium">{FEATURE_IMAGES[feature.id].subtitle}</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {feature.id === 'keyword-research' && input1 && (
             <KeywordTrendGraph difficulty={55} />
@@ -1095,7 +937,7 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
 
           {!loading && !lastResponse && (
             <div className="flex flex-col items-center justify-center py-24 bg-[var(--bg-card)] border border-dashed border-[var(--border-base)] rounded-3xl text-center p-6 shadow-sm">
-              <CpuIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4 animate-pulse" />
+              <ZapIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4 animate-pulse" />
               <h4 className="text-[var(--text-primary)] font-bold text-sm mb-1 uppercase tracking-wide">Aether-Core Ready</h4>
               <p className="text-[var(--text-secondary)] text-xs max-w-sm leading-relaxed">
                 Provide directive specifications in the left controller console and select execute to trigger neural analysis stream.
@@ -1124,16 +966,6 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
               {feature.id === 'trending' && <TrendMomentumTickerWidget content={lastResponse.content} />}
               {feature.id === 'personas' && <AudienceDossierWidget content={lastResponse.content} />}
               {feature.id === 'repurposing' && <RepurposePipelineWidget content={lastResponse.content} />}
-              {feature.id === 'content-ideas' && <ViralIdeaCardDeckWidget content={lastResponse.content} />}
-              {feature.id === 'ai-script-outline' && <NarrativeArchitectBlueprintWidget content={lastResponse.content} />}
-              {feature.id === 'headlines' && <HeadlineCTRVisualizerWidget content={lastResponse.content} />}
-              {(feature.id === 'keyword-research' || feature.id === 'vseo-keywords') && <KeywordIntelligenceMatrixWidget content={lastResponse.content} />}
-              {feature.id === 'youtube-seo' && <LiveVideoFeedPreviewWidget content={lastResponse.content} />}
-              {feature.id === 'vseo-title-desc' && <MetadataAABenchmarkWidget content={lastResponse.content} />}
-              {feature.id === 'vseo-tags' && <SemanticTagCloudWidget content={lastResponse.content} />}
-              {feature.id === 'posting-schedule' && <WeeklyPostingHeatmapWidget content={lastResponse.content} />}
-              {(feature.id === 'post-optimizer' || feature.id === 'vseo-best-time') && <GlobalPostingTimeClockWidget content={lastResponse.content} />}
-              {(feature.id === 'seo-scorecard' || feature.id === 'vseo-scorecard') && <DynamicAuditScorecardWidget content={lastResponse.content} />}
 
               {/* Hashtag custom directory layout */}
               {feature.id === 'hashtags' && tagsList.length > 0 && (
@@ -1189,113 +1021,234 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
 
               {/* Standard Advisory transcription */}
               <div className="p-6 md:p-8 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl shadow-sm relative overflow-hidden">
-                <div className="flex items-center justify-between pb-4 border-b border-[var(--border-base)] mb-6">
-                  <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-[0.2em] font-bold">Advisory Notes transcription</span>
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[var(--border-base)] mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-[0.2em] font-bold">Advisory Notes transcription</span>
+                    {activeDocId && (
+                      <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded border border-emerald-500/20 uppercase font-semibold">Saved ✓</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Wrap Up Button */}
+                    {activeDocId && (
+                      <div className="relative">
+                        <button
+                          onClick={handleWrapUpAction}
+                          disabled={isWrapping || !!currentMessageFromHistory?.wrappedUp}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-bold border cursor-pointer transition-all disabled:opacity-50",
+                            currentMessageFromHistory?.wrappedUp
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              : "bg-brand/10 text-brand border-brand/20 hover:bg-brand/20"
+                          )}
+                        >
+                          {isWrapping ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : currentMessageFromHistory?.wrappedUp ? (
+                            <Check size={12} />
+                          ) : (
+                            <Sparkles size={11} />
+                          )}
+                          <span>{currentMessageFromHistory?.wrappedUp ? 'Wrapped Up' : 'Wrap Up (0.5c)'}</span>
+                        </button>
+
+                        <AnimatePresence>
+                          {showDeductionAnim && (
+                            <motion.span
+                              initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                              animate={{ opacity: 1, y: -25, scale: 1.1 }}
+                              exit={{ opacity: 0 }}
+                              className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-[9px] font-black text-red-500 font-mono tracking-wider pointer-events-none whitespace-nowrap bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded"
+                            >
+                              -0.5 CREDITS
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+
+                    {/* Copy Button */}
+                    <button
+                      onClick={handleCopyAction}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-[var(--border-base)] rounded-lg text-[10px] uppercase tracking-wider font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                    >
+                      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                      <span>{copied ? 'Copied ✓' : 'Copy'}</span>
+                    </button>
+
+                    {/* New Chat Button */}
+                    <button
+                      onClick={onNewChat}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-[var(--border-base)] rounded-lg text-[10px] uppercase tracking-wider font-bold text-red-500 hover:bg-red-500/10 border-red-500/10 hover:border-red-500/20 transition-all cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                      <span>New Chat</span>
+                    </button>
+
+                    {/* Original Actions */}
                     {actions(lastResponse)}
+
                     {bookContext?.onSendToBook && (
                       <button 
-                        onClick={() => bookContext.onSendToBook?.(lastResponse.content, `${getCleanFeatureLabel(feature.label)}: ${input1.slice(0, 15)}`)}
-                        className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-[var(--border-base)] rounded-lg text-[var(--text-secondary)] hover:text-brand transition-all cursor-pointer"
+                        onClick={() => bookContext.onSendToBook?.(lastResponse.content, `${feature.label}: ${input1.slice(0, 15)}`)}
+                        className="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-[var(--border-base)] rounded-lg text-[var(--text-secondary)] hover:text-brand transition-all cursor-pointer"
                         title="Send to Ruled Book"
                       >
                         <BookOpen size={14} />
                       </button>
                     )}
-                    {onDeleteMessage && (
-                      <button 
-                        onClick={() => onDeleteMessage(feature.id, lastResponse.id)}
-                        className="p-2 bg-slate-50 hover:bg-red-500/10 hover:text-red-500 dark:bg-slate-800 dark:hover:bg-red-500/10 border border-[var(--border-base)] rounded-lg text-slate-400 hover:text-red-500 transition-all cursor-pointer"
-                        title="Delete this chat session"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
                   </div>
                 </div>
 
-                <div className="markdown-body prose dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] leading-relaxed font-sans max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
+                {/* Wrapped Up Bullet points display */}
+                {currentMessageFromHistory?.wrappedUp && (
+                  <div className="p-5 mb-6 bg-brand/5 border border-brand/10 rounded-2xl shadow-sm text-left relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="absolute top-0 right-0 p-3">
+                      <Sparkles size={16} className="text-brand animate-pulse" />
+                    </div>
+                    <h4 className="text-xs font-mono font-bold text-brand uppercase tracking-[0.2em] mb-2.5">✓ 3-Bullet Strategic Wrap-Up</h4>
+                    <ul className="space-y-2.5 font-sans text-xs text-[var(--text-secondary)]">
+                      {currentMessageFromHistory.wrappedUp.split('\n').filter(l => l.trim()).slice(0, 3).map((bullet: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-2 leading-relaxed">
+                          <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-brand mt-1.5" />
+                          <span>{bullet.replace(/^-\s*/, '').replace(/^\*\s*/, '').replace(/^\d+\.\s*/, '')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] leading-relaxed font-sans max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
                   <ReactMarkdown>{lastResponse.content}</ReactMarkdown>
                 </div>
               </div>
 
-              {/* Saved History & Previous Sessions Section */}
-              {chatSessions.length > 1 && (
-                <div className="p-6 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl shadow-sm space-y-4 animate-in fade-in duration-300">
-                  <div className="flex items-center justify-between pb-3 border-b border-[var(--border-base)]">
-                    <div className="flex items-center gap-2">
-                      <HistoryIcon size={16} className={feature.themeColor} />
-                      <h3 className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase tracking-wider">Saved Session Logs ({chatSessions.length - 1} saved)</h3>
-                    </div>
-                    {onClearAllChatData && (
-                      <button
-                        onClick={() => onClearAllChatData(feature.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 rounded-xl text-[10px] font-mono uppercase tracking-wider font-bold transition-all cursor-pointer shadow-sm active:scale-95"
-                        title="Wipe all saved chats for this feature to free up space"
-                      >
-                        <Trash2 size={12} />
-                        <span>Clear All Data</span>
-                      </button>
-                    )}
+              {/* --- NEURAL DIALOGUE HUB --- */}
+              <div className="p-6 md:p-8 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl shadow-sm relative overflow-hidden space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-[var(--border-base)]">
+                  <div>
+                    <span className="text-[10px] font-mono text-cyan-500 bg-cyan-500/10 px-2.5 py-1 rounded border border-cyan-500/20 uppercase tracking-widest font-bold">Linguistic Co-Pilot Terminal</span>
+                    <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase mt-1">Dialogue with {feature.persona || 'ChidonIQ Artificial Strategist'}</h3>
                   </div>
-
-                  <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-                    {chatSessions.slice(1).map((session) => {
-                      const timestampStr = session.userMsg.timestamp instanceof Date 
-                        ? session.userMsg.timestamp.toLocaleString() 
-                        : new Date(session.userMsg.timestamp).toLocaleString();
-
-                      return (
-                        <div key={session.id} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-[var(--border-base)] rounded-2xl space-y-3 relative group">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="space-y-1">
-                              <span className="text-[9px] font-mono text-slate-400 block">{timestampStr}</span>
-                              <p className="text-xs font-semibold text-[var(--text-primary)] leading-normal italic">
-                                &ldquo;{session.userMsg.content}&rdquo;
-                              </p>
-                            </div>
-                            {onDeleteMessage && (
-                              <button
-                                onClick={() => onDeleteMessage(feature.id, session.assistantMsg?.id || session.userMsg.id)}
-                                className="p-1.5 bg-slate-100 hover:bg-red-500 dark:bg-slate-800 dark:hover:bg-red-500 text-slate-400 hover:text-white border border-[var(--border-base)] rounded-lg transition-all cursor-pointer shadow-sm"
-                                title="Delete this session from history"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
-
-                          {session.assistantMsg && (
-                            <div className="pt-3 border-t border-[var(--border-base)]/60">
-                              <div className="markdown-body prose dark:prose-invert prose-xs max-w-none text-[var(--text-secondary)] leading-relaxed font-sans max-h-48 overflow-y-auto pr-1.5 custom-scrollbar">
-                                <ReactMarkdown>{session.assistantMsg.content}</ReactMarkdown>
-                              </div>
-                              
-                              {/* Mini actions for previous session */}
-                              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[var(--border-base)]/40">
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(session.assistantMsg.content);
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all text-[9px] font-mono uppercase tracking-wider font-bold cursor-pointer border border-white/5"
-                                >
-                                  <Copy size={10} /> Copy
-                                </button>
-                                <button
-                                  onClick={() => onSaveDraft(feature.id, session.assistantMsg.content, `${getCleanFeatureLabel(feature.label)}: ${session.userMsg.content.slice(0, 20)}`)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all text-[9px] font-mono uppercase tracking-wider font-bold cursor-pointer border border-white/5"
-                                >
-                                  <BookOpen size={10} /> Vault
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">Live Feedback Link</span>
                   </div>
                 </div>
-              )}
+
+                {/* Chat Message Thread */}
+                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                  {(messages || []).map((msg: any, idx: number) => {
+                    const isUser = msg.role === 'user';
+                    return (
+                      <div 
+                        key={msg.id || idx} 
+                        className={cn(
+                          "flex gap-3 text-xs leading-relaxed max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300",
+                          isUser ? "ml-auto flex-row-reverse" : "mr-auto"
+                        )}
+                      >
+                        {/* Avatar bubble */}
+                        <div className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
+                          isUser 
+                            ? "bg-slate-100 dark:bg-slate-800 border-[var(--border-base)] text-[var(--text-primary)]" 
+                            : cn("bg-slate-50 dark:bg-slate-900 border-[var(--border-base)]", feature.themeColor)
+                        )}>
+                          {isUser ? <UserCircle size={14} /> : <feature.icon size={13} />}
+                        </div>
+
+                        {/* Text bubble */}
+                        <div className={cn(
+                          "p-3.5 rounded-2xl border text-left space-y-2 relative overflow-hidden shadow-sm w-full",
+                          isUser 
+                            ? "bg-slate-50 dark:bg-slate-900/50 border-[var(--border-base)] text-[var(--text-primary)] rounded-tr-none" 
+                            : "bg-white dark:bg-[#0c1221] border-[var(--border-base)] text-[var(--text-secondary)] rounded-tl-none"
+                        )}>
+                          <div className="flex items-center justify-between gap-6 mb-1 border-b border-black/5 dark:border-white/5 pb-1">
+                            <span className="font-mono text-[9px] uppercase tracking-wider font-bold">
+                              {isUser ? 'Co-Pilot Directive' : (feature.persona || 'ChidonIQ Agent')}
+                            </span>
+                            <span className="text-[8px] text-slate-400 font-mono">
+                              {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                          </div>
+                          
+                          <div className="prose dark:prose-invert prose-xs max-w-none">
+                            {isUser && msg.content.includes(FORMATTING_PROTOCOL) ? (
+                              <p className="font-mono text-[10px] text-brand/80">🚀 Initialized {feature.label} directive protocol with preset configurations.</p>
+                            ) : (
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Quick Response Suggestions */}
+                <div className="space-y-1.5 text-left">
+                  <span className="text-[8px] font-mono uppercase tracking-wider text-slate-400 font-bold block">Refinement presets</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Make it punchier & shorten it",
+                      "Translate the entire output to Spanish",
+                      "Add high-CTR psychological triggers",
+                      "Convert to TikTok & Reels script structure",
+                      "Explain the key strategy behind this"
+                    ].map((presetText) => (
+                      <button
+                        key={presetText}
+                        type="button"
+                        onClick={() => handleFollowUpSend(presetText)}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900/30 border border-[var(--border-base)] hover:border-brand/30 hover:bg-brand/5 hover:text-brand text-[10px] text-[var(--text-secondary)] transition-all cursor-pointer font-sans font-medium"
+                      >
+                        ✨ {presetText}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Input Control Box */}
+                <div className="space-y-1">
+                  <div className="flex gap-2">
+                    <textarea
+                      placeholder={`Instruct ${feature.persona || 'AI'} to refine or customize...`}
+                      rows={1}
+                      className="flex-1 bg-slate-50 dark:bg-slate-900/40 border border-[var(--border-base)] rounded-xl px-4 py-3 outline-none focus:border-brand focus:ring-1 focus:ring-brand/15 transition-all text-xs font-sans text-[var(--text-primary)] placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
+                      value={followUpInput}
+                      onChange={(e) => setFollowUpInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleFollowUpSend();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleFollowUpSend()}
+                      disabled={loading || !followUpInput.trim()}
+                      className={cn(
+                        "px-4 rounded-xl text-white font-bold text-xs uppercase transition-all shadow-sm flex items-center justify-center shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer gap-1.5",
+                        feature.themeColor.replace('text-', 'bg-')
+                      )}
+                    >
+                      <MessageSquare size={14} />
+                      <span>Send</span>
+                    </button>
+                  </div>
+                  <div className="text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase text-right tracking-wider pr-1">
+                    Dialogue Run Cost: {
+                      feature.id === 'ai-script-outline' ? 5 :
+                      feature.id === 'shadowban-solutions' ? 4 :
+                      ['scripts', 'competitor-analysis', 'trending', 'trending-topics', 'trend-alerts'].includes(feature.id) ? 3 :
+                      ['content-ideas', 'thumbnails', 'daily-ideas'].includes(feature.id) ? 2 : 1
+                    } Credits
+                  </div>
+                </div>
+              </div>
 
             </div>
           )}
@@ -1303,6 +1256,18 @@ export default function AdvancedNeuralTool({ feature, onGenerate, messages, load
         </div>
 
       </div>
+
+      {/* History Sidebar Integration */}
+      <HistorySidebar
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        messages={chatMessages}
+        loading={loadingHistory}
+        onSelect={onLoadHistoryItem}
+        onWrapUp={(msg: any) => onWrapUpMessage(feature.id, msg.id, msg.result, credits)}
+        onDelete={onDeleteMessage}
+        credits={credits}
+      />
 
     </div>
   );
@@ -1317,19 +1282,10 @@ function LoaderCircleIcon(props: any) {
   );
 }
 
-function CpuIcon(props: any) {
+function ZapIcon(props: any) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <rect width="16" height="16" x="4" y="4" rx="2" />
-      <rect width="6" height="6" x="9" y="9" rx="1" />
-      <path d="M9 1v3" />
-      <path d="M15 1v3" />
-      <path d="M9 20v3" />
-      <path d="M15 20v3" />
-      <path d="M20 9h3" />
-      <path d="M20 15h3" />
-      <path d="M1 9h3" />
-      <path d="M1 15h3" />
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </svg>
   );
 }

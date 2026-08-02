@@ -1,12 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@450;500;650;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-brand: #4f46e5;
+  --color-brand: var(--color-primary);
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
@@ -21,37 +22,31 @@
 
 @layer base {
   :root {
-    --bg-app: #f1f5f9;
-    --bg-card: #ffffff;
-    --text-primary: #000000;
-    --text-secondary: #000000;
-    --border-base: #cbd5e1;
-    --accent-glow: rgba(79, 70, 229, 0.15);
+    --bg-app: #FFFFFF;
+    --bg-card: #F8F9FA;
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --border-base: #E5E7EB;
+    --color-primary: #4F46E5;
+    --accent-glow: rgba(79, 70, 229, 0.1);
   }
 
   .dark {
-    --bg-app: #090d16;
-    --bg-card: #0f172a;
-    --text-primary: #ffffff;
-    --text-secondary: #cbd5e1;
-    --border-base: #1e293b;
-    --accent-glow: rgba(139, 92, 246, 0.2);
+    --bg-app: #0B0F1A;
+    --bg-card: #111827;
+    --text-primary: #F9FAFB;
+    --text-secondary: #D1D5DB;
+    --border-base: #374151;
+    --color-primary: #818CF8;
+    --accent-glow: rgba(129, 140, 248, 0.15);
   }
 
   body {
-    @apply bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased selection:bg-brand/20 selection:text-brand transition-colors duration-200 font-bold;
-  }
-
-  .dark body {
-    @apply font-semibold;
+    @apply bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased selection:bg-brand/20 selection:text-brand transition-colors duration-200 font-normal;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight font-black text-[var(--text-primary)];
-  }
-
-  .dark h1, .dark h2, .dark h3 {
-    @apply text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-400 to-brand;
+    @apply font-display tracking-tight font-extrabold text-[var(--text-primary)];
   }
 }
 
@@ -86,70 +81,69 @@
   @apply bg-gray-300 dark:bg-zinc-800 rounded-full;
 }
 
-.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4,
-.prose h1, .prose h2, .prose h3, .prose h4 {
-  @apply font-display font-black text-[var(--text-primary)] mt-6 mb-3 first:mt-0 tracking-tight leading-snug text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-950 to-brand dark:from-white dark:via-cyan-400 dark:to-brand;
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  @apply font-display font-extrabold text-[var(--text-primary)] mt-10 mb-6 first:mt-0 tracking-tight leading-snug;
 }
 
-.markdown-body h1, .prose h1 { @apply text-2xl border-b border-[var(--border-base)] pb-2 mb-4; }
-.markdown-body h2, .prose h2 { @apply text-xl border-b border-[var(--border-base)] pb-1 mb-3; }
-.markdown-body h3, .prose h3 { @apply text-base font-bold text-[var(--text-primary)]; }
-.markdown-body h4, .prose h4 { @apply text-sm font-semibold text-[var(--text-primary)]; }
+.markdown-body h1 { @apply text-3xl border-b border-gray-100 dark:border-zinc-800 pb-3; }
+.markdown-body h2 { @apply text-2xl border-b border-gray-100 dark:border-zinc-800/50 pb-2; }
+.markdown-body h3 { @apply text-xl; }
+.markdown-body h4 { @apply text-lg; }
 
-.markdown-body p, .prose p {
-  @apply mb-6 text-[var(--text-secondary)] leading-relaxed text-sm font-sans font-medium;
+.markdown-body p {
+  @apply mb-6 text-[var(--text-secondary)] leading-loose text-base font-sans font-medium tracking-wide;
 }
 
-.markdown-body strong, .prose strong {
-  @apply font-extrabold text-slate-950 dark:text-white bg-slate-100 dark:bg-slate-800/60 px-1 py-0.5 rounded text-[13px] border border-slate-200 dark:border-slate-800 font-sans;
+.markdown-body ul, .markdown-body ol {
+  @apply space-y-4 mb-6 pl-6 font-sans font-medium text-base;
 }
 
-.markdown-body ul, .prose ul {
-  @apply space-y-2 mb-4 list-disc pl-6 font-sans font-medium;
+.markdown-body ul {
+  @apply list-disc;
 }
 
-.markdown-body ol, .prose ol {
-  @apply space-y-2 mb-4 list-decimal pl-6 font-sans font-medium;
+.markdown-body ol {
+  @apply list-decimal;
 }
 
-.markdown-body li, .prose li {
-  @apply text-[var(--text-secondary)] text-sm leading-relaxed;
+.markdown-body li {
+  @apply text-[var(--text-secondary)] leading-relaxed;
 }
 
-.markdown-body table, .prose table {
-  @apply w-full border-collapse my-6 bg-slate-950/5 dark:bg-slate-950/40 rounded-xl overflow-hidden border border-[var(--border-base)] shadow-sm;
+.markdown-body li > p {
+  @apply mb-2;
 }
 
-.markdown-body th, .prose th {
-  @apply bg-slate-100 dark:bg-zinc-900 text-[var(--text-primary)] font-display font-black text-xs text-left px-4 py-3 border-b border-[var(--border-base)] uppercase tracking-wider;
+.markdown-body strong {
+  @apply font-bold text-[var(--text-primary)] px-0.5;
 }
 
-.markdown-body td, .prose td {
-  @apply px-4 py-3 border-b border-[var(--border-base)] text-xs text-[var(--text-secondary)] font-medium font-sans;
+.markdown-body blockquote {
+  @apply pl-6 border-l-4 border-indigo-500/50 dark:border-indigo-500/30 italic text-gray-600 dark:text-zinc-400 my-8 py-1 bg-indigo-50/20 dark:bg-indigo-500/5 rounded-r-lg pr-4;
 }
 
-.markdown-body tr:last-child td, .prose tr:last-child td {
-  @apply border-b-0;
+.markdown-body table {
+  @apply w-full border-collapse my-8 bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border-base)] shadow-sm;
 }
 
-.markdown-body tr:nth-child(even), .prose tr:nth-child(even) {
-  @apply bg-slate-100/40 dark:bg-slate-900/30;
+.markdown-body th {
+  @apply bg-slate-50/80 dark:bg-zinc-900 text-[var(--text-primary)] font-display font-bold text-sm text-left px-5 py-4 border-b border-[var(--border-base)] uppercase tracking-wider;
 }
 
-.markdown-body code, .prose code {
-  @apply font-mono text-xs text-brand dark:text-cyan-400 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800;
+.markdown-body td {
+  @apply px-5 py-4 border-b border-[var(--border-base)] text-sm text-[var(--text-secondary)] leading-relaxed;
 }
 
-.markdown-body pre, .prose pre {
-  @apply bg-slate-950 text-slate-100 font-mono text-xs p-4 rounded-xl border border-white/10 my-4 overflow-x-auto;
+.markdown-body pre {
+  @apply p-5 bg-slate-950 dark:bg-black/45 text-slate-100 rounded-2xl my-8 overflow-x-auto border border-white/5 font-mono text-sm leading-relaxed;
 }
 
-.markdown-body pre code, .prose pre code {
-  @apply border-0 p-0 text-slate-100 bg-transparent;
+.markdown-body code {
+  @apply px-2 py-0.5 bg-slate-100 dark:bg-zinc-800/80 rounded font-mono text-xs text-indigo-600 dark:text-indigo-400 font-semibold mx-0.5;
 }
 
-.markdown-body blockquote, .prose blockquote {
-  @apply pl-4 border-l-4 border-brand text-[var(--text-secondary)] italic my-4 bg-slate-50 dark:bg-slate-900/30 py-2 pr-2 rounded-r-lg;
+.markdown-body pre code {
+  @apply p-0 bg-transparent rounded-none text-inherit font-normal mx-0 text-xs;
 }
 
 .tiptap {

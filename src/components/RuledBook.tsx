@@ -14,8 +14,7 @@ import {
   ArrowLeft,
   Calendar,
   Layers,
-  FileText,
-  Cpu
+  FileText
 } from 'lucide-react';
 import { 
   collection, 
@@ -34,6 +33,7 @@ import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
+import emptyRuledBookImg from '../assets/images/empty_ruled_book_1781319215699.jpg';
 
 interface NotePage {
   id: string;
@@ -69,8 +69,6 @@ export const RuledBook: React.FC<RuledBookProps> = ({
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [archiving, setArchiving] = useState(false);
-  const [archivedToVaultSuccess, setArchivedToVaultSuccess] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -257,44 +255,6 @@ export const RuledBook: React.FC<RuledBookProps> = ({
     }
   };
 
-  // Archive sheet to Chidon Saved Intel Vault
-  const handleSaveToVault = async () => {
-    if (!title.trim() && !content.trim()) return;
-    setArchiving(true);
-    try {
-      const draftPayload: any = {
-        featureId: 'notepad',
-        title: (title || 'Uncharted Intelligence').slice(0, 199),
-        content: content.slice(0, 9999),
-        createdAt: serverTimestamp(),
-      };
-      
-      if (auth.currentUser) {
-        draftPayload.userId = auth.currentUser.uid;
-        await addDoc(collection(db, 'drafts'), draftPayload);
-      } else {
-        // If guest, save in a local storage fallback for drafts so that they don't lose it!
-        const guestDrafts = localStorage.getItem('guest_drafts');
-        const list = guestDrafts ? JSON.parse(guestDrafts) : [];
-        list.push({
-          id: 'guest_' + Date.now(),
-          featureId: 'notepad',
-          title: (title || 'Uncharted Intelligence').slice(0, 199),
-          content: content.slice(0, 9999),
-          createdAt: new Date().toISOString()
-        });
-        localStorage.setItem('guest_drafts', JSON.stringify(list));
-      }
-      
-      setArchivedToVaultSuccess(true);
-      setTimeout(() => setArchivedToVaultSuccess(false), 2000);
-    } catch (err) {
-      console.error("Error archiving to Vault:", err);
-    } finally {
-      setArchiving(false);
-    }
-  };
-
   // Discard page
   const handleDeletePage = async (indexToDelete: number) => {
     if (!window.confirm("Are you sure you want to rip this page out of your notebook?")) return;
@@ -478,27 +438,6 @@ export const RuledBook: React.FC<RuledBookProps> = ({
                   <FileDown className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Export Page</span>
                 </button>
-
-                <button
-                  onClick={handleSaveToVault}
-                  disabled={archiving}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer active:scale-95 duration-150 border",
-                    archivedToVaultSuccess
-                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
-                      : "bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20"
-                  )}
-                  title="Archive Sheet to CHIDON Saved Intel Vault"
-                >
-                  {archiving ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : archivedToVaultSuccess ? (
-                    <Check className="w-3.5 h-3.5" />
-                  ) : (
-                    <Cpu className="w-3.5 h-3.5" />
-                  )}
-                  <span>{archivedToVaultSuccess ? "Archived" : archiving ? "Archiving..." : "Save to Vault"}</span>
-                </button>
               </div>
             </div>
 
@@ -579,10 +518,13 @@ export const RuledBook: React.FC<RuledBookProps> = ({
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
-            <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/40 flex items-center justify-center group">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.1),transparent)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px]" />
-              <Book size={48} className="text-cyan-400 relative z-10 transition-transform duration-500 group-hover:scale-110" />
+            <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-slate-900/40">
+              <img 
+                src={emptyRuledBookImg} 
+                alt="No active sheet loaded" 
+                className="w-full h-full object-cover select-none pointer-events-none"
+                referrerPolicy="no-referrer"
+              />
               <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
             </div>
             <div className="max-w-md">

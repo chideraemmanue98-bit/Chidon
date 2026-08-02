@@ -32,3 +32,10 @@ export async function deleteNoteLocal(id: string) {
   const db = await initDB();
   return db.delete(STORE_NAME, id);
 }
+
+export async function clearAllNotesLocal() {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  await tx.store.clear();
+  await tx.done;
+}

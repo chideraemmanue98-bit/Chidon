@@ -1,22 +1,46 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GoogleGenAI, Type } from "@google/genai";
-import dotenv from "dotenv";
-
-// Load environment variables
-dotenv.config();
+import { GoogleGenAI } from "@google/genai";
 import { QueryClient } from "@tanstack/query-core";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
-import { validateSEORequest, seoSystemPrompt } from "./features/seoFeature";
-import { validateWritingRequest, writingSystemPrompt } from "./features/writingFeature";
-import { validateGigDescriptionRequest, gigDescriptionSystemPrompt } from "./features/gigDescriptionFeature";
-import { validatePortfolioRequest, portfolioSystemPrompt } from "./features/portfolioFeature";
-import { validateChatRequest, chatSystemPrompt } from "./features/chatFeature";
+import fs from "fs";
+import crypto from "crypto";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize Firebase Admin dynamically to avoid failures if credentials are not configured
+let firestoreAdminDb: any = null;
+
+function getFirestoreAdminDb(): any {
+  if (!firestoreAdminDb) {
+    try {
+      const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+      if (fs.existsSync(configPath)) {
+        const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+        
+        if (getApps().length === 0) {
+          initializeApp({
+            projectId: firebaseConfig.projectId
+          });
+        }
+        
+        // Correctly target the specific Firestore database instance configured
+        firestoreAdminDb = getFirestore(undefined, firebaseConfig.firestoreDatabaseId);
+        console.log("[Firebase Admin] Initialized Firestore Admin SDK successfully.");
+      } else {
+        console.warn("[Firebase Admin] firebase-applet-config.json not found. Firestore Admin operations will be disabled.");
+      }
+    } catch (err) {
+      console.error("[Firebase Admin] Initialization failed:", err);
+    }
+  }
+  return firestoreAdminDb;
+}
 
 // PERF: Backend TanStack Query Client for caching API requests and generative computations
 const queryClient = new QueryClient({
@@ -158,8 +182,12 @@ async function generateContentWithRetryAndFallback(
 const app = express();
 const PORT = 3000;
 
-// Middleware for parsing JSON requests
-app.use(express.json({ limit: "15mb" }));
+// Middleware for parsing JSON requests and preserving raw body for webhook verification
+app.use(express.json({
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
   // =========================================================================
   // SECURE OS V4 ENGINE: GOOGLE AI STUDIO STANDARDS DEFENSE-IN-DEPTH SYSTEM
@@ -173,7 +201,7 @@ app.use(express.json({ limit: "15mb" }));
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.supabase.co ws: wss:;"
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://*.google.com https://*.supabase.co ws: wss:;"
     );
     next();
   });
@@ -215,8 +243,8 @@ app.use(express.json({ limit: "15mb" }));
     const { prompt, text } = req.body;
     
     if (prompt && typeof prompt === "string") {
-      // Restrict payload to absolute functional boundaries (max 150,000 characters to support large video transcripts)
-      if (prompt.length > 150000) {
+      // Restrict payload to absolute functional boundaries (max 10,000 characters)
+      if (prompt.length > 10000) {
         return res.status(400).json({ error: "Security Protocol: Request failed. Prompt body bounds exceeded standard scope limits." });
       }
 
@@ -309,93 +337,98 @@ app.use(express.json({ limit: "15mb" }));
       status: "online", 
       system: "CHIDON IQ Neural OS",
       protocol: "v4.0.8",
-      backend: "Node.js/Express",
-      deployment: process.env.NETLIFY ? "Netlify Serverless" : (process.env.VERCEL ? "Vercel Serverless" : "Standard Container"),
-      envConfig: {
-        geminiApiKeyConfigured: !!process.env.GEMINI_API_KEY,
-        paystackSecretKeyConfigured: !!process.env.PAYSTACK_SECRET_KEY,
-        supabaseUrlConfigured: !!process.env.VITE_SUPABASE_URL || !!process.env.SUPABASE_URL,
-        postgresConfigured: !!process.env.SQL_HOST,
-        rateConfigured: !!process.env.USD_TO_NGN_RATE,
+      backend: "Node.js/Express"
+    });
+  });
+
+  // REAL-TIME CRAWLING WEB BROWSER ENGINE: FETCH TRENDING VIDEOS FROM YOUTUBE, FACEBOOK, AND TIKTOK
+  app.post("/api/trends/videos", apiRateLimiter, async (req, res) => {
+    try {
+      const { platform = "all", category = "general", searchQuery = "", bypassCache = false } = req.body;
+      const queryKey = ["trends-videos", platform, category, searchQuery];
+      
+      if (bypassCache) {
+        queryClient.invalidateQueries({ queryKey });
       }
-    });
-  });
 
+      const videos = await queryClient.fetchQuery({
+        queryKey,
+        queryFn: async () => {
+          if (!process.env.GEMINI_API_KEY) {
+            console.warn("[Crawler Browser] GEMINI_API_KEY is not defined, running in High-Fidelity Simulation Mode.");
+            return generateMockTrends(platform, category, searchQuery);
+          }
 
+          try {
+            const ai = getGeminiClient();
+            const platformKeywords = platform === "all" ? "YouTube, TikTok, and Facebook Reels" : platform;
+            
+            const prompt = `Act as an advanced real-time browser searching social indices.
+Run queries to search for the absolute top daily trending, viral videos on ${platformKeywords} for the category: "${category}". 
+${searchQuery ? `Incorporate specific search criteria: "${searchQuery}".` : "Focus on general current breakout items."}
 
-  // =========================================================================
-  // GLOBAL CONNECTIVITY BACKEND FEATURE: LIVE CREATOR NODE REGISTRY
-  // =========================================================================
-  interface ConnectedNode {
-    userId: string;
-    fullName: string;
-    username: string;
-    avatarURL: string;
-    country: string;
-    ip: string;
-    latencyMs: number;
-    lastActive: number;
+You MUST run a real-world web search query for current day (June 2026) trends on platforms like YouTube, TikTok, and Facebook to discover actual viral items page/reels/videos.
+
+Generate a valid, highly structured JSON array of 4-5 video objects.
+Strict structure:
+[
+  {
+    "platform": "youtube" | "tiktok" | "facebook",
+    "title": "Clear, actual trending video title or hook",
+    "creator": "@username or Channel Name",
+    "views": "E.g. '1.2M views' or '450K views'",
+    "url": "Actual URL or realistic social platform link",
+    "summary": "1-2 sentence description explaining the theme, content and why it is trending today",
+    "tactics": [
+      "Key actionable creator advice 1",
+      "Key actionable creator advice 2"
+    ],
+    "viralityScore": 92,
+    "publishedTime": "Format e.g. '4 hours ago' or '1 day ago'"
   }
+]
 
-  let LIVE_CONNECTED_CREATORS: ConnectedNode[] = [];
+NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON array. If you fail to find exact results, generate the most accurate real-world trending topics based on actual search results from today.`;
 
-  // Seeding some international active nodes to demonstrate real-time data mesh networking
-  const seedInternationalNodes = () => {
-    return [];
-  };
+            const response = await generateContentWithRetryAndFallback(prompt, {
+              model: "gemini-3.5-flash",
+              config: {
+                temperature: 0.7,
+                tools: [{ googleSearch: {} }],
+                responseMimeType: "application/json"
+              }
+            });
 
-  app.post("/api/connectivity/ping", (req, res) => {
-    const { userId, fullName, username, avatarURL, country, latencyMs } = req.body;
-    if (!userId || !username) {
-      return res.status(400).json({ error: "Missing identity specifications." });
+            const text = response.text?.trim() || "";
+            if (!text) {
+              throw new Error("Empty text response from Gemini Search Grounding.");
+            }
+
+            let parsed;
+            try {
+              parsed = JSON.parse(text);
+            } catch (e) {
+              const cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+              parsed = JSON.parse(cleanText);
+            }
+
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+            throw new Error("JSON is not a populated array");
+          } catch (err: any) {
+            console.error("[Crawler Browser] Search Grounding Error, using dynamic fallback:", err);
+            return generateMockTrends(platform, category, searchQuery);
+          }
+        },
+        staleTime: bypassCache ? 0 : 5 * 60 * 1000 // Cache for 5 minutes
+      });
+
+      return res.json({ success: true, videos });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
     }
-    const forwarded = req.headers["x-forwarded-for"];
-    const ip = (typeof forwarded === "string" ? forwarded.split(",")[0] : req.socket.remoteAddress) || "127.0.0.1";
-    
-    // Prune stale nodes (inactive for > 15 minutes)
-    const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
-    LIVE_CONNECTED_CREATORS = LIVE_CONNECTED_CREATORS.filter(c => c.lastActive > fifteenMinsAgo);
-
-    const existingIdx = LIVE_CONNECTED_CREATORS.findIndex(c => c.userId === userId);
-    const newNode: ConnectedNode = {
-      userId,
-      fullName: fullName || username,
-      username,
-      avatarURL: avatarURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`,
-      country: country || "Unknown",
-      ip: typeof ip === "string" ? ip.split(",")[0] : "127.0.0.1",
-      latencyMs: latencyMs || Math.floor(Math.random() * 30) + 8,
-      lastActive: Date.now()
-    };
-
-    if (existingIdx !== -1) {
-      LIVE_CONNECTED_CREATORS[existingIdx] = newNode;
-    } else {
-      LIVE_CONNECTED_CREATORS.push(newNode);
-    }
-
-    const seeds = seedInternationalNodes();
-    // Return both live user and active seed nodes merged
-    res.json({ 
-      success: true, 
-      activeCount: LIVE_CONNECTED_CREATORS.length, 
-      totalNetworkNodes: LIVE_CONNECTED_CREATORS.length + seeds.length,
-      nodes: [...LIVE_CONNECTED_CREATORS, ...seeds]
-    });
   });
-
-  app.get("/api/connectivity/nodes", (req, res) => {
-    const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
-    LIVE_CONNECTED_CREATORS = LIVE_CONNECTED_CREATORS.filter(c => c.lastActive > fifteenMinsAgo);
-    const seeds = seedInternationalNodes();
-    res.json({ 
-      activeCount: LIVE_CONNECTED_CREATORS.length, 
-      totalNetworkNodes: LIVE_CONNECTED_CREATORS.length + seeds.length,
-      nodes: [...LIVE_CONNECTED_CREATORS, ...seeds] 
-    });
-  });
-
-
 
   // Client-Dynamic PostgreSQL Connection Tester (Supports custom Google Cloud SQL or Supabase direct parameters)
   app.post("/api/integrations/postgres/test", async (req, res) => {
@@ -755,6 +788,92 @@ app.use(express.json({ limit: "15mb" }));
     }
   });
 
+  // Secure Paystack Webhook Listener to verify payments and update user subscription fields
+  app.post("/api/paystack/webhook", async (req, res) => {
+    const signature = req.headers["x-paystack-signature"] as string;
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+
+    if (!secretKey) {
+      console.warn("[Paystack Webhook] Received webhook but PAYSTACK_SECRET_KEY is not configured.");
+      return res.status(500).json({ success: false, message: "Webhook key missing" });
+    }
+
+    // Verify HMAC signature to guarantee authenticity of the payload
+    if (signature) {
+      const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
+      const hash = crypto.createHmac("sha512", secretKey).update(rawBody).digest("hex");
+      if (hash !== signature) {
+        console.error("[Paystack Webhook] Security Alert: HMAC-SHA512 verification failed.");
+        return res.status(401).json({ success: false, message: "Invalid signature" });
+      }
+    } else {
+      console.warn("[Paystack Webhook] Warning: Received unsigned webhook payload.");
+    }
+
+    const { event, data } = req.body;
+    console.log(`[Paystack Webhook] Received event: ${event}`);
+
+    if (event === "charge.success" && data && data.status === "success") {
+      const metadata = data.metadata || {};
+      const { userId, planName, planId, isSubscription } = metadata;
+      const reference = data.reference;
+      const amountKobo = data.amount;
+      const currency = data.currency;
+
+      if (!userId) {
+        console.warn("[Paystack Webhook] Warning: Transaction lacks a valid userId in metadata. Cannot sync to user record.");
+        return res.status(400).json({ success: false, message: "Missing userId in metadata" });
+      }
+
+      try {
+        const firestoreAdmin = getFirestoreAdminDb();
+        if (!firestoreAdmin) {
+          throw new Error("Firestore Admin is not initialized.");
+        }
+
+        console.log(`[Paystack Webhook] Processing successful payment for userId: ${userId}, planName: ${planName}`);
+
+        // Update User Doc in Firestore securely using admin privileges
+        const userRef = firestoreAdmin.collection("users").doc(userId);
+        
+        // Calculate USD value of plan (can fallback to metadata properties if present)
+        const usdPrice = metadata.originalAmountUsd || (amountKobo / 100);
+
+        await userRef.update({
+          subscriptionPlan: planName || "Starter Creator Pack",
+          subscriptionStatus: "active",
+          subscriptionPrice: usdPrice,
+          paystackSubscriptionRef: reference,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+
+        // Log payment receipt as a subcollection document to create a robust historical billing ledger
+        const receiptRef = userRef.collection("receipts").doc(reference);
+        await receiptRef.set({
+          amountNgn: currency === "NGN" ? (amountKobo / 100) : null,
+          amountUsd: usdPrice,
+          reference: reference,
+          payerEmail: data.customer?.email || "subscriber@chidon.iq",
+          bundleName: planName || "Starter Creator Pack",
+          status: "paid",
+          createdAt: FieldValue.serverTimestamp(),
+          paymentChannel: data.channel || "card",
+          gatewayResponse: data.gateway_response || "Successful"
+        });
+
+        console.log(`[Paystack Webhook] Sync successful! User ${userId} active subscription updated to '${planName}'.`);
+        return res.json({ success: true, message: "Webhook processed and Firestore updated successfully" });
+
+      } catch (err: any) {
+        console.error("[Paystack Webhook] Error writing updates to Firestore:", err);
+        return res.status(500).json({ success: false, message: "Database update failed", error: err.message });
+      }
+    }
+
+    // Acknowledge receipt of other event types cleanly
+    return res.json({ success: true, message: `Event '${event}' acknowledged (No sync needed)` });
+  });
+
   // PERF: Server-side Gemini proxy backed by TanStack Query client caching to reuse previous outputs and minimize upstream API request latency to ~0ms
   app.post("/api/gemini/generate", apiRateLimiter, cargoSanitizer, async (req, res) => {
     try {
@@ -798,285 +917,26 @@ app.use(express.json({ limit: "15mb" }));
       const text = await queryClient.fetchQuery({
         queryKey: ["gemini-generate", prompt, language, targetModel],
         queryFn: async () => {
-          let systemInstruction = `You are a professional social media optimizer. Output your entire response exclusively in public human ${languageName}. Always maintain perfect native slang, correct localization, and natural phrasing appropriate for ${languageName}. NEVER output any part of your answer in English or any other language, unless the requested language name itself is English, or the user specifically requests translation to other tongues. All titles, scripts, hashtags, strategy documents, lists, schedules, analyses, and tables MUST be in ${languageName} completely. Keep formatting beautiful with clean markdown. ALWAYS use standard markdown for new paragraphs (using normal blank lines) instead of outputting raw text symbols like '\\n' or '/n' or '\\n\\n' or 'n/n/'. Let all paragraphs be separated by simple clean spacing.`;
-
-          // If the prompt is requesting structured JSON output (e.g. from VideoContentAnalyzer), adjust systemInstruction to not break JSON formatting
-          const isJsonRequest = typeof prompt === "string" && (
-            prompt.includes("JSON") || 
-            prompt.includes("json") || 
-            prompt.includes("Required JSON Keys") ||
-            prompt.includes("Required JSON format")
-          );
-
-          if (isJsonRequest) {
-            systemInstruction = `You are a professional video analysis assistant. Output your response exclusively in valid JSON format matching the schema requested by the user. Do not add any markdown formatting or text outside the JSON block. Ensure correct localization of content texts inside the JSON values according to ${languageName}.`;
-          }
+          const systemInstruction = `You are a professional social media optimizer. Output your entire response exclusively in public human ${languageName}. Always maintain perfect native slang, correct localization, and natural phrasing appropriate for ${languageName}. NEVER output any part of your answer in English or any other language, unless the requested language name itself is English, or the user specifically requests translation to other tongues. All titles, scripts, hashtags, strategy documents, lists, schedules, analyses, and tables MUST be in ${languageName} completely. Keep formatting beautiful with clean markdown.`;
 
           const response = await generateContentWithRetryAndFallback(prompt, {
             model: targetModel,
             config: { 
-              temperature: isJsonRequest ? 0.2 : 0.8,
-              systemInstruction: systemInstruction,
-              responseMimeType: isJsonRequest ? "application/json" : undefined
+              temperature: 0.8,
+              systemInstruction: systemInstruction
             }
           });
           if (!response || !response.text) {
             throw new Error("No text response received from Gemini.");
           }
-          
-          let responseText = response.text;
-          if (responseText && typeof responseText === "string") {
-            responseText = responseText
-              .replace(/\\n\\n/g, "\n\n")
-              .replace(/\\n/g, "\n")
-              .replace(/\\r/g, "")
-              .replace(/n\/n\//g, "\n\n")
-              .replace(/\/n\/n\//g, "\n\n")
-              .replace(/\/n\//g, "\n")
-              .replace(/\s*n\/n\s*/g, "\n\n")
-              .trim();
-          }
-          return responseText;
+          return response.text;
         }
       });
 
-      res.json({ text, success: true, content: text });
+      res.json({ text });
     } catch (error: any) {
       console.error("Gemini server error:", error);
       res.status(500).json({ error: error.message || "An error occurred during generation." });
-    }
-  });
-
-  // --- SPECIALIZED CHIDONFREELANCE FEATURE SYSTEM ENDPOINTS ---
-
-  // 1. SEO Feature Route
-  app.post("/api/features/seo", apiRateLimiter, async (req, res) => {
-    try {
-      const { keyword, niche, platform, model } = req.body;
-      
-      // Perform strict validation
-      const validation = validateSEORequest({ keyword, niche, platform });
-      if (!validation.isValid) {
-        return res.status(400).json({ error: validation.error });
-      }
-
-      // Resolve Gemini model
-      let targetModel = model || "gemini-3.5-flash";
-
-      const prompt = `Perform SEO optimization for:
-- Primary Keyword: ${keyword}
-- Business Niche/Category: ${niche}
-- Platform Target: ${platform}`;
-
-      const response = await generateContentWithRetryAndFallback(prompt, {
-        model: targetModel,
-        config: {
-          temperature: 0.2, // lower temperature for strictly structured JSON output
-          systemInstruction: seoSystemPrompt,
-          responseMimeType: "application/json" // force JSON schema output!
-        }
-      });
-
-      if (!response || !response.text) {
-        throw new Error("No response from Gemini.");
-      }
-
-      // Parse JSON from Gemini response
-      let resultText = response.text.trim();
-      if (resultText.startsWith("```json")) {
-        resultText = resultText.replace(/^```json/, "").replace(/```$/, "").trim();
-      } else if (resultText.startsWith("```")) {
-        resultText = resultText.replace(/^```/, "").replace(/```$/, "").trim();
-      }
-
-      const parsedJson = JSON.parse(resultText);
-      return res.json({ success: true, data: parsedJson });
-    } catch (error: any) {
-      console.error("[SEO Feature Error]:", error);
-      return res.status(500).json({ error: error.message || "An error occurred during SEO generation." });
-    }
-  });
-
-  // 2. Content Writing Feature Route
-  app.post("/api/features/writing", apiRateLimiter, async (req, res) => {
-    try {
-      const { topic, targetAudience, tone, model } = req.body;
-
-      // Perform strict validation
-      const validation = validateWritingRequest({ topic, targetAudience, tone });
-      if (!validation.isValid) {
-        return res.status(400).json({ error: validation.error });
-      }
-
-      let targetModel = model || "gemini-3.5-flash";
-
-      const prompt = `Write marketing content for:
-- Product/Topic/Service: ${topic}
-- Target Audience: ${targetAudience}
-- Desired Writing Tone: ${tone}`;
-
-      const response = await generateContentWithRetryAndFallback(prompt, {
-        model: targetModel,
-        config: {
-          temperature: 0.7,
-          systemInstruction: writingSystemPrompt,
-          responseMimeType: "application/json"
-        }
-      });
-
-      if (!response || !response.text) {
-        throw new Error("No response from Gemini.");
-      }
-
-      let resultText = response.text.trim();
-      if (resultText.startsWith("```json")) {
-        resultText = resultText.replace(/^```json/, "").replace(/```$/, "").trim();
-      } else if (resultText.startsWith("```")) {
-        resultText = resultText.replace(/^```/, "").replace(/```$/, "").trim();
-      }
-
-      const parsedJson = JSON.parse(resultText);
-      return res.json({ success: true, data: parsedJson });
-    } catch (error: any) {
-      console.error("[Content Writing Error]:", error);
-      return res.status(500).json({ error: error.message || "An error occurred during content generation." });
-    }
-  });
-
-  // 3. Gig Description Feature Route
-  app.post("/api/features/gig-description", apiRateLimiter, async (req, res) => {
-    try {
-      const { serviceName, niche, uniqueSellingPoint, model } = req.body;
-
-      // Perform strict validation
-      const validation = validateGigDescriptionRequest({ serviceName, niche, uniqueSellingPoint });
-      if (!validation.isValid) {
-        return res.status(400).json({ error: validation.error });
-      }
-
-      let targetModel = model || "gemini-3.5-flash";
-
-      const prompt = `Write a converting Gig description for:
-- Service Name/Title: ${serviceName}
-- Service Niche: ${niche}
-- Unique Selling Point (USP): ${uniqueSellingPoint}`;
-
-      const response = await generateContentWithRetryAndFallback(prompt, {
-        model: targetModel,
-        config: {
-          temperature: 0.7,
-          systemInstruction: gigDescriptionSystemPrompt,
-          responseMimeType: "application/json"
-        }
-      });
-
-      if (!response || !response.text) {
-        throw new Error("No response from Gemini.");
-      }
-
-      let resultText = response.text.trim();
-      if (resultText.startsWith("```json")) {
-        resultText = resultText.replace(/^```json/, "").replace(/```$/, "").trim();
-      } else if (resultText.startsWith("```")) {
-        resultText = resultText.replace(/^```/, "").replace(/```$/, "").trim();
-      }
-
-      const parsedJson = JSON.parse(resultText);
-      return res.json({ success: true, data: parsedJson });
-    } catch (error: any) {
-      console.error("[Gig Description Error]:", error);
-      return res.status(500).json({ error: error.message || "An error occurred during Gig Description generation." });
-    }
-  });
-
-  // 4. Portfolio Case Study Feature Route
-  app.post("/api/features/portfolio", apiRateLimiter, async (req, res) => {
-    try {
-      const { projectName, niche, role, projectOverview, model } = req.body;
-
-      // Perform strict validation
-      const validation = validatePortfolioRequest({ projectName, niche, role, projectOverview });
-      if (!validation.isValid) {
-        return res.status(400).json({ error: validation.error });
-      }
-
-      let targetModel = model || "gemini-3.5-flash";
-
-      const prompt = `Generate a structured case study for:
-- Project Name: ${projectName}
-- Niche/Category: ${niche}
-- Your Role: ${role}
-- Project Overview: ${projectOverview}`;
-
-      const response = await generateContentWithRetryAndFallback(prompt, {
-        model: targetModel,
-        config: {
-          temperature: 0.6,
-          systemInstruction: portfolioSystemPrompt,
-          responseMimeType: "application/json"
-        }
-      });
-
-      if (!response || !response.text) {
-        throw new Error("No response from Gemini.");
-      }
-
-      let resultText = response.text.trim();
-      if (resultText.startsWith("```json")) {
-        resultText = resultText.replace(/^```json/, "").replace(/```$/, "").trim();
-      } else if (resultText.startsWith("```")) {
-        resultText = resultText.replace(/^```/, "").replace(/```$/, "").trim();
-      }
-
-      const parsedJson = JSON.parse(resultText);
-      return res.json({ success: true, data: parsedJson });
-    } catch (error: any) {
-      console.error("[Portfolio Case Study Error]:", error);
-      return res.status(500).json({ error: error.message || "An error occurred during Portfolio generation." });
-    }
-  });
-
-  // 5. Chat Support Assistant Feature Route
-  app.post("/api/features/chat", apiRateLimiter, async (req, res) => {
-    try {
-      const { question, model } = req.body;
-
-      // Perform strict validation
-      const validation = validateChatRequest({ question });
-      if (!validation.isValid) {
-        return res.status(400).json({ error: validation.error });
-      }
-
-      let targetModel = model || "gemini-3.5-flash";
-
-      const prompt = `Answer the following question about using ChidonFreelance platform:
-Question: ${question}`;
-
-      const response = await generateContentWithRetryAndFallback(prompt, {
-        model: targetModel,
-        config: {
-          temperature: 0.4,
-          systemInstruction: chatSystemPrompt,
-          responseMimeType: "application/json"
-        }
-      });
-
-      if (!response || !response.text) {
-        throw new Error("No response from Gemini.");
-      }
-
-      let resultText = response.text.trim();
-      if (resultText.startsWith("```json")) {
-        resultText = resultText.replace(/^```json/, "").replace(/```$/, "").trim();
-      } else if (resultText.startsWith("```")) {
-        resultText = resultText.replace(/^```/, "").replace(/```$/, "").trim();
-      }
-
-      const parsedJson = JSON.parse(resultText);
-      return res.json({ success: true, data: parsedJson });
-    } catch (error: any) {
-      console.error("[Chat Support Error]:", error);
-      return res.status(500).json({ error: error.message || "An error occurred during Chat Support generation." });
     }
   });
 
@@ -1149,6 +1009,54 @@ Question: ${question}`;
     }
   });
 
+  app.post("/api/gemini/generate-image", apiRateLimiter, cargoSanitizer, async (req, res) => {
+    try {
+      const { prompt, aspectRatio } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      console.log(`[Gemini Image Engine] Generating image with prompt: "${prompt}" and aspect ratio: ${aspectRatio || "16:9"}...`);
+      
+      const ai = getGeminiClient();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite-image',
+        contents: {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: aspectRatio || "16:9",
+          },
+        },
+      });
+
+      let imageUrl = null;
+      if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            const base64EncodeString: string = part.inlineData.data;
+            imageUrl = `data:image/png;base64,${base64EncodeString}`;
+            break;
+          }
+        }
+      }
+
+      if (!imageUrl) {
+        throw new Error("No inline image data received from Gemini Image model.");
+      }
+
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error("Gemini image generation error:", error);
+      res.status(500).json({ error: error.message || "An error occurred during image generation." });
+    }
+  });
+
   // Qualities of the App API (Static for now, but cached dynamically via backend TanStack)
   app.get("/api/chidon_iq/qualities", async (req, res) => {
     try {
@@ -1169,56 +1077,10 @@ Question: ${question}`;
     }
   });
 
-  // =========================================================================
-  // GOOGLE GEMINI NANO BANANA BACKEND ANALYZER ROUTE
-  // =========================================================================
-  app.post("/api/banana/analyze", apiRateLimiter, async (req, res) => {
-    try {
-      const { featureId, logs, systemState } = req.body;
-      
-      const prompt = `Perform a full, detailed, professional systems-level and aesthetic audit of the Chidon IQ App. 
-      Focus on: ${featureId ? `Feature: ${featureId}` : 'The complete suite of 20+ viral tools (Video Ideas, Hashtag Engine, Script Writer, Shadowban Solutions, etc.)'}.
-      
-      Logs provided from active telemetry: ${JSON.stringify(logs || { status: 'healthy', database: 'connected' })}
-      System states: ${JSON.stringify(systemState || { theme: 'slate-ambient', animations: 'motion/react enabled' })}
-      
-      Identify any potential interface issues, spacing errors, or visual bugs, and write a detailed resolution plan.
-      Include a list of highly strategic professional images (describing their prompt, layout placement, and dimensions) that will elevate the user experience.
-      Suggest 3 custom-crafted CSS/micro-motion animations using 'motion/react' that would look incredibly premium.
-      
-      Ensure your response is returned as a beautiful, technical markdown document with clear headers and bullet points. Include humorous and authoritative comments from 'Google Nano Banana' (the elite golden-cyan visual consultant). Keep paragraphs extremely punchy and maintain a high-tech, futuristic tone.`;
-
-      const response = await generateContentWithRetryAndFallback(prompt, {
-        model: "gemini-3.5-flash",
-        config: {
-          temperature: 0.85,
-          systemInstruction: "You are the Google Nano Banana AI Consultant. You specialize in full-stack web audits, elegant layout spacing, beautiful color palettes, custom animated SVGs, and high-quality imagery advice. You are professional, tech-forward, and have a playful banana/golden-theme personality."
-        }
-      });
-
-      if (!response || !response.text) {
-        throw new Error("No analysis returned from the Google Nano Banana service.");
-      }
-
-      return res.json({
-        success: true,
-        analysis: response.text,
-        timestamp: new Date().toISOString(),
-        engine: "Google Gemini 3.5 Flash (Nano Banana Protocol)"
-      });
-    } catch (err: any) {
-      console.error("[Nano Banana Engine] Analysis failed:", err);
-      return res.status(500).json({
-        success: false,
-        error: err.message || "Unknown error during Nano Banana analysis"
-      });
-    }
-  });
-
   // Handle static serving and Vite dev server depending on environment
   async function setupFrontendRouting() {
-    // If we are running in serverless context (Vercel or Netlify), do not attach Vite middleware or static serving
-    if (process.env.VERCEL || process.env.NETLIFY) {
+    // If we are running in Vercel serverless context, do not attach Vite middleware or static serving
+    if (process.env.VERCEL) {
       return;
     }
 
@@ -1242,11 +1104,115 @@ Question: ${question}`;
 
   setupFrontendRouting();
 
-  // Only listen to port if not in a serverless context (Vercel or Netlify)
-  if (!process.env.VERCEL && !process.env.NETLIFY) {
+  // Only listen to port if not in Vercel serverless function context
+  if (!process.env.VERCEL) {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`CHIDON IQ Neural Backend listening on http://0.0.0.0:${PORT}`);
     });
   }
 
 export default app;
+
+function generateMockTrends(platform: string, category: string, searchQuery: string) {
+  const platforms = ["youtube", "tiktok", "facebook"];
+  const selectedPlatforms = platform === "all" ? platforms : [platform];
+  
+  const creatorNames: Record<string, string[]> = {
+    youtube: ["MrBeast", "MKBHD", "Ali Abdaal", "Zach King", "Ryan Trahan", "Casey Neistat"],
+    tiktok: ["Khaby Lame", "Bella Poarch", "Charli D'Amelio", "Zach King", "Jake Paul", "DailyDoseOfInternet"],
+    facebook: ["Jay Shetty", "Tasty", "Goalcast", "Nas Daily", "5-Minute Crafts", "Dude Perfect"]
+  };
+
+  const templates = [
+    {
+      title: "The 24-Hour Digital Fast: I went fully analog and my brain rewired",
+      category: "productivity",
+      summary: "A content creator documents their struggle of giving up all tech for 24 hours. The dynamic editing and honest vulnerability sparked massive shares and a hot discussion on lifestyle habits.",
+      tactics: ["Introduce high stakes in the first 2 seconds", "Vary audio pacing with ASMR styled natural sounds", "Keep visual contrast high with black-and-white cuts"]
+    },
+    {
+      title: "How micro-SaaS is completely killing traditional tech jobs",
+      category: "tech",
+      summary: "An analytical deep-dive into how indie hackers use modular AI tools to ship applications in half a day. It has gone viral across tech circles and LinkedIn.",
+      tactics: ["Use code-blocks and terminal footage for screen immersion", "Keep bullet list metrics readable", "Conclude with an inspiring indie resource roadmap"]
+    },
+    {
+      title: "I rebuilt the world's most illegal skateboard and tested it on the streets",
+      category: "entertainment",
+      summary: "A wild engineering hack that integrates heavy-duty fan thrusters onto a standard skateboard. The high-rebounding suspense and comic street reactions triggered global viral traffic.",
+      tactics: ["Stagger cliffhangers right before every test", "Insert visual overlay meters representing speed", "Run tight camera tracking of citizens' expressions"]
+    },
+    {
+      title: "Stop storing your money in banks. Here is what smart money does instead",
+      category: "finance",
+      summary: "An educational finance guide warning watchers about inflation tax, and introducing capital-preservation indexes. Simple animations and drawings make complex macroeconomics extremely digestible.",
+      tactics: ["Draw charts live using physical markers on glassboards", "Highlight contrarian hooks", "Do not sell products, focus 100% on zero-fluff stats"]
+    },
+    {
+      title: "Unboxing the futuristic $50,000 holographic glasses that feel like real life",
+      category: "tech",
+      summary: "Hands-on developer review of ultra-exclusive augmented reality lenses. The flawless overlay and physical interactivity generated high marvel and endless comments.",
+      tactics: ["Shoot direct point-of-view perspective shots", "Use immersive panning shots to highlight physical elements", "Include raw specs in JetBrains Mono overlays"]
+    },
+    {
+      title: "Cooking a 5-star steak using only solar heat inside a locked car",
+      category: "lifestyle",
+      summary: "A quirky and thrilling culinary challenge tested during a record heatwave. High-contrast cooking cuts combined with scientific measurements kept watchers highly engaged.",
+      tactics: ["Use a digital thermometer overlay as a ticking clock", "Accelerate transition speeds by 1.5x", "Add crisp sizzling ASMR audio layers"]
+    }
+  ];
+
+  let pool = templates;
+  if (category && category !== "general") {
+    const matched = templates.filter(t => t.category.toLowerCase() === category.toLowerCase());
+    if (matched.length > 0) pool = matched;
+  }
+
+  const results = [];
+  const count = 4;
+  for (let i = 0; i < count; i++) {
+    const curPlatform = selectedPlatforms[i % selectedPlatforms.length];
+    const template = pool[Math.floor(Math.random() * pool.length)];
+    const creators = creatorNames[curPlatform];
+    const creator = creators[Math.floor(Math.random() * creators.length)];
+    
+    const viewsNum = (Math.random() * 5 + 0.1).toFixed(1);
+    const views = curPlatform === "youtube" ? `${viewsNum}M views` : `${Math.floor(Math.random() * 800 + 100)}K views`;
+    
+    const randomHours = Math.floor(Math.random() * 20 + 2);
+    const publishedTime = `${randomHours} hours ago`;
+    const viralityScore = Math.floor(Math.random() * 15) * (i + 1) % 20 + 80;
+
+    let title = template.title;
+    let summary = template.summary;
+    let tactics = template.tactics;
+
+    if (searchQuery) {
+      title = `Breakout Spot: "${searchQuery}" - Absolute Mastery of ${template.category.toUpperCase()}`;
+      summary = `The ultimate trending post analyzing "${searchQuery}". This breakout topic is currently gaining explosive traction on social discovery engines, generating high conversational engagement.`;
+      tactics = [
+        `Focus heavily on organic semantic keyword tags for "${searchQuery}"`,
+        `Lead with a contrarian opinion concerning "${searchQuery}" to spark comments`,
+        `Maintain a fast editing cut of 1.2s per frame to maximize retention`
+      ];
+    }
+
+    results.push({
+      platform: curPlatform,
+      title,
+      creator: curPlatform === "youtube" ? creator : `@${creator.toLowerCase().replace(/\s+/g, '')}`,
+      views,
+      url: curPlatform === "youtube" 
+        ? `https://www.youtube.com/results?search_query=${encodeURIComponent(title)}`
+        : curPlatform === "tiktok"
+        ? `https://www.tiktok.com/tag/${encodeURIComponent(template.category)}`
+        : `https://www.facebook.com/hashtag/${encodeURIComponent(template.category)}`,
+      summary,
+      tactics,
+      viralityScore,
+      publishedTime
+    });
+  }
+
+  return results;
+}

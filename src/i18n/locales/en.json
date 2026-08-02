@@ -33,12 +33,11 @@
     "launchHub": "Launch Hub"
   },
   "categories": {
-    "Content Creation": "Creative & Scripting",
-    "SEO & Optimization": "Metadata & Keywords",
-    "Branding & Strategy": "Identity & Audience",
-    "Publishing & Logistics": "Schedules & Publishing",
-    "Diagnostics & Trends": "Scorecards & Trends",
-    "SaaS Workspace": "Vault & Workspace Utilities"
+    "Core": "Core Protocols",
+    "Video SEO": "Video SEO Hub",
+    "Trends": "Trends & Insights",
+    "Growth": "Growth Hacking",
+    "Pro": "Pro Suite"
   },
   "dashboard": {
     "systemLive": "System Live: ACTIVE",
@@ -169,6 +168,10 @@
     "ai-script-outline": {
       "label": "Script Blueprint",
       "desc": "Full narrative architecture from seed keywords."
+    },
+    "shadowban-solutions": {
+      "label": "Shadowban Solutions",
+      "desc": "Audit channel health, check sensitive policy risk indicators and trace 30-day view recovery action steps."
     }
   },
   "buttons": {

@@ -229,69 +229,9 @@
       },
       "required": ["amountUsd", "amountNgn", "creditsAmount", "reference", "payerEmail", "status", "createdAt"]
     },
-    "Review": {
-      "title": "Review",
-      "description": "Freelance gig reviews",
-      "type": "object",
-      "properties": {
-        "gigId": { "type": "string" },
-        "buyerId": { "type": "string" },
-        "buyerName": { "type": "string" },
-        "buyerAvatar": { "type": "string" },
-        "rating": { "type": "number" },
-        "comment": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["gigId", "buyerId", "rating", "comment", "createdAt"]
-    },
-    "Dispute": {
-      "title": "Dispute",
-      "description": "Freelance order disputes",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "raisedById": { "type": "string" },
-        "raisedByName": { "type": "string" },
-        "reason": { "type": "string" },
-        "details": { "type": "string" },
-        "status": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["orderId", "raisedById", "reason", "status", "createdAt"]
-    },
-    "MilestoneUpdate": {
-      "title": "Milestone Update",
-      "description": "Freelance project milestone updates",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "milestoneIndex": { "type": "number" },
-        "authorId": { "type": "string" },
-        "authorName": { "type": "string" },
-        "authorRole": { "type": "string" },
-        "statusNote": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["orderId", "milestoneIndex", "authorId", "authorName", "authorRole", "statusNote", "createdAt"]
-    },
-    "Notification": {
-      "title": "Notification",
-      "description": "Freelance and workspace notifications",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "message": { "type": "string" },
-        "type": { "type": "string" },
-        "linkId": { "type": "string" },
-        "isRead": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "title", "message", "isRead", "createdAt"]
-    },
-    "BlogPost": {
-      "title": "Blog Post",
-      "description": "User created or seeded blog posts on Chidon Blog",
+    "Blog": {
+      "title": "Blog",
+      "description": "User uploaded and shared blog posts in Chidon Blog",
       "type": "object",
       "properties": {
         "title": { "type": "string" },
@@ -299,16 +239,68 @@
         "content": { "type": "string" },
         "category": { "type": "string" },
         "readTime": { "type": "string" },
-        "date": { "type": "string" },
         "author": { "type": "string" },
+        "authorId": { "type": "string" },
         "tags": { "type": "array", "items": { "type": "string" } },
-        "image": { "type": "string" },
+        "date": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["title", "excerpt", "content", "category", "readTime", "date", "author"]
+      "required": ["title", "content", "author", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile in freelance portal",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string" },
+        "fullName": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarURL": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "experienceYears": { "type": "number" },
+        "platforms": { "type": "array", "items": { "type": "string" } },
+        "isVerified": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "credits": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["role", "fullName"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "An AI generation session message with wrap-up and expiration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "feature": { "type": "string" },
+        "prompt": { "type": "string" },
+        "result": { "type": "string" },
+        "wrappedUp": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expireAt": { "type": "string", "format": "date-time" },
+        "creditsUsed": { "type": "number" }
+      },
+      "required": ["id", "feature", "prompt", "result", "createdAt", "expireAt", "creditsUsed"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A workspace terminal debit charge or credit top up log",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["debit", "credit"] },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "featureId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "description", "amount", "createdAt"]
     }
   },
   "firestore": {
+    "/chats/{userId}/features/{featureId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Real-time AI generation messages stored for 7 days per feature page"
+    },
     "/feedback/{feedbackId}": {
       "schema": "Feedback",
       "description": "Collection of user feedback entries"
@@ -320,6 +312,10 @@
     "/users/{userId}/receipts/{receiptId}": {
       "schema": "Receipt",
       "description": "Collection of subscription or credit purchase receipts"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Real-time query and fuel charge transactions logged for users"
     },
     "/scheduled_posts/{postId}": {
       "schema": "ScheduledPost",
@@ -369,25 +365,13 @@
       "schema": "Follow",
       "description": "Collection of follower actions"
     },
-    "/reviews/{reviewId}": {
-      "schema": "Review",
-      "description": "Collection of freelance gig reviews"
-    },
-    "/disputes/{disputeId}": {
-      "schema": "Dispute",
-      "description": "Collection of freelance order disputes"
-    },
-    "/milestone_updates/{updateId}": {
-      "schema": "MilestoneUpdate",
-      "description": "Collection of freelance milestone status updates"
-    },
-    "/notifications/{notificationId}": {
-      "schema": "Notification",
-      "description": "Collection of freelance and workspace notifications"
-    },
     "/blogs/{blogId}": {
-      "schema": "BlogPost",
-      "description": "Collection of Chidon Blog posts"
+      "schema": "Blog",
+      "description": "Collection of user-uploaded and shared blog posts"
+    },
+    "/profiles/{profileId}": {
+      "schema": "UserProfile",
+      "description": "Collection of freelance user profiles"
     }
   }
 }

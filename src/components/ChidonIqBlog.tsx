@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { 
   BookOpen, Wand2, ArrowLeft, Check, Loader2, 
   Share2, Copy, Save, Calendar, Clock, User, Zap, Brain, 
-  Target, ChevronRight, MessageSquare, Terminal, Eye, PenTool, Plus, X, Send
+  Target, ChevronRight, MessageSquare, Terminal, Eye, PenTool,
+  Plus, Flame, ThumbsUp, MessageCircle, Heart, Send, Globe, Wifi, Filter, X
 } from 'lucide-react';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { auth } from '../firebase';
+import { getSupabaseClient } from '../lib/supabase';
 
 interface ChidonIqBlogProps {
   onSaveDraft?: (featureId: string, content: string, title: string) => Promise<void>;
@@ -31,275 +24,56 @@ interface BlogPost {
   readTime: string;
   date: string;
   author: string;
+  authorId?: string;
+  authorEmail?: string;
   tags: string[];
-  image?: string;
+  likes: number;
+  claps: number;
+  mindblown: number;
+  isUserGenerated?: boolean;
 }
 
-const IMAGE_PRESETS = [
-  { name: 'Algorithmic Feeds', color: 'from-cyan-950 via-slate-950 to-blue-950/40', icon: 'Brain' },
-  { name: 'Neuromorphic Design', color: 'from-purple-950 via-slate-950 to-pink-950/40', icon: 'Zap' },
-  { name: 'Creative Escrow', color: 'from-emerald-950 via-slate-950 to-teal-950/40', icon: 'BookOpen' },
-  { name: 'Semantic Analytics', color: 'from-amber-950 via-slate-950 to-red-950/40', icon: 'Target' }
-];
+interface BlogComment {
+  id: string;
+  authorName: string;
+  authorId: string;
+  content: string;
+  createdAt: any;
+}
 
-const PRE_CURATED_BLOGS: BlogPost[] = [
-  {
-    id: 'intel-1',
-    title: 'The 2026 Social Curation Paradox: How Chidon IQ Outpaces Recommendation Graphs',
-    excerpt: 'Platform algorithms are undergoing historic structural shifts. Discover how neuromorphic indexing and Chidon IQ allow creators to command feeds natively.',
-    category: 'Algorithms & Core Strategy',
-    readTime: '4 min read',
-    date: 'June 10, 2026',
-    author: 'Chief Intelligence Architect',
-    tags: ['Algorithms', 'Neuromorphic', 'Feeds', 'CTR'],
-    image: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
-    content: `### The Collapse of the Follower Graph
-
-For over a decade, social platforms thrived on the traditional follower model. You followed a brand, and your feed displayed their content. Today, that graph is virtually dead. It has been replaced by **Interest-based Recommendation Core engines (neuromorphic sorting vectors)**.
-
-Platforms like TikTok, Instagram, and YouTube no longer care who is subscribed to you. Instead, they rank individual pieces of content through dynamic micro-batches:
-
-1. **Phase 1 (Ingress)**: The post is shown to 100 highly active users in your niche folder.
-2. **Phase 2 (The 3-Second Filter)**: If the retention curve drops below 40% before the 3-second mark, distribution freezes.
-3. **Phase 3 (Amplification)**: If engagement metrics exceed outlier indexes, it matches macro-interest clusters.
-
-### How Chidon IQ Rewrites the Rules
-
-Chidon IQ does not play the saturation game. It actively intervenes in **Phase 2** by compiling high-friction, psychological narrative anchors. Our platform leverages the **Open-Loop Cognitive Formula** to build scripts that require resolution:
-
-*   **Standard Hook**: "Here is how I grew my retail store..." (Fails Phase 2)
-*   **Chidon IQ Neuro Hook**: "I watched 400 retailers burn $10,000 before discovering this singular, 12-word bio layout modification..." (Succeeds Phase 2)
-
-By injecting strategic contrast ratios, exact typography guides, and tailored niche briefs immediately based on Advanced AI intelligence, Chidon IQ stabilizes early retention curves, allowing creators to consistently bypass standard algorithmic throttles.`
-  },
-  {
-    id: 'intel-2',
-    title: 'Behavioral Hooks: Retaining 72%+ Viewers Within the Critical Attention Gate',
-    excerpt: 'Unpack the human eye behavior tracking data. Use psychological triggers to maintain visual tension and dramatic buy-in.',
-    category: 'Neuromorphic Growth',
-    readTime: '6 min read',
-    date: 'June 08, 2026',
-    author: 'Visual Cognition Expert',
-    tags: ['Psychology', 'Audience Retention', 'Visual Design'],
-    image: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
-    content: `### The Neurological Gatekeepers
-    
-The modern human attention span does not suffer from simple exhaustion; it has evolved a highly sensitive **redundant-content filter**. The visual cortex processes visual layout cues in less than 80 milliseconds. If it recognizes a standard recycled frame pattern or overproduced corporate format, it forces the user to flick upwards instinctively.
-
-To cross this visual threshold safely, your content must leverage **tactical visual contrast and psychological tension**.
-
-| Metric | Recycled Format | Chidon IQ Synthesized |
-| :--- | :---: | :---: |
-| **First-Second Bounce** | 68% Dismissal | 12% Dismissal |
-| **Middle-Section Completion** | 22% Completion | 64% Completion |
-| **Conversion Action Lift** | +12% | +240% |
-
-### The Chidon Cognitive Retention Framework
-
-Our research outlines a three-part structural pillar to resolve attention decay:
-
-#### 1. The Negative Frame Setup
-Humans are biologically wired to avoid threat zones rather than seek gains. Always structure early scripts through scarcity or mistake-avoidance layouts. Specify what users will **lose** or **reveal** rather than what they will simply "learn".
-
-#### 2. Pattern Interrupt Matrices
-At the 4, 12, and 24-second intervals of an interactive script, inject immediate sensory shifts. This can include precise typographical placement, localized vocabulary accents, or structural questions that demand immediate mental categorization.
-
-#### 3. Single-Link Gateway Systems
-A common failure in viral growth is call-to-action dispersion. Requesting likes, follows, comments, and newsletter signups simultaneously fractures cognitive focus. Direct all engagement variables downward into a single, high-fidelity landing zone.`
-  },
-  {
-    id: 'intel-3',
-    title: 'The Decentralized Freelance Economy: Building Wealth with the Chidon Earn Portal',
-    excerpt: 'Unleashing creative equity. Discover how global creators are packaging content deliverables as elite algorithmic service products.',
-    category: 'Creative Capital',
-    readTime: '5 min read',
-    date: 'June 02, 2026',
-    author: 'Freelance Logistics Officer',
-    tags: ['Gigs', 'Decentralization', 'Earn', 'Wealth'],
-    image: '/assets/images/empty_earned_1781319231364.jpg',
-    content: `### The Creator Deliverable Redefined
-
-Over 70% of businesses actively seek custom creative positioning, yet they lack the specialized technical knowledge to execute high-retention video formats or SEO matrices themselves. Simply offering to "write captions" or "make posts" is a race to bottom-tier pricing.
-
-The secret to command high-ticket retainer contracts is packaging your output as **Data-Validated Algorithmic Assets**.
-
-### Transitioning to Elite Gig Dispatching
-
-Instead of standard, manual writing, creators using the **Chidon Earn Portal** package their services into strategic capsules:
-
-1.  **Metric-Driven Positioning**: Sell "Retention Script Packs" backed by calculated 30-day psychological targets.
-2.  **SEO Title Maps**: Deliver structured comparative keyword briefs built through Chidon IQ's advanced YouTube & platform scraper layers.
-3.  **Encapsulated Local Vault Sync**: Share ready-to-use content packages with client networks directly, preventing platform formatting corruption.
-
-By operating with professional, clinical precision rather than guesswork, freelance consultants using Chidon IQ have scaled average contract values by **+180%**, demonstrating that digital assets are the ultimate sovereign equity of today's social economy.`
-  },
-  {
-    id: 'intel-4',
-    title: 'The Ghost in the Feed: Deconstructing Platform Shadowbans & Dynamic Suppression',
-    excerpt: 'Is your content being silently throttled? Unpack the system mechanics of shadowban scoring, algorithmic safety checks, and feed compliance vectors.',
-    category: 'Algorithms & Core Strategy',
-    readTime: '5 min read',
-    date: 'May 28, 2026',
-    author: 'Chief of Algorithmic Safety',
-    tags: ['Safety', 'Shadowban', 'Optimization', 'Feeds'],
-    image: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
-    content: `### Understanding Algorithmic Suppression
-
-Many creators suspect their accounts are "shadowbanned" due to poor luck, but the reality is strictly mathematical. Social algorithms employ **Dynamic Moderation Engines (DMEs)** that score content in real-time before releasing it to wider distribution rings. 
-
-Suppression occurs when your content triggers specific algorithmic tripwires.
-
-| Diagnostic Category | High-Risk Indicator | Compliant Solution |
-| :--- | :--- | :--- |
-| **Meta Flagging** | Rapid reuse of identical tag maps | Dynamic contextual tagging |
-| **Visual Safety** | Low-contrast or heavily compressed video | High-fidelity export with exact typography |
-| **Linguistic Scan** | Out-of-vocabulary slang or extreme clickbait | Authoritative, value-focused scripts |
-
-### The 3 Golden Rules of Algorithmic Safety
-
-To guarantee your creative assets remain unrestricted and command healthy, persistent placement on recommendation feeds, execute these compliance protocols:
-
-1. **Contextual Tag Rotation**: Never copy-paste tags between drafts. Ensure every tag maps strictly to the unique visual semantic keywords generated by Chidon IQ.
-2. **Visual Fidelity Audits**: Algorithms prefer crisp visual contrast. Avoid third-party watermark files, low-contrast color overlays, and low-bitrate compression patterns.
-3. **Open-Loop Title Framing**: Create intrigue without violating strict clickbait moderation rules. Use logical inquiry hooks instead of sensational claims.`
-  },
-  {
-    id: 'intel-5',
-    title: 'Milestones over Contracts: Why Chidon\'s Escrow Service is the Sovereign Freelancer\'s Shield',
-    excerpt: 'Traditional hourly billing is dead. Discover the psychological leverage of milestone-based escrows for secure, high-value freelance contracts.',
-    category: 'Creative Capital',
-    readTime: '7 min read',
-    date: 'May 22, 2026',
-    author: 'Freelance Relations Advisor',
-    tags: ['Contracts', 'Escrow', 'Freelance', 'Milestones'],
-    image: '/assets/images/empty_earned_1781319231364.jpg',
-    content: `### The Hourly Trap
-
-Most freelancers operate on hourly tracking models, exposing themselves to client micromanagement and infinite scope creep. More importantly, hourly billing actively punishes you for efficiency. If you write an elite retention campaign in 20 minutes because of your specialized intelligence, you are paid next to nothing.
-
-Sovereign creators package their skills into **Value-Locked Milestones** secured by Chidon\'s Escrow.
-
-### The Psychology of Escrow Trust
-
-Milestone escrows completely realign the client-creator dynamic. By placing funds in escrow before work begins:
-
-* **Eliminate Chase Chaos**: You never spend hours tracking down late invoices.
-* **Define Perfect Boundaries**: Each milestone has a specific, immutable set of deliverables. Scope creep is stopped at the gate.
-* **Demonstrate High Status**: Operating with a secure, professional ledger immediately positions you as a high-ticket consultant rather than a gig worker.
-
-### Constructing a High-Leverage Milestone Map
-
-For a standard $5,000 retainer, break down your workflow into three secure, independent phases:
-
-1. **Phase 1: Discovery & Index Mapping (30%)** - Deliver custom competitor analysis and title maps.
-2. **Phase 2: Narrative Generation & Assets (50%)** - Deliver complete retention script sets and raw video assets.
-3. **Phase 3: Performance Audit & Optimization (20%)** - Deliver completion metrics and semantic recommendations.`
-  },
-  {
-    id: 'intel-6',
-    title: 'The Aesthetic Advantage: Why Clean Minimalist UI Outperforms Flashy Visual Noise',
-    excerpt: 'In an era saturated with sensory overload, hyper-clean layouts, premium typography, and generous negative space are the ultimate trust signals.',
-    category: 'Visual Design',
-    readTime: '4 min read',
-    date: 'May 15, 2026',
-    author: 'Principal Designer',
-    tags: ['Design', 'Typography', 'Minimalism', 'Trust'],
-    image: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg',
-    content: `### The Saturation of AI Noise
-
-As generative AI tools flood the internet with highly saturated, flashy, and over-engineered visuals, a strange counter-trend has emerged. High-profile decision makers, enterprise clients, and sophisticated buyers are experiencing profound **visual fatigue**.
-
-When everything is loud, neon, and flashing, **minimalism becomes the ultimate pattern interrupt**.
-
-### Establishing Visual Hierarchy & Rhythm
-
-To command respect on the timeline or in your client pitch decks, transition your visual layouts to an editorial standard:
-
-#### 1. Generous Negative Space
-Give your visual assets room to breathe. Negative space is not "empty" space; it is active breathing room that guides the viewer's focal points and establishes a feeling of premium luxury.
-
-#### 2. Monospaced and Sans-Serif Pairings
-Pair clean, geometric headers (like Space Grotesk) with high-fidelity monospaced accents (like JetBrains Mono) for structural details. This evokes a technical, clinical authority that signals precision craftsmanship.
-
-#### 3. Restrained Color Palettes
-Limit your visual brand to one premium accent color (such as Cyan Primary) against deep slates, dark charcoal, or soft warm whites. High-contrast simplicity suggests clarity of thought.`
-  },
-  {
-    id: 'intel-7',
-    title: 'Hook Chemistry: The 5-Part Linguistic Formula for 10x Comment-to-Share Ratios',
-    excerpt: 'Move past generic copywriting templates. Uncover the cognitive science behind open curiosity loops and visual friction gates.',
-    category: 'Neuromorphic Growth',
-    readTime: '6 min read',
-    date: 'May 09, 2026',
-    author: 'Linguistic Strategist',
-    tags: ['Hooks', 'Psychology', 'Copywriting', 'Viral'],
-    image: '/assets/images/seo_analytics_vector_1783490751280.jpg',
-    content: `### Beyond the Generic Templates
-
-We have all seen the recycled copywriting advice: "Top 3 tools you need to survive..." or "How I made $X doing Y...". While these might capture high initial impressions from low-intent users, they produce abysmal **retention and share ratios**. 
-
-Real community amplification requires establishing profound **Linguistic Friction**.
-
-### The Five-Part Hook Chemistry Formula
-
-To create content that users don't just consume, but actively save, share, and debate in the comments, structure your narratives with these five pillars:
-
-1. **The Curiosity Loop**: Introduce an outcome that contradicts conventional wisdom. (e.g., "Why my worst-performing email sequence made $40,000...")
-2. **The Scarcity Pivot**: Restrict the accessibility of the solution. (e.g., "This only works if you have under 2,000 followers...")
-3. **The Friction Gap**: Highlight the hidden difficulty that others ignore. (e.g., "99% of creators fail here because they refuse to clean their contact files...")
-4. **Cognitive Relatability**: Speak directly to a highly specific, emotional daily pain point.
-5. **The Single-Link Gateway**: Ask for exactly one form of engagement, explaining precisely what the reader gets in return.`
-  },
-  {
-    id: 'intel-8',
-    title: 'Local State, Sovereign Sync: Inside Chidon\'s Engineering Philosophy',
-    excerpt: 'A behind-the-scenes look at how Chidon IQ blends lightning-fast local cache engines with cloud databases for uninterrupted developer flow.',
-    category: 'Tech & Engineering',
-    readTime: '5 min read',
-    date: 'April 30, 2026',
-    author: 'Core Engineering Lead',
-    tags: ['Tech', 'React', 'Firestore', 'Offline-First'],
-    image: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg',
-    content: `### Offline-First Resiliency
-
-A common failure in modern full-stack web apps is a total reliance on active network connections. If a developer goes into a subway or has a brief packet loss, the entire workspace freezes, forms crash, and creative drafts are lost forever.
-
-Chidon IQ was engineered from day one on a **Sovereign Local-First Architecture**.
-
-### The Cloud-Sync Lifecycle
-
-When you edit a draft or log a freelance escrow transaction in Chidon, the action undergoes a three-stage lifecycle:
-
-1. **Immediate Local Mutation**: State updates instantly in a highly-optimized React state and persists in LocalStorage within 4 milliseconds.
-2. **Asynchronous Queueing**: Outgoing mutations are formatted as Zero-Trust JSON payloads.
-3. **Firestore Sync**: Once the browser connection stabilizes, our background synchronization client pushes the updates to Firestore, returning real-time snapshots to sync across all your devices.
-
-### Zero-Trust Client Validations
-
-By validating all document shapes on the client *before* they are sent to our cloud rules, we guarantee that bad or truncated schema payloads never waste server bandwidth or trigger quota errors, ensuring Chidon IQ remains incredibly fast, durable, and cost-efficient.`
-  }
+const CATEGORIES = [
+  { name: 'Growth Hacking', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+  { name: 'Algorithmic Shifts', color: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20' },
+  { name: 'Neural Marketing', color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' },
+  { name: 'Creative Capital', color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
+  { name: 'Tech & AI Systems', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
 ];
 
 export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack }) => {
-  const { i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<'feed' | 'synthesizer'>('feed');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // Blogs dynamic data
-  const [blogs, setBlogs] = useState<BlogPost[]>([]);
-  const [loadingBlogs, setLoadingBlogs] = useState(true);
+  // Global posts state
+  const [globalPosts, setGlobalPosts] = useState<BlogPost[]>([]);
+  const [comments, setComments] = useState<BlogComment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Write Blog State & Modal
-  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+  const supabase = getSupabaseClient();
+
+  // Plus Button & Upload State
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [newCategory, setNewCategory] = useState('Growth Hacking');
   const [newExcerpt, setNewExcerpt] = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newCategory, setNewCategory] = useState('Algorithms & Core Strategy');
-  const [newAuthor, setNewAuthor] = useState('');
-  const [newTagsString, setNewTagsString] = useState('');
-  const [newImagePreset, setNewImagePreset] = useState('Algorithmic Feeds');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [newTags, setNewTags] = useState('');
+  const [uploadPreviewMode, setUploadPreviewMode] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   // Synthesizer State
   const [synthTopic, setSynthTopic] = useState('');
@@ -314,142 +88,228 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
   const [errorStatus, setErrorStatus] = useState('');
   const [copied, setCopied] = useState(false);
   const [savedToVault, setSavedToVault] = useState(false);
+  const [publishedGlobal, setPublishedGlobal] = useState(false);
 
   // Consult AI state
   const [consultQuestion, setConsultQuestion] = useState('');
   const [consultAnswer, setConsultAnswer] = useState('');
   const [consultLoading, setConsultLoading] = useState(false);
 
-  // Syncing author name with logged-in user
+  // Load Global posts from Supabase
   useEffect(() => {
-    if (auth.currentUser) {
-      setNewAuthor(auth.currentUser.displayName || auth.currentUser.email || '');
-    }
-  }, [auth.currentUser]);
-
-  // Loading and syncing blogs from Firestore (with local fallback)
-  useEffect(() => {
-    const stored = localStorage.getItem('local_blogs');
-    const localBlogs: BlogPost[] = stored ? JSON.parse(stored) : [];
-
-    const blogsCollection = collection(db, 'blogs');
-    const q = query(blogsCollection, orderBy('createdAt', 'desc'));
-
-    const seedDatabase = async () => {
+    async function fetchPosts() {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
       try {
-        const batchPromises = PRE_CURATED_BLOGS.map(async (b) => {
-          return addDoc(blogsCollection, {
-            title: b.title,
-            excerpt: b.excerpt,
-            content: b.content,
-            category: b.category,
-            readTime: b.readTime,
-            date: b.date,
-            author: b.author,
-            tags: b.tags,
-            image: b.image || '',
-            createdAt: new Date().toISOString() // use string ISO for stable sorting cross-node
-          });
-        });
-        await Promise.all(batchPromises);
+        setLoading(true);
+        setError(null);
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data) {
+          const formatted = data.map((item: any) => ({
+            id: item.id,
+            title: item.title || 'Untitled Global Insight',
+            excerpt: item.excerpt || '',
+            content: item.content || '',
+            category: item.category || 'Growth Hacking',
+            readTime: item.read_time || '3 min read',
+            date: item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+            author: item.author || 'Chidon Global Node',
+            authorId: item.author_id,
+            authorEmail: item.author_email,
+            tags: Array.isArray(item.tags) ? item.tags : (typeof item.tags === 'string' ? item.tags.split(',') : []),
+            likes: item.likes || 0,
+            claps: item.claps || 0,
+            mindblown: item.mindblown || 0,
+            isUserGenerated: true
+          }));
+          setGlobalPosts(formatted);
+        }
+      } catch (err: any) {
+        console.error("Supabase error loading posts:", err);
+        setError(err.message || "Failed to load posts");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPosts();
+  }, [supabase]);
+
+  // Sync comments when post is selected from Supabase
+  useEffect(() => {
+    if (!selectedPost || !supabase) {
+      setComments([]);
+      return;
+    }
+    async function fetchComments() {
+      try {
+        const { data, error } = await supabase
+          .from('comments')
+          .select('*')
+          .eq('post_id', selectedPost.id)
+          .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        if (data) {
+          setComments(data.map((c: any) => ({
+            id: c.id,
+            authorName: c.author_name || 'Anonymous Node',
+            authorId: c.author_id || '',
+            content: c.content || '',
+            createdAt: c.created_at ? new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'
+          })));
+        }
       } catch (err) {
-        console.warn("Failed to seed database with curated blogs:", err);
-        setBlogs([...localBlogs, ...PRE_CURATED_BLOGS]);
-        setLoadingBlogs(false);
+        console.warn("Could not load comments from Supabase:", err);
       }
-    };
+    }
+    fetchComments();
+  }, [selectedPost, supabase]);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const dbBlogs: BlogPost[] = [];
-      snapshot.forEach((doc) => {
-        dbBlogs.push({ id: doc.id, ...doc.data() } as BlogPost);
-      });
-
-      if (dbBlogs.length > 0) {
-        // Merge local state modifications with cloud-synced blogs
-        setBlogs([...localBlogs, ...dbBlogs]);
-        setLoadingBlogs(false);
-      } else {
-        // If database is completely empty, trigger self-seeding
-        seedDatabase();
-      }
-    }, (error) => {
-      console.warn("Firestore blogs subscription offline, loading local caches:", error);
-      setBlogs([...localBlogs, ...PRE_CURATED_BLOGS]);
-      setLoadingBlogs(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleSubmitBlogPost = async (e: React.FormEvent) => {
+  // Handle Publishing a Custom Blog Post to Supabase
+  const handleUploadBlog = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newExcerpt.trim() || !newContent.trim()) {
-      setSubmitError("Please fill out all required fields: Title, Excerpt, and Content.");
+    if (!newTitle.trim() || !newContent.trim() || !supabase) {
+      setUploadError("Title and Main Content are required to broadcast to the network.");
       return;
     }
 
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    const blogTags = newTagsString
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
-
-    const calcReadTime = `${Math.max(1, Math.ceil(newContent.split(/\s+/).length / 200))} min read`;
-    const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    const newPostData = {
-      title: newTitle.trim(),
-      excerpt: newExcerpt.trim(),
-      content: newContent.trim(),
-      category: newCategory,
-      readTime: calcReadTime,
-      date: todayStr,
-      author: newAuthor.trim() || auth.currentUser?.displayName || auth.currentUser?.email || "Guest Creator",
-      tags: blogTags.length > 0 ? blogTags : ['Community', 'ChidonIQ'],
-      image: newImagePreset || '/assets/images/seo_analytics_vector_1783490751280.jpg',
-    };
+    setUploading(true);
+    setUploadError('');
 
     try {
-      const blogsCollection = collection(db, 'blogs');
-      await addDoc(blogsCollection, {
-        ...newPostData,
-        createdAt: new Date().toISOString()
-      });
+      const words = newContent.trim().split(/\s+/).length;
+      const readTimeCalculated = `${Math.max(1, Math.ceil(words / 150))} min read`;
+      const tagsArray = newTags
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
 
-      // Clear Form state
-      setNewTitle('');
-      setNewExcerpt('');
-      setNewContent('');
-      setNewCategory('Algorithms & Core Strategy');
-      setNewTagsString('');
-      setIsWriteModalOpen(false);
-    } catch (err) {
-      console.warn("Write rejected by cloud gateway, buffering inside local sandbox storage:", err);
-      const fallbackPost: BlogPost = {
-        id: `local-${Date.now()}`,
-        ...newPostData,
+      const username = auth.currentUser?.email?.split('@')[0] || auth.currentUser?.displayName || 'Chidon Elite User';
+      const userMail = auth.currentUser?.email || 'anonymous@chidon.iq';
+
+      const payload = {
+        title: newTitle.trim(),
+        excerpt: newExcerpt.trim() || (newContent.substring(0, 120) + '...'),
+        content: newContent.trim(),
+        category: newCategory,
+        read_time: readTimeCalculated,
+        author: username,
+        author_id: auth.currentUser?.uid || 'anonymous',
+        author_email: userMail,
+        tags: tagsArray,
+        likes: 0,
+        claps: 0,
+        mindblown: 0
       };
 
-      setBlogs(prev => [fallbackPost, ...prev]);
+      const { data, error } = await supabase.from('posts').insert([payload]).select();
+      if (error) throw error;
 
-      // Cache locally
-      const stored = localStorage.getItem('local_blogs');
-      const storedList = stored ? JSON.parse(stored) : [];
-      storedList.unshift(fallbackPost);
-      localStorage.setItem('local_blogs', JSON.stringify(storedList));
+      if (data && data[0]) {
+        const item = data[0];
+        const newPost: BlogPost = {
+          id: item.id,
+          title: item.title,
+          excerpt: item.excerpt,
+          content: item.content,
+          category: item.category,
+          readTime: item.read_time,
+          date: new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          author: item.author,
+          authorId: item.author_id,
+          authorEmail: item.author_email,
+          tags: item.tags || [],
+          likes: item.likes,
+          claps: item.claps,
+          mindblown: item.mindblown,
+          isUserGenerated: true
+        };
+        setGlobalPosts(prev => [newPost, ...prev]);
+      }
 
-      // Clear state
+      // Reset Form State
       setNewTitle('');
       setNewExcerpt('');
       setNewContent('');
-      setNewCategory('Algorithms & Core Strategy');
-      setNewTagsString('');
-      setIsWriteModalOpen(false);
+      setNewTags('');
+      setIsUploadOpen(false);
+      setUploadPreviewMode(false);
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to broadcast post to the global database.");
     } finally {
-      setIsSubmitting(false);
+      setUploading(false);
+    }
+  };
+
+  // React to a blog post in Supabase
+  const handleReaction = async (blogId: string, reactionType: 'likes' | 'claps' | 'mindblown') => {
+    if (!supabase) return;
+    try {
+      const { data: current, error: getErr } = await supabase
+        .from('posts')
+        .select(reactionType)
+        .eq('id', blogId)
+        .single();
+      
+      if (getErr) throw getErr;
+      const nextVal = (current?.[reactionType] || 0) + 1;
+
+      const { error: updErr } = await supabase
+        .from('posts')
+        .update({ [reactionType]: nextVal })
+        .eq('id', blogId);
+
+      if (updErr) throw updErr;
+
+      // Update local state immediately for pristine feeling
+      setGlobalPosts(prev => prev.map(p => p.id === blogId ? { ...p, [reactionType]: nextVal } : p));
+      setSelectedPost(prev => prev && prev.id === blogId ? { ...prev, [reactionType]: nextVal } : prev);
+    } catch (err) {
+      console.error("Failed to update reaction:", err);
+    }
+  };
+
+  // Submit dynamic comment to Supabase
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || !selectedPost || !supabase) return;
+
+    setSubmittingComment(true);
+    try {
+      const commentPayload = {
+        post_id: selectedPost.id,
+        author_name: auth.currentUser?.email?.split('@')[0] || auth.currentUser?.displayName || 'Chidon Reader',
+        author_id: auth.currentUser?.uid || 'anonymous',
+        content: commentText.trim()
+      };
+
+      const { data, error } = await supabase.from('comments').insert([commentPayload]).select();
+      if (error) throw error;
+
+      if (data && data[0]) {
+        const c = data[0];
+        const newComment: BlogComment = {
+          id: c.id,
+          authorName: c.author_name,
+          authorId: c.author_id,
+          content: c.content,
+          createdAt: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setComments(prev => [...prev, newComment]);
+      }
+      setCommentText('');
+    } catch (err) {
+      console.error("Comment submission error:", err);
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -459,6 +319,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
     setErrorStatus('');
     setGeneratedBlog('');
     setSavedToVault(false);
+    setPublishedGlobal(false);
     
     try {
       const prompt = `Act as Chidon IQ Principal Social Analyst & Editorial Elite.
@@ -481,7 +342,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt, language: i18n.language }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
@@ -490,18 +351,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
 
       const data = await response.json();
       if (data && data.text) {
-        let rawText = data.text;
-        if (typeof rawText === 'string') {
-          rawText = rawText
-            .replace(/\\n\\n/g, '\n\n')
-            .replace(/\\n/g, '\n')
-            .replace(/\\r/g, '')
-            .replace(/n\/n\//g, '\n\n')
-            .replace(/\/n\/n\//g, '\n\n')
-            .replace(/\/n\//g, '\n')
-            .replace(/\s*n\/n\s*/g, '\n\n')
-            .trim();
-        }
+        const rawText = data.text;
         let titleLine = `Viral Index: ${synthTopic}`;
         let blogBody = rawText;
 
@@ -523,6 +373,59 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
     }
   };
 
+  // Publish AI generated blog straight to Global Database in Supabase
+  const publishGeneratedBlogToGlobal = async () => {
+    if (!generatedBlog || !generatedTitle || !supabase) return;
+    try {
+      const words = generatedBlog.trim().split(/\s+/).length;
+      const readTimeCalculated = `${Math.max(1, Math.ceil(words / 150))} min read`;
+      const username = auth.currentUser?.email?.split('@')[0] || auth.currentUser?.displayName || 'Chidon Expert Node';
+
+      const payload = {
+        title: generatedTitle,
+        excerpt: `AI Synthesized briefing examining: ${synthTopic}`,
+        content: generatedBlog,
+        category: 'Tech & AI Systems',
+        read_time: readTimeCalculated,
+        author: `${username} (AI Synthesized)`,
+        author_id: auth.currentUser?.uid || 'anonymous',
+        author_email: auth.currentUser?.email || 'anonymous',
+        tags: ['AI Synthesized', 'Chidon IQ', synthPlatform.split(' ')[0]],
+        likes: 1,
+        claps: 3,
+        mindblown: 1
+      };
+
+      const { data, error } = await supabase.from('posts').insert([payload]).select();
+      if (error) throw error;
+
+      if (data && data[0]) {
+        const item = data[0];
+        const newPost: BlogPost = {
+          id: item.id,
+          title: item.title,
+          excerpt: item.excerpt,
+          content: item.content,
+          category: item.category,
+          readTime: item.read_time,
+          date: new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          author: item.author,
+          authorId: item.author_id,
+          authorEmail: item.author_email,
+          tags: item.tags || [],
+          likes: item.likes,
+          claps: item.claps,
+          mindblown: item.mindblown,
+          isUserGenerated: true
+        };
+        setGlobalPosts(prev => [newPost, ...prev]);
+      }
+      setPublishedGlobal(true);
+    } catch (err) {
+      console.error("Failed to publish AI blog globally:", err);
+    }
+  };
+
   const executeConsultation = async (blogPostTitle: string) => {
     if (!consultQuestion.trim()) return;
     setConsultLoading(true);
@@ -539,7 +442,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt, language: i18n.language }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (response.ok) {
@@ -572,43 +475,62 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
     }
   };
 
+  // Combine pre-curated with dynamic user-generated blogs to provide a complete robust list
+  const combinedAllBlogs = globalPosts;
+
+  // Filter combined lists by active selection category
+  const filteredBlogs = combinedAllBlogs.filter(post => {
+    if (selectedCategory === 'All') return true;
+    return post.category.toLowerCase().trim() === selectedCategory.toLowerCase().trim();
+  });
+
   return (
-    <div className="space-y-6 select-text">
+    <div className="space-y-6 select-text pb-16">
       
-      {/* Header and Brand Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-base)] pb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-primary shrink-0">
-            <BookOpen size={22} className="animate-pulse" />
+      {/* Real-time Connection Status Header Banner */}
+      <div className="bg-gradient-to-r from-indigo-900 via-slate-950 to-purple-950 border border-indigo-500/30 rounded-3xl p-5 md:p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-purple-500/10 rounded-full filter blur-2xl pointer-events-none" />
+        
+        <div className="flex items-center gap-4 relative z-10 text-center md:text-left flex-col md:flex-row">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-500 text-white shrink-0 shadow-lg shadow-indigo-500/20">
+            <Globe size={24} className="animate-spin-slow text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase font-extrabold">CHIDON INTEL REPOSITORY</span>
-              <span className="text-[8px] font-mono bg-cyan-500/15 text-cyan-500 border border-cyan-500/20 px-1.5 py-0.2 rounded font-black uppercase">LIVE GATEWAY</span>
+            <div className="flex items-center justify-center md:justify-start gap-2">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono font-black tracking-widest text-emerald-400 uppercase bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                <Wifi size={10} className="animate-pulse" />
+                Global Network Linked
+              </span>
+              <span className="text-[10px] font-mono text-purple-300 uppercase font-bold bg-purple-950/50 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                Chidon Live Matrix
+              </span>
             </div>
-            <h2 className="text-xl md:text-2xl font-display font-extrabold text-[var(--text-primary)] tracking-tight">
-              Chidon Blog
-            </h2>
+            <h1 className="text-2xl md:text-3xl font-display font-black text-white tracking-tight mt-1.5">
+              Chidon Blog & Collaborative Network
+            </h1>
+            <p className="text-xs text-slate-300 font-sans mt-0.5 max-w-xl">
+              Upload your own briefings, comment on industry paradigms, react dynamically, and stay interconnected in real-time.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          {/* Add Blog Post Button */}
+        {/* Action controls */}
+        <div className="flex items-center gap-3 shrink-0 relative z-10 w-full md:w-auto justify-center md:justify-end">
           <button
-            onClick={() => setIsWriteModalOpen(true)}
-            className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-sans font-bold flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all cursor-pointer"
+            onClick={() => setIsUploadOpen(true)}
+            className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:opacity-90 active:scale-95 text-white rounded-2xl text-xs font-mono font-black tracking-wide shadow-xl shadow-indigo-500/10 flex items-center gap-2 cursor-pointer transition-all border border-white/10"
           >
-            <Plus size={15} />
-            <span>Write a Post</span>
+            <Plus size={16} strokeWidth={3} />
+            <span>Upload Insight</span>
           </button>
 
-          {/* Back navigation button */}
           {onBack && (
             <button
               onClick={onBack}
-              className="px-3.5 py-1.5 bg-slate-100 dark:bg-zinc-900 border border-[var(--border-base)] rounded-xl text-xs font-mono font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-slate-300 dark:hover:border-zinc-700 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-mono font-bold text-slate-200 hover:bg-white/10 transition-all flex items-center gap-2 cursor-pointer"
             >
-              <ArrowLeft size={13} />
+              <ArrowLeft size={14} />
               <span>Return to Hub</span>
             </button>
           )}
@@ -617,27 +539,58 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
 
       {/* Workspace Menu Tabs */}
       {!selectedPost && (
-        <div className="flex border-b border-[var(--border-base)] gap-6">
-          <button
-            onClick={() => setActiveTab('feed')}
-            className={`pb-3 text-xs font-mono uppercase tracking-widest border-b-2 font-black transition-all cursor-pointer ${
-              activeTab === 'feed'
-                ? 'border-cyan-500 text-cyan-600 dark:text-cyan-primary'
-                : 'border-transparent text-slate-400 hover:text-[var(--text-primary)]'
-            }`}
-          >
-            📬 Blog Feed
-          </button>
-          <button
-            onClick={() => setActiveTab('synthesizer')}
-            className={`pb-3 text-xs font-mono uppercase tracking-widest border-b-2 font-black transition-all cursor-pointer ${
-              activeTab === 'synthesizer'
-                ? 'border-cyan-500 text-cyan-600 dark:text-cyan-primary animate-pulse'
-                : 'border-transparent text-slate-400 hover:text-[var(--text-primary)]'
-            }`}
-          >
-            🧠 Linguistic Optimizer Core Synthesizer
-          </button>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-base)] pb-2">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab('feed')}
+              className={`pb-3 text-xs font-mono uppercase tracking-widest border-b-2 font-black transition-all cursor-pointer ${
+                activeTab === 'feed'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-[var(--text-primary)]'
+              }`}
+            >
+              📬 Global Network Feed ({combinedAllBlogs.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('synthesizer')}
+              className={`pb-3 text-xs font-mono uppercase tracking-widest border-b-2 font-black transition-all cursor-pointer ${
+                activeTab === 'synthesizer'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 animate-pulse'
+                  : 'border-transparent text-slate-400 hover:text-[var(--text-primary)]'
+              }`}
+            >
+              🧠 Linguistic Optimizer Synthesizer
+            </button>
+          </div>
+
+          {/* Quick Categories Filter inside feed */}
+          {activeTab === 'feed' && (
+            <div className="flex flex-wrap items-center gap-1.5 self-start md:self-auto pb-2">
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                  selectedCategory === 'All'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-400 border-transparent hover:text-slate-200'
+                }`}
+              >
+                All Insights
+              </button>
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat.name}
+                  onClick={() => setSelectedCategory(cat.name)}
+                  className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    selectedCategory.toLowerCase() === cat.name.toLowerCase()
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-400 border-transparent hover:text-slate-200'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -651,44 +604,29 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
             className="space-y-6"
           >
             <button
-              onClick={() => { setSelectedPost(null); setConsultAnswer(''); setConsultQuestion(''); }}
-              className="inline-flex items-center gap-1.5 text-xs font-mono text-cyan-600 dark:text-cyan-primary hover:underline font-bold pb-2 cursor-pointer"
+              onClick={() => { setSelectedPost(null); setComments([]); setConsultAnswer(''); setConsultQuestion(''); }}
+              className="inline-flex items-center gap-1.5 text-xs font-mono text-indigo-500 hover:underline font-bold pb-2 cursor-pointer"
             >
-              <ArrowLeft size={13} /> Return to Blog Feed
+              <ArrowLeft size={13} /> Return to Global Feed
             </button>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
               {/* Blog Article Core Body */}
-              <div className="lg:col-span-8 card-base p-6 md:p-8 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl space-y-6 text-left relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
+              <div className="lg:col-span-8 card-base p-6 md:p-8 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl space-y-6 text-left relative overflow-hidden shadow-xl">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
                 
-                {/* Beautiful Banner Image */}
-                <div className="w-full h-48 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-md mb-4 bg-slate-950 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/40" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.15),transparent)] animate-pulse" />
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px]" />
-                  
-                  <div className="relative z-10 p-3 bg-slate-900/80 border border-white/5 rounded-2xl text-cyan-400">
-                    <BookOpen size={32} />
-                  </div>
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
-                    <span className="text-[9px] font-mono font-bold text-cyan-400 bg-slate-950/80 px-2.5 py-0.5 rounded border border-cyan-500/25 uppercase tracking-wider">
-                      Neural Analytics Hub Stream
-                    </span>
-                  </div>
-                </div>
-
                 {/* Meta details */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-primary bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">{selectedPost.category}</span>
-                  <h1 className="text-xl md:text-3xl font-display font-black text-[var(--text-primary)] tracking-tight leading-snug">
+                <div className="space-y-3">
+                  <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    {selectedPost.category}
+                  </span>
+                  <h1 className="text-2xl md:text-3xl font-display font-black text-[var(--text-primary)] tracking-tight leading-snug">
                     {selectedPost.title}
                   </h1>
                   
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-400 font-mono pt-1">
-                    <span className="flex items-center gap-1"><User size={12} /> {selectedPost.author}</span>
+                    <span className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md"><User size={12} className="text-indigo-400" /> {selectedPost.author}</span>
                     <span className="flex items-center gap-1"><Calendar size={12} /> {selectedPost.date}</span>
                     <span className="flex items-center gap-1"><Clock size={12} /> {selectedPost.readTime}</span>
                   </div>
@@ -697,22 +635,108 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 <div className="w-full h-[1px] bg-[var(--border-base)]" />
 
                 {/* Main Text Content */}
-                <div className="prose prose-slate dark:prose-invert max-w-none text-sm text-[var(--text-secondary)] leading-relaxed space-y-4">
+                <div className="markdown-body text-[var(--text-secondary)]">
                   <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-4">
                   {selectedPost.tags.map(t => (
-                    <span key={t} className="text-[9px] font-mono bg-slate-100 dark:bg-zinc-800/80 px-2 py-1 rounded-md text-slate-400">#{t}</span>
+                    <span key={t} className="text-[9px] font-mono bg-slate-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-md text-slate-400">#{t}</span>
                   ))}
                 </div>
+
+                {/* Interactive Reaction & Clap Engine */}
+                <div className="border-t border-[var(--border-base)] pt-6 mt-6">
+                  <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest mb-4">React to this Insight</h4>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => handleReaction(selectedPost.id, 'likes')}
+                      className="px-4 py-2 bg-pink-500/5 border border-pink-500/15 text-pink-500 rounded-xl hover:bg-pink-500/10 transition-all flex items-center gap-2 cursor-pointer text-xs font-mono font-black"
+                    >
+                      <Heart size={14} className="fill-pink-500 text-pink-500" />
+                      <span>Support ({selectedPost.likes || 0})</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleReaction(selectedPost.id, 'claps')}
+                      className="px-4 py-2 bg-indigo-500/5 border border-indigo-500/15 text-indigo-400 rounded-xl hover:bg-indigo-500/10 transition-all flex items-center gap-2 cursor-pointer text-xs font-mono font-black"
+                    >
+                      <ThumbsUp size={14} className="text-indigo-400" />
+                      <span>Clap ({selectedPost.claps || 0})</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleReaction(selectedPost.id, 'mindblown')}
+                      className="px-4 py-2 bg-yellow-500/5 border border-yellow-500/15 text-yellow-500 rounded-xl hover:bg-yellow-500/10 transition-all flex items-center gap-2 cursor-pointer text-xs font-mono font-black"
+                    >
+                      <Flame size={14} className="fill-yellow-500 text-yellow-500" />
+                      <span>Mind Blown ({selectedPost.mindblown || 0})</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Real-time Global Discussion Thread Section */}
+                <div className="border-t border-[var(--border-base)] pt-6 mt-8 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle size={18} className="text-indigo-500" />
+                    <h3 className="text-sm font-mono font-black uppercase tracking-wider text-[var(--text-primary)]">
+                      Real-time Global Discussion ({comments.length})
+                    </h3>
+                  </div>
+
+                  <form onSubmit={handleAddComment} className="flex gap-2.5">
+                    <input
+                      type="text"
+                      placeholder="Add an insight or drop strategic feedback globally..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className="flex-1 px-4 py-2.5 bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-xs text-[var(--text-primary)] font-sans"
+                    />
+                    <button
+                      type="submit"
+                      disabled={submittingComment || !commentText.trim()}
+                      className="px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingComment ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                      <span className="text-xs font-mono font-bold">Post</span>
+                    </button>
+                  </form>
+
+                  {/* Comments Thread Viewport */}
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {comments.length > 0 ? (
+                      comments.map((comment) => (
+                        <div 
+                          key={comment.id}
+                          className="p-3 bg-slate-50 dark:bg-zinc-900/40 border border-[var(--border-base)] rounded-xl text-left text-xs font-sans flex justify-between items-start"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-black text-slate-500 dark:text-slate-300">@{comment.authorName}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-400" />
+                              <span className="text-[10px] text-slate-400 font-mono">{comment.createdAt}</span>
+                            </div>
+                            <p className="text-[var(--text-secondary)] mt-1 whitespace-pre-wrap leading-relaxed">
+                              {comment.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6 text-slate-400 text-xs font-mono">
+                        💬 No global thoughts added yet. Be the first to share an insight!
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
 
               {/* Sidebar consultation interactive segment */}
               <div className="lg:col-span-4 space-y-4">
                 <div className="card-base p-5 border-2 border-[var(--border-base)] bg-slate-50 dark:bg-zinc-900/30 rounded-2xl space-y-4 text-left">
                   <div className="flex items-center gap-2">
-                    <Brain size={18} className="text-cyan-500 shrink-0" />
+                    <Brain size={18} className="text-indigo-500 shrink-0" />
                     <h3 className="text-xs font-mono font-black uppercase tracking-wider text-[var(--text-primary)]">Consult Core Expert</h3>
                   </div>
                   
@@ -725,13 +749,13 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                       placeholder="e.g. How do I apply these 3-second neuromorphic hooks if my channel is about luxury espresso coffee?"
                       value={consultQuestion}
                       onChange={(e) => setConsultQuestion(e.target.value)}
-                      className="w-full h-24 p-2.5 text-xs bg-[var(--bg-card)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans resize-none"
+                      className="w-full h-24 p-2.5 text-xs bg-[var(--bg-card)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans resize-none"
                     />
                     
                     <button
                       onClick={() => executeConsultation(selectedPost.title)}
                       disabled={consultLoading || !consultQuestion.trim()}
-                      className="w-full py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-sans font-bold flex items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md disabled:opacity-50"
+                      className="w-full py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-xl text-xs font-sans font-bold flex items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md disabled:opacity-50"
                     >
                       {consultLoading ? (
                         <>
@@ -748,8 +772,8 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   </div>
 
                   {consultAnswer && (
-                    <div className="p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 text-xs text-[var(--text-primary)] leading-normal font-sans space-y-2 max-h-[160px] overflow-y-auto">
-                      <div className="text-[8px] font-mono text-cyan-500 font-extrabold tracking-widest uppercase">CHIDON ADVICE RESPONSE</div>
+                    <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-xs text-[var(--text-primary)] leading-normal font-sans space-y-2 max-h-[160px] overflow-y-auto">
+                      <div className="text-[8px] font-mono text-indigo-500 font-extrabold tracking-widest uppercase">CHIDON ADVICE RESPONSE</div>
                       <p className="whitespace-pre-wrap leading-relaxed">{consultAnswer}</p>
                     </div>
                   )}
@@ -759,65 +783,71 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
             </div>
           </motion.div>
         ) : activeTab === 'feed' ? (
-          
-          /* Show feed of curated industry-grade influence intelligence */
-          loadingBlogs ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-              <Loader2 className="animate-spin text-cyan-500" size={32} />
-              <p className="text-xs font-mono tracking-widest text-slate-400 uppercase font-extrabold animate-pulse">Syncing Blog Feed...</p>
+          loading ? (
+            <div className="flex flex-col items-center justify-center py-16 w-full col-span-full">
+              <Loader2 className="animate-spin text-indigo-500 mx-auto" size={36} />
+              <p className="text-xs font-mono text-slate-500 mt-4">Syncing feed intelligence node...</p>
             </div>
-          ) : blogs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-              <BookOpen className="text-slate-400 animate-bounce" size={36} />
-              <p className="text-xs font-mono text-slate-400">No blog posts found. Write the first post!</p>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-red-500/20 rounded-2xl p-8 max-w-md mx-auto col-span-full">
+              <p className="text-sm font-semibold text-red-400">Failed to load</p>
+              <p className="text-xs font-mono text-slate-400 mt-2">{error}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {blogs.map((blog) => (
-                <motion.div
-                  key={blog.id}
-                  whileHover={{ y: -4 }}
-                  className="card-base border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl flex flex-col justify-between text-left relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
-                  onClick={() => setSelectedPost(blog)}
-                >
-                  <div>
-                    {/* Card Banner Image */}
-                    <div className="w-full h-32 overflow-hidden border-b border-[var(--border-base)] relative bg-slate-950 flex items-center justify-center">
-                      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-cyan-950/40" />
-                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.1),transparent)]" />
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:16px_16px]" />
-                      <BookOpen size={20} className="text-cyan-400/80 relative z-10 transition-transform duration-500 group-hover:scale-110" />
-                      <div className="absolute top-2 left-2">
-                        <span className="text-[8px] font-mono font-bold text-cyan-400 bg-slate-950/80 px-2 py-0.5 rounded border border-cyan-500/25 uppercase tracking-wider">
+            /* Show feed of curated industry-grade influence intelligence */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 col-span-full">
+              {filteredBlogs.length === 0 ? (
+                <div className="col-span-full py-16 text-center border-2 border-dashed border-slate-700/30 rounded-2xl p-8">
+                  <p className="text-sm text-slate-400 font-mono">No posts yet. Be the first to write one.</p>
+                </div>
+              ) : (
+                filteredBlogs.map((blog) => (
+                  <motion.div
+                    key={blog.id}
+                    whileHover={{ y: -4 }}
+                    className="card-base p-6 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl flex flex-col justify-between text-left relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
+                    onClick={() => setSelectedPost(blog)}
+                  >
+                    {/* Visual accent top line representing categories */}
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-indigo-500" />
+                    
+                    <div className="space-y-4 pt-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                           {blog.category}
                         </span>
-                      </div>
-                    </div>
-
-                    <div className="p-5 space-y-3">
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                        <span>{blog.date}</span>
-                        <span>{blog.readTime}</span>
+                        <span className="text-[9px] font-mono text-slate-400">{blog.readTime}</span>
                       </div>
 
-                      <h3 className="text-sm font-display font-black text-[var(--text-primary)] leading-snug tracking-tight group-hover:text-cyan-500 transition-colors line-clamp-2">
+                      <h3 className="text-base font-display font-extrabold text-[var(--text-primary)] leading-snug tracking-tight group-hover:text-indigo-500 transition-colors">
                         {blog.title}
                       </h3>
                       
-                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-2 font-sans font-medium">
+                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-3 font-sans font-medium">
                         {blog.excerpt}
                       </p>
                     </div>
-                  </div>
 
-                  <div className="px-5 pb-5 pt-3 border-t border-[var(--border-base)]/40 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-400 font-mono font-bold">{blog.author}</span>
-                    <span className="text-xs font-mono font-black text-cyan-600 dark:text-cyan-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      Read Intel <ChevronRight size={14} />
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="pt-4 border-t border-[var(--border-base)]/40 mt-6">
+                      {/* Reaction metrics overview inside card */}
+                      <div className="flex gap-2.5 mb-3 text-[10px] text-slate-400 font-mono">
+                        <span className="flex items-center gap-1"><Heart size={11} className="text-pink-500 fill-pink-500/20" /> {blog.likes || 0}</span>
+                        <span className="flex items-center gap-1"><ThumbsUp size={11} className="text-indigo-400" /> {blog.claps || 0}</span>
+                        <span className="flex items-center gap-1"><Flame size={11} className="text-yellow-500 fill-yellow-500/10" /> {blog.mindblown || 0}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-mono font-bold max-w-[120px] truncate">
+                          @{blog.author}
+                        </span>
+                        <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                          Read Intel <ChevronRight size={14} />
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           )
 
@@ -832,7 +862,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
             {/* Command Config Panel */}
             <div className="lg:col-span-4 card-base p-6 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl text-left space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-base)]/60">
-                <Terminal size={16} className="text-cyan-500" />
+                <Terminal size={16} className="text-indigo-500" />
                 <span className="text-[10px] font-mono font-black text-[var(--text-primary)] uppercase tracking-wider">Synthesis Console</span>
               </div>
 
@@ -844,7 +874,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   placeholder="e.g. Why micro-vlogs convert sales"
                   value={synthTopic}
                   onChange={(e) => setSynthTopic(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
+                  className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
                 />
               </div>
 
@@ -855,7 +885,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   <select
                     value={synthPlatform}
                     onChange={(e) => setSynthPlatform(e.target.value)}
-                    className="w-full px-2.5 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
+                    className="w-full px-2.5 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
                   >
                     <option value="TikTok & Reels">TikTok & Reels</option>
                     <option value="YouTube Shorts">YouTube Shorts</option>
@@ -870,7 +900,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   <select
                     value={synthTone}
                     onChange={(e) => setSynthTone(e.target.value)}
-                    className="w-full px-2.5 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
+                    className="w-full px-2.5 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
                   >
                     <option value="Tactical Blueprint">Tactical Blueprint</option>
                     <option value="High-Energy Viral">High-Energy Viral</option>
@@ -888,7 +918,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   placeholder="e.g. Vintage Watch Buyers, Ecom Brand Owners"
                   value={synthAudience}
                   onChange={(e) => setSynthAudience(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
+                  className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
                 />
               </div>
 
@@ -898,7 +928,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 <select
                   value={synthLength}
                   onChange={(e) => setSynthLength(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
+                  className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
                 >
                   <option value="Concise (~250 words)">Concise (~250 words)</option>
                   <option value="Comprehensive (~500 words)">Comprehensive (~500 words)</option>
@@ -910,12 +940,12 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
               <button
                 onClick={triggerSynthesis}
                 disabled={generating || !synthTopic.trim()}
-                className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-sans font-bold flex items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-xl text-xs font-sans font-bold flex items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
               >
                 {generating ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Engaging chidoniq core...</span>
+                    <span>Engaging Chidon Node...</span>
                   </>
                 ) : (
                   <>
@@ -933,21 +963,31 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
             </div>
 
             {/* Synthesized Output Display Viewport */}
-            <div className="lg:col-span-8 card-base border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl min-h-[440px] flex flex-col justify-stretch overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-bl from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
+            <div className="lg:col-span-8 card-base border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl min-h-[440px] flex flex-col justify-stretch overflow-hidden relative shadow-lg">
+              <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-bl from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
 
               {generatedBlog ? (
                 /* Generated results loaded viewport */
                 <div className="flex flex-col h-full justify-between flex-1">
                   
                   {/* Result Header actions bar */}
-                  <div className="p-4 border-b border-[var(--border-base)] flex items-center justify-between gap-4 bg-slate-50/50 dark:bg-zinc-900/30">
+                  <div className="p-4 border-b border-[var(--border-base)] flex flex-wrap items-center justify-between gap-4 bg-slate-50/50 dark:bg-zinc-900/30">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">REAL-TIME INTEL SYNTHESIS SUCCESS</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Share globally */}
+                      <button
+                        onClick={publishGeneratedBlogToGlobal}
+                        disabled={publishedGlobal}
+                        className="p-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-500 rounded-xl hover:from-emerald-500 hover:to-teal-500 transition-all flex items-center gap-1.5 text-xs font-mono font-black cursor-pointer disabled:opacity-55"
+                      >
+                        <Share2 size={13} />
+                        <span>{publishedGlobal ? 'Shared Globally' : 'Share Globally'}</span>
+                      </button>
+
                       {/* Copy */}
                       <button
                         onClick={copyToClipboard}
@@ -963,7 +1003,7 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                         <button
                           onClick={saveToChidonVault}
                           disabled={savedToVault}
-                          className="p-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-600 dark:text-cyan-primary hover:bg-cyan-500/20 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-55"
+                          className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-55"
                           title="Commit to Chidon Vault"
                         >
                           <Save size={13} />
@@ -974,14 +1014,20 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                   </div>
 
                   {/* Body Content output container viewport */}
-                  <div className="p-6 md:p-8 text-left space-y-4 max-h-[460px] overflow-y-auto custom-scrollbar prose prose-slate dark:prose-invert max-w-none text-sm text-[var(--text-secondary)] leading-relaxed">
-                    <h1 className="text-xl md:text-2xl font-display font-black text-[var(--text-primary)] tracking-tight leading-snug border-b pb-4">
+                  <div className="p-8 md:p-10 text-left max-h-[600px] overflow-y-auto custom-scrollbar markdown-body text-[var(--text-secondary)] leading-relaxed">
+                    <h1 className="text-2xl md:text-3xl font-display font-black text-[var(--text-primary)] tracking-tight leading-snug border-b pb-4 mb-8">
                       {generatedTitle}
                     </h1>
                     <ReactMarkdown>{generatedBlog}</ReactMarkdown>
                   </div>
                   
-                  {savedToVault && (
+                  {publishedGlobal && (
+                    <div className="p-3 bg-emerald-500/10 border-t border-emerald-500/20 text-xs text-emerald-500 font-mono text-center font-bold">
+                      ✓ Successfully broadcasted to the Chidon global network! All users can view, react, and comment on your post live.
+                    </div>
+                  )}
+
+                  {savedToVault && !publishedGlobal && (
                     <div className="p-3 bg-emerald-500/10 border-t border-emerald-500/20 text-xs text-emerald-500 font-mono text-center font-bold">
                       ✓ Successfully archived inside the Chidon vault index! Select "CHIDON Vault" anytime to view your records offline.
                     </div>
@@ -993,9 +1039,9 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-4">
                   {generating ? (
                     <div className="space-y-3 animate-pulse">
-                      <Loader2 className="animate-spin text-cyan-500 mx-auto" size={32} />
+                      <Loader2 className="animate-spin text-indigo-500 mx-auto" size={32} />
                       <div className="space-y-1">
-                        <span className="text-[10px] font-mono tracking-widest text-cyan-500 uppercase font-black">ALIGNING PARAMETERS</span>
+                        <span className="text-[10px] font-mono tracking-widest text-indigo-500 uppercase font-black">ALIGNING PARAMETERS</span>
                         <p className="text-xs font-sans text-slate-500 max-w-xs mx-auto">
                           Asking our AI Engine to research organic benchmarks, psychological retainers, and comparative matrices.
                         </p>
@@ -1022,180 +1068,194 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         )}
       </div>
 
-      {/* Write Blog Post Modal */}
+      {/* Broadcast / Upload Blog Insight Modal overlay */}
       <AnimatePresence>
-        {isWriteModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+        {isUploadOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-2xl bg-[var(--bg-card)] border-2 border-[var(--border-base)] rounded-2xl shadow-xl overflow-hidden text-left"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-2xl bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl overflow-hidden shadow-2xl flex flex-col text-left"
             >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-base)] bg-slate-50/50 dark:bg-zinc-900/30">
+              {/* Modal header bar */}
+              <div className="p-5 border-b border-[var(--border-base)] flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/30">
                 <div className="flex items-center gap-2">
-                  <PenTool className="text-cyan-500" size={18} />
-                  <h3 className="text-sm font-mono font-black uppercase text-[var(--text-primary)]">Publish a Blog Post</h3>
+                  <Globe size={18} className="text-indigo-500" />
+                  <h3 className="text-sm font-mono font-black uppercase tracking-wider text-[var(--text-primary)]">
+                    Broadcast Global Insight
+                  </h3>
                 </div>
                 <button
-                  onClick={() => setIsWriteModalOpen(false)}
-                  className="p-1 text-slate-400 hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer"
+                  onClick={() => { setIsUploadOpen(false); setUploadPreviewMode(false); }}
+                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
                 >
-                  <X size={18} />
+                  <X size={18} className="text-slate-400 hover:text-white" />
                 </button>
               </div>
 
-              {/* Modal Form */}
-              <form onSubmit={handleSubmitBlogPost} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                {submitError && (
-                  <div className="p-3 text-xs font-mono text-red-500 bg-red-100/10 border border-red-500/20 rounded-xl text-center font-bold">
-                    {submitError}
+              {/* Form container scroll block */}
+              <form onSubmit={handleUploadBlog} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                
+                {/* Mode toggle */}
+                <div className="flex border-b border-[var(--border-base)] mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setUploadPreviewMode(false)}
+                    className={`pb-2 text-xs font-mono uppercase tracking-widest border-b-2 font-black transition-all px-4 cursor-pointer ${
+                      !uploadPreviewMode ? 'border-indigo-500 text-indigo-500' : 'border-transparent text-slate-400'
+                    }`}
+                  >
+                    ✏️ Edit Content
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadPreviewMode(true)}
+                    className={`pb-2 text-xs font-mono uppercase tracking-widest border-b-2 font-black transition-all px-4 cursor-pointer ${
+                      uploadPreviewMode ? 'border-indigo-500 text-indigo-500' : 'border-transparent text-slate-400'
+                    }`}
+                  >
+                    👁️ Markdown Live Preview
+                  </button>
+                </div>
+
+                {!uploadPreviewMode ? (
+                  <>
+                    {/* Title */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase">Insight Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Navigating standard programmatic algorithms in late 2026..."
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        required
+                        className="w-full px-4 py-2.5 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
+                      />
+                    </div>
+
+                    {/* Excerpt and Category */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase">Category Focus</label>
+                        <select
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                          className="w-full px-3 py-2.5 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
+                        >
+                          {CATEGORIES.map(cat => (
+                            <option key={cat.name} value={cat.name}>{cat.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase">Short Summary Excerpt</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Quick overview of algorithmic changes on social graphs."
+                          value={newExcerpt}
+                          onChange={(e) => setNewExcerpt(e.target.value)}
+                          className="w-full px-4 py-2.5 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Main Markdown Body */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase">Content Body (Markdown Supported)</label>
+                      <textarea
+                        placeholder="### Hello World&#10;Write detailed strategies here using **Markdown** formatting. You can include tables, lists, and quotes easily."
+                        value={newContent}
+                        onChange={(e) => setNewContent(e.target.value)}
+                        required
+                        className="w-full h-48 p-4 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans resize-none"
+                      />
+                    </div>
+
+                    {/* Tags */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase">Pill Tags (Comma Separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. AI, Growth, Algorithm, Strategy"
+                        value={newTags}
+                        onChange={(e) => setNewTags(e.target.value)}
+                        className="w-full px-4 py-2.5 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-indigo-500 text-[var(--text-primary)] font-sans"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* Preview Render panel */
+                  <div className="p-4 rounded-2xl bg-[var(--bg-app)] border border-[var(--border-base)] min-h-[300px] markdown-body text-left">
+                    <h1 className="text-xl md:text-2xl font-display font-black text-[var(--text-primary)] tracking-tight mb-4 pb-2 border-b">
+                      {newTitle || 'Untitled Preview'}
+                    </h1>
+                    <div className="text-xs text-slate-400 font-mono mb-4 flex gap-4">
+                      <span>Category: {newCategory}</span>
+                      <span>Tags: {newTags || 'none'}</span>
+                    </div>
+                    {newContent ? (
+                      <ReactMarkdown>{newContent}</ReactMarkdown>
+                    ) : (
+                      <p className="text-slate-400 font-mono italic">Start typing content inside the Edit tab to see live preview.</p>
+                    )}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Title */}
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Title *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 5 Coding Hooks that Blew up on TechX"
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
-                    />
+                {uploadError && (
+                  <div className="p-3 text-xs font-mono text-red-500 bg-red-100/10 border border-red-500/20 rounded-xl text-center font-bold">
+                    {uploadError}
                   </div>
-
-                  {/* Excerpt */}
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Excerpt / Summary *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Uncover how custom code listings can act as magnetic triggers on content timelines."
-                      value={newExcerpt}
-                      onChange={(e) => setNewExcerpt(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
-                    />
-                  </div>
-
-                  {/* Category */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Category</label>
-                    <select
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
-                    >
-                      <option value="Algorithms & Core Strategy">Algorithms & Core Strategy</option>
-                      <option value="Neuromorphic Growth">Neuromorphic Growth</option>
-                      <option value="Creative Capital">Creative Capital</option>
-                      <option value="Visual Design">Visual Design</option>
-                      <option value="Tech & Engineering">Tech & Engineering</option>
-                    </select>
-                  </div>
-
-                  {/* Author */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Author Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Creative Engineer"
-                      value={newAuthor}
-                      onChange={(e) => setNewAuthor(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
-                    />
-                  </div>
-
-                  {/* Tags */}
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Tags (comma-separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Coding, Reels, Escrow"
-                      value={newTagsString}
-                      onChange={(e) => setNewTagsString(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-sans"
-                    />
-                  </div>
-
-                  {/* Cover Image Presets */}
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Select Cover Style</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {IMAGE_PRESETS.map((p) => (
-                        <button
-                          key={p.name}
-                          type="button"
-                          onClick={() => setNewImagePreset(p.name)}
-                          className={`group flex flex-col p-1.5 rounded-xl border-2 bg-[var(--bg-app)] text-left transition-all overflow-hidden ${
-                            newImagePreset === p.name
-                              ? 'border-cyan-500 shadow-sm'
-                              : 'border-[var(--border-base)] hover:border-slate-300 dark:hover:border-zinc-700'
-                          }`}
-                        >
-                          <div className={`w-full h-14 rounded-lg overflow-hidden mb-1 border border-[var(--border-base)]/45 bg-gradient-to-br ${p.color} flex items-center justify-center`}>
-                            <div className="text-cyan-400/80">
-                              {p.icon === 'Brain' && <Brain size={16} />}
-                              {p.icon === 'Zap' && <Zap size={16} />}
-                              {p.icon === 'BookOpen' && <BookOpen size={16} />}
-                              {p.icon === 'Target' && <Target size={16} />}
-                            </div>
-                          </div>
-                          <span className="text-[9px] font-mono font-bold text-slate-400 group-hover:text-[var(--text-primary)] truncate block w-full">{p.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Content Editor */}
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-mono font-extrabold text-[var(--text-primary)] uppercase block">Content (supports Markdown) *</label>
-                    <textarea
-                      required
-                      rows={8}
-                      placeholder="Write your article body here. You can use standard Markdown like ### Headers, **bold**, *italic*, lists, or even tables!"
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      className="w-full p-3 text-xs bg-[var(--bg-app)] border-2 border-[var(--border-base)] rounded-xl outline-none focus:border-cyan-500 text-[var(--text-primary)] font-mono resize-y"
-                    />
-                  </div>
-                </div>
-
-                {/* Submit button */}
-                <div className="pt-4 border-t border-[var(--border-base)] flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsWriteModalOpen(false)}
-                    className="px-4 py-2 text-xs font-mono font-bold text-slate-500 hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-sans font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:shadow-md disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin" />
-                        <span>Publishing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send size={13} />
-                        <span>Publish Blog Post</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                )}
               </form>
+
+              {/* Action buttons inside modal */}
+              <div className="p-4 border-t border-[var(--border-base)] bg-slate-50/50 dark:bg-zinc-900/30 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsUploadOpen(false); setUploadPreviewMode(false); }}
+                  className="px-4 py-2 text-xs font-mono font-bold text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUploadBlog}
+                  disabled={uploading}
+                  className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white rounded-xl text-xs font-mono font-black tracking-wide flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Broadcasting Node...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={13} />
+                      <span>Publish to Network Feed</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Quick Access Floating Button in corner */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsUploadOpen(true)}
+          className="p-4 bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 hover:shadow-cyan-500/20 text-white rounded-full shadow-2xl flex items-center justify-center cursor-pointer border-2 border-white/20 hover:rotate-90 transition-all duration-300"
+          title="Broadcast new blog"
+        >
+          <Plus size={22} strokeWidth={3} />
+        </motion.button>
+      </div>
 
     </div>
   );

@@ -13,7 +13,6 @@ import {
   LayoutGrid,
   Lightbulb, 
   Hash, 
-  Flame, 
   PenTool, 
   UserCircle, 
   Image as ImageIcon, 
@@ -50,6 +49,7 @@ import {
   BookOpen,
   Book,
   Video,
+  ShoppingBag,
   Tag,
   Compass,
   Bell,
@@ -72,9 +72,7 @@ import {
   Database,
   Crown,
   CreditCard,
-  Plus,
-  Layers,
-  Bot
+  Lock
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -97,7 +95,8 @@ import { Tooltip } from './components/Tooltip';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { ChidonLogo } from './components/ChidonLogo';
 import { WelcomePage } from './components/WelcomePage';
-import { ChidonAuth } from './components/ChidonAuth';
+import { getSupabaseClient } from './lib/supabase';
+const getSupabaseAuthClient = getSupabaseClient;
 
 // PERF: Lazy load heavy overlays and non-critical modular sub-components to reduce initial load times and optimize bundle sizing
 const FeedbackModal = lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -111,6 +110,8 @@ const TemplateLibrary = lazy(() => import('./components/TemplateLibrary').then(m
 import { ShadowbanSolutions } from './components/ShadowbanSolutions';
 import AdvancedNeuralTool from './components/AdvancedNeuralTool';
 import ChidonPricing from './components/ChidonPricing';
+import { useChatHistory } from './hooks/useChatHistory';
+import HistorySidebar from './components/HistorySidebar';
 
 import { 
   ScriptPrompterWidget, 
@@ -119,19 +120,24 @@ import {
   GrowthMathWidget, 
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
-  RepurposePipelineWidget
+  RepurposePipelineWidget,
+  GoogleBrowserEngineWidget
 } from './components/SpecializedWidgets';
 
-import { ChidonFreelance, FreelanceView } from './components/ChidonFreelance';
-import { ProfilePage } from './components/ProfilePage';
-
-import { BookContext } from './lib/contexts';
-export { BookContext };
+import { BookContext } from './context/BookContext';
 import { cn } from './lib/utils';
+import { clearAllNotesLocal } from './lib/idb';
 import LanguageSelector, { LANGUAGES } from './components/LanguageSelector';
-
+import { ChidonFreelanceEarn } from './components/ChidonFreelanceEarn';
 import { ChidonIqBlog } from './components/ChidonIqBlog';
 import { ConfirmationDialog } from './components/ConfirmationDialog';
+import AuthPage from './components/AuthPage';
+import { useAccess } from './hooks/useAccess';
+import { PaywallGate } from './components/PaywallGate';
+import { NotificationBell } from './components/NotificationBell';
+import { NotificationsPage } from './components/NotificationsPage';
+import { ToastNotification } from './components/ToastNotification';
+
 import { 
   collection, 
   addDoc, 
@@ -144,11 +150,14 @@ import {
   setDoc,
   deleteDoc,
   limit,
-  getDocs
+  getDocs,
+  increment,
+  Timestamp
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
   signInAnonymously, 
+  signOut,
   User 
 } from 'firebase/auth';
 import { db, auth } from './firebase';
@@ -197,7 +206,6 @@ const handleFirestoreError = (error: unknown, operationType: OperationType, path
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  return errInfo;
 };
 
 // --- TYPES ---
@@ -220,6 +228,7 @@ type FeatureId =
   | 'competitor-analysis'
   | 'posting-schedule'
   | 'engagement-calc'
+  | 'trending'
   | 'personas'
   | 'headlines'
   | 'repurposing'
@@ -237,6 +246,10 @@ type FeatureId =
   | 'vseo-scorecard'
   | 'vseo-keywords'
   | 'vseo-best-time'
+  // Content Trends Hub
+  | 'trending-topics'
+  | 'daily-ideas'
+  | 'trend-alerts'
   // Pro Layer
   | 'ai-script-outline'
   | 'shadowban-solutions';
@@ -246,14 +259,32 @@ interface Feature {
   label: string;
   icon: any;
   description: string;
-  category?: 'Content Creation' | 'SEO & Optimization' | 'Branding & Strategy' | 'Publishing & Logistics' | 'Diagnostics & Trends' | 'SaaS Workspace';
+  category?: 'Video SEO' | 'Trends' | 'Pro' | 'Core' | 'Growth';
   themeColor: string;
   glowColor: string;
   persona: string;
-  imageUrl?: string;
 }
 
 // --- CONSTANTS ---
+
+export const cleanFeatureText = (text: string | undefined | null): string => {
+  if (!text) return '';
+  return text.replace(/^features\./i, '').replace(/^Feature\./i, '').replace(/Feature\./gi, '');
+};
+
+export const getFeatureLabel = (f: { id: string; label: string }, t: any): string => {
+  const key = `features.${f.id}.label`;
+  const resolved = t(key);
+  const label = (resolved && resolved !== key) ? resolved : f.label;
+  return cleanFeatureText(label);
+};
+
+export const getFeatureDesc = (f: { id: string; description: string }, t: any): string => {
+  const key = `features.${f.id}.desc`;
+  const resolved = t(key);
+  const desc = (resolved && resolved !== key) ? resolved : f.description;
+  return cleanFeatureText(desc);
+};
 
 const FORMATTING_PROTOCOL = `
 [FORMATTING REQUIREMENT]: 
@@ -268,14 +299,7 @@ const FORMATTING_PROTOCOL = `
 - Avoid walls of text; keep paragraphs concise (max 2 sentences).
 `;
 
-const categories = [
-  'Content Creation',
-  'SEO & Optimization',
-  'Branding & Strategy',
-  'Publishing & Logistics',
-  'Diagnostics & Trends',
-  'SaaS Workspace'
-];
+const categories = ['Core', 'Video SEO', 'Trends', 'Growth', 'Pro'];
 
 const FEATURES: Feature[] = [
   { 
@@ -283,313 +307,308 @@ const FEATURES: Feature[] = [
     label: 'Video Ideas', 
     icon: Lightbulb, 
     description: 'Viral video formats, hooks, and script protocols.', 
-    category: 'Content Creation',
+    category: 'Core',
     themeColor: 'text-cyan-primary',
     glowColor: 'bg-cyan-primary/20',
-    persona: 'Viral Producer AI',
-    imageUrl: '/assets/images/chidon_iq_dashboard_v4_1783388097105.jpg'
-  },
-  { 
-    id: 'scripts', 
-    label: 'Script Writer', 
-    icon: PenTool, 
-    description: 'Platform-specific scripts with length controls.', 
-    category: 'Content Creation',
-    themeColor: 'text-emerald-vibrant',
-    glowColor: 'bg-emerald-vibrant/20',
-    persona: 'Narrative Engine AI',
-    imageUrl: '/assets/images/content_writing_banner_1783649293057.jpg'
-  },
-  { 
-    id: 'ai-script-outline', 
-    label: 'Script Blueprint', 
-    icon: FilePlus2, 
-    description: 'Full narrative architecture from seed keywords.', 
-    category: 'Content Creation',
-    themeColor: 'text-purple-vibrant',
-    glowColor: 'bg-purple-vibrant/20',
-    persona: 'Narrative Architect AI',
-    imageUrl: '/assets/images/portfolio_case_study_banner_1783649308111.jpg'
-  },
-  { 
-    id: 'headlines', 
-    label: 'Headline Hook', 
-    icon: Zap, 
-    description: '10 hook formulas with predicted CTR markers.', 
-    category: 'Content Creation',
-    themeColor: 'text-yellow-400',
-    glowColor: 'bg-yellow-400/20',
-    persona: 'Click Magnet AI',
-    imageUrl: '/assets/images/template_wireframe_1783490763717.jpg'
-  },
-  { 
-    id: 'ruled-book', 
-    label: 'Book with Lines', 
-    icon: Book, 
-    description: 'Digital journal and script book structured over authentic ruled sheets.', 
-    category: 'Content Creation',
-    themeColor: 'text-cyan-primary',
-    glowColor: 'bg-cyan-primary/20',
-    persona: 'Lined Scribe AI',
-    imageUrl: '/assets/images/journal_ruled_cover_1783488617827.jpg'
-  },
-  { 
-    id: 'keyword-research', 
-    label: 'Keyword Intel', 
-    icon: Microscope, 
-    description: 'Deep volume, competition, and difficulty scan.', 
-    category: 'SEO & Optimization',
-    themeColor: 'text-amber-500',
-    glowColor: 'bg-amber-500/20',
-    persona: 'Data Miner AI',
-    imageUrl: '/assets/images/keyword_intel_radar_1783488604768.jpg'
-  },
-  { 
-    id: 'youtube-seo', 
-    label: 'Organic Video Feed Strategizer', 
-    icon: Trophy, 
-    description: 'Viral metadata optimization and ranking strategy.', 
-    category: 'SEO & Optimization',
-    themeColor: 'text-red-500',
-    glowColor: 'bg-red-500/20',
-    persona: 'Organic Quality Architect AI',
-    imageUrl: '/assets/images/seo_tool_banner_1783649274905.jpg'
-  },
-  { 
-    id: 'vseo-title-desc', 
-    label: 'Title + Description Generator', 
-    icon: Video, 
-    description: 'High-CTR titles and descriptions optimized for growth.', 
-    category: 'SEO & Optimization',
-    themeColor: 'text-red-400',
-    glowColor: 'bg-red-400/20',
-    persona: 'Metadata Architect AI',
-    imageUrl: '/assets/images/seo_analytics_vector_1783490751280.jpg'
-  },
-  { 
-    id: 'vseo-tags', 
-    label: 'Tag Architect', 
-    icon: Tag, 
-    description: 'Neural tag extraction for high-volume ranking.', 
-    category: 'SEO & Optimization',
-    themeColor: 'text-red-500',
-    glowColor: 'bg-red-500/20',
-    persona: 'Semantic Tagging AI',
-    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'vseo-keywords', 
-    label: 'Keyword Research', 
-    icon: Microscope, 
-    description: 'Data-driven search volume, competition tiers, and related video terms.', 
-    category: 'SEO & Optimization',
-    themeColor: 'text-amber-400',
-    glowColor: 'bg-amber-400/20',
-    persona: 'Query Intelligence AI',
-    imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'bio', 
-    label: 'Bio Optimizer', 
-    icon: UserCircle, 
-    description: 'Three optimized bio versions with strategy.', 
-    category: 'Branding & Strategy',
-    themeColor: 'text-pink-vibrant',
-    glowColor: 'bg-pink-vibrant/20',
-    persona: 'Identity Strategist AI',
-    imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'personas', 
-    label: 'Audience Builder', 
-    icon: Users, 
-    description: 'Fictional audience profiles and psychological triggers.', 
-    category: 'Branding & Strategy',
-    themeColor: 'text-indigo-500',
-    glowColor: 'bg-indigo-500/20',
-    persona: 'Psychographic Architect AI',
-    imageUrl: '/assets/images/chidon_iq_strategy_v4_1783388126590.jpg'
-  },
-  { 
-    id: 'thumbnails', 
-    label: 'Thumbnail Designer', 
-    icon: ImageIcon, 
-    description: 'Visual concept briefs and psychology.', 
-    category: 'Branding & Strategy',
-    themeColor: 'text-amber-500',
-    glowColor: 'bg-amber-500/20',
-    persona: 'Visual Psychologist AI',
-    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'competitor-analysis', 
-    label: 'Competitor Lab', 
-    icon: BarChart3, 
-    description: 'Strategic intelligence and pillar charts.', 
-    category: 'Branding & Strategy',
-    themeColor: 'text-cyan-400',
-    glowColor: 'bg-cyan-400/20',
-    persona: 'Market Analyst AI',
-    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80'
+    persona: 'Viral Producer AI'
   },
   { 
     id: 'hashtags', 
     label: 'Hashtag Engine', 
     icon: Hash, 
     description: 'Ranked hashtag research with reach tiers.', 
-    category: 'Publishing & Logistics',
+    category: 'Core',
     themeColor: 'text-purple-vibrant',
     glowColor: 'bg-purple-vibrant/20',
-    persona: 'Reach Architect AI',
-    imageUrl: 'https://images.unsplash.com/photo-1562577309-4932fdd64cd1?auto=format&fit=crop&w=800&q=80'
+    persona: 'Reach Architect AI'
   },
   { 
-    id: 'repurposing', 
-    label: 'Repurpose AI', 
-    icon: Share2, 
-    description: 'Tactical content conversion for multi-platform ops.', 
-    category: 'Publishing & Logistics',
-    themeColor: 'text-cyan-primary',
-    glowColor: 'bg-cyan-primary/20',
-    persona: 'Omni-channel Strategist AI',
-    imageUrl: '/assets/images/chidon_iq_engine_v4_1783388111932.jpg'
+    id: 'scripts', 
+    label: 'Script Writer', 
+    icon: PenTool, 
+    description: 'Platform-specific scripts with length controls.', 
+    category: 'Core',
+    themeColor: 'text-emerald-vibrant',
+    glowColor: 'bg-emerald-vibrant/20',
+    persona: 'Narrative Engine AI'
+  },
+  { 
+    id: 'bio', 
+    label: 'Bio Optimizer', 
+    icon: UserCircle, 
+    description: 'Three optimized bio versions with strategy.', 
+    category: 'Core',
+    themeColor: 'text-pink-vibrant',
+    glowColor: 'bg-pink-vibrant/20',
+    persona: 'Identity Strategist AI'
+  },
+  { 
+    id: 'thumbnails', 
+    label: 'Thumbnail Designer', 
+    icon: ImageIcon, 
+    description: 'Visual concept briefs and psychology.', 
+    category: 'Core',
+    themeColor: 'text-amber-500',
+    glowColor: 'bg-amber-500/20',
+    persona: 'Visual Psychologist AI'
+  },
+  { 
+    id: 'competitor-analysis', 
+    label: 'Competitor Lab', 
+    icon: BarChart3, 
+    description: 'Strategic intelligence and pillar charts.', 
+    category: 'Core',
+    themeColor: 'text-cyan-400',
+    glowColor: 'bg-cyan-400/20',
+    persona: 'Market Analyst AI'
   },
   { 
     id: 'posting-schedule', 
     label: 'Schedule Lab', 
     icon: Calendar, 
     description: 'Styled weekly optimized calendar grid.', 
-    category: 'Publishing & Logistics',
+    category: 'Core',
     themeColor: 'text-blue-500',
     glowColor: 'bg-blue-500/20',
-    persona: 'Temporal Logistics AI',
-    imageUrl: '/assets/images/empty_scheduler_1781319203016.jpg'
-  },
-  { 
-    id: 'post-scheduler', 
-    label: 'Command Calendar', 
-    icon: Calendar, 
-    description: 'Tactical content scheduling and queue management.', 
-    category: 'Publishing & Logistics',
-    themeColor: 'text-white',
-    glowColor: 'bg-white/10',
-    persona: 'Operations Matrix AI',
-    imageUrl: '/assets/images/empty_scheduler_1781319203016.jpg'
-  },
-  { 
-    id: 'post-optimizer', 
-    label: 'Time Optimizer', 
-    icon: Clock, 
-    description: 'Global posting windows optimized by local data.', 
-    category: 'Publishing & Logistics',
-    themeColor: 'text-emerald-vibrant',
-    glowColor: 'bg-emerald-vibrant/20',
-    persona: 'Chronos Optimizer AI',
-    imageUrl: 'https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'vseo-best-time', 
-    label: 'Post Optimizer', 
-    icon: Clock, 
-    description: 'Data-driven timing for maximum reach.', 
-    category: 'Publishing & Logistics',
-    themeColor: 'text-blue-400',
-    glowColor: 'bg-blue-400/20',
-    persona: 'Temporal Reach AI',
-    imageUrl: 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'seo-scorecard', 
-    label: 'SEO Scorecard', 
-    icon: Activity, 
-    description: 'Real-time neural content audit and score.', 
-    category: 'Diagnostics & Trends',
-    themeColor: 'text-emerald-500',
-    glowColor: 'bg-emerald-500/20',
-    persona: 'Algorithmic Judge AI',
-    imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'vseo-scorecard', 
-    label: 'Video Auditor', 
-    icon: Trophy, 
-    description: '1-100 score based on title, tags, and keywords.', 
-    category: 'Diagnostics & Trends',
-    themeColor: 'text-emerald-400',
-    glowColor: 'bg-emerald-400/20',
-    persona: 'Ranking Auditor AI',
-    imageUrl: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&w=800&q=80'
-  },
-  { 
-    id: 'shadowban-solutions', 
-    label: 'Shadowban Solutions', 
-    icon: AlertCircle, 
-    description: 'Audit channel health, check sensitive policy risk indicators and trace 30-day view recovery action steps.', 
-    category: 'Diagnostics & Trends',
-    themeColor: 'text-red-500',
-    glowColor: 'bg-red-500/20',
-    persona: 'YouTube Policy Expert AI',
-    imageUrl: '/assets/images/shadowban_diagnostic_vector_1783488589558.jpg'
-  },
-  { 
-    id: 'drafts', 
-    label: 'CHIDON Vault', 
-    icon: BookOpen, 
-    description: 'Specialized index of saved scripts, social bios, and intelligence reports.', 
-    category: 'SaaS Workspace',
-    themeColor: 'text-brand',
-    glowColor: 'bg-brand/20',
-    persona: 'Vault Guardian AI',
-    imageUrl: '/assets/images/empty_vault_1781319190599.jpg'
-  },
-  { 
-    id: 'template-library', 
-    label: 'CHIDON IQ Template Library', 
-    icon: Cpu, 
-    description: 'Populate professional social posts, bios, and competitor maps with CHIDON Intelligence Engine.', 
-    category: 'SaaS Workspace',
-    themeColor: 'text-cyan-primary',
-    glowColor: 'bg-cyan-primary/20',
-    persona: 'Architect copywriter AI',
-    imageUrl: '/assets/images/template_wireframe_1783490763717.jpg'
+    persona: 'Temporal Logistics AI'
   },
   { 
     id: 'engagement-calc', 
     label: 'Engagement Advisor', 
     icon: Calculator, 
     description: 'Computing rates and 30-day growth plans.', 
-    category: 'SaaS Workspace',
+    category: 'Core',
     themeColor: 'text-emerald-400',
     glowColor: 'bg-emerald-400/20',
-    persona: 'Growth Mathematician AI',
-    imageUrl: '/assets/images/empty_earned_1781319231364.jpg'
+    persona: 'Growth Mathematician AI'
+  },
+  { 
+    id: 'trending', 
+    label: 'Trend Detector', 
+    icon: TrendingUp, 
+    description: '20 momentum-scored trending topics.', 
+    category: 'Core',
+    themeColor: 'text-orange-500',
+    glowColor: 'bg-orange-500/20',
+    persona: 'Trend Pulse AI'
+  },
+  { 
+    id: 'personas', 
+    label: 'Audience Builder', 
+    icon: Users, 
+    description: 'Fictional audience profiles and psychological triggers.', 
+    category: 'Core',
+    themeColor: 'text-indigo-500',
+    glowColor: 'bg-indigo-500/20',
+    persona: 'Psychographic Architect AI'
+  },
+  { 
+    id: 'headlines', 
+    label: 'Headline Hook', 
+    icon: Zap, 
+    description: '10 hook formulas with predicted CTR markers.', 
+    category: 'Core',
+    themeColor: 'text-yellow-400',
+    glowColor: 'bg-yellow-400/20',
+    persona: 'Click Magnet AI'
+  },
+  { 
+    id: 'repurposing', 
+    label: 'Repurpose AI', 
+    icon: Share2, 
+    description: 'Tactical content conversion for multi-platform ops.', 
+    category: 'Core',
+    themeColor: 'text-cyan-primary',
+    glowColor: 'bg-cyan-primary/20',
+    persona: 'Omni-channel Strategist AI'
+  },
+  { 
+    id: 'post-scheduler', 
+    label: 'Command Calendar', 
+    icon: Calendar, 
+    description: 'Tactical content scheduling and queue management.', 
+    category: 'Core',
+    themeColor: 'text-white',
+    glowColor: 'bg-white/10',
+    persona: 'Operations Matrix AI'
+  },
+  { 
+    id: 'drafts', 
+    label: 'CHIDON Vault', 
+    icon: BookOpen, 
+    description: 'Specialized index of saved scripts, social bios, and intelligence reports.', 
+    category: 'Core',
+    themeColor: 'text-brand',
+    glowColor: 'bg-brand/20',
+    persona: 'Vault Guardian AI'
+  },
+  { 
+    id: 'ruled-book', 
+    label: 'Book with Lines', 
+    icon: Book, 
+    description: 'Digital journal and script book structured over authentic ruled sheets.', 
+    category: 'Core',
+    themeColor: 'text-cyan-primary',
+    glowColor: 'bg-cyan-primary/20',
+    persona: 'Lined Scribe AI'
+  },
+  { 
+    id: 'template-library', 
+    label: 'CHIDON IQ Template Library', 
+    icon: Zap, 
+    description: 'Populate professional social posts, bios, and competitor maps with CHIDON Intelligence Engine.', 
+    category: 'Core',
+    themeColor: 'text-cyan-primary',
+    glowColor: 'bg-cyan-primary/20',
+    persona: 'Architect copywriter AI'
+  },
+  { 
+    id: 'post-optimizer', 
+    label: 'Time Optimizer', 
+    icon: Clock, 
+    description: 'Global posting windows optimized by local data.', 
+    category: 'Growth',
+    themeColor: 'text-emerald-vibrant',
+    glowColor: 'bg-emerald-vibrant/20',
+    persona: 'Chronos Optimizer AI'
+  },
+  { 
+    id: 'youtube-seo', 
+    label: 'Organic Video Feed Strategizer', 
+    icon: Trophy, 
+    description: 'Viral metadata optimization and ranking strategy.', 
+    category: 'Core',
+    themeColor: 'text-red-500',
+    glowColor: 'bg-red-500/20',
+    persona: 'Organic Quality Architect AI'
+  },
+  { 
+    id: 'seo-scorecard', 
+    label: 'SEO Scorecard', 
+    icon: Activity, 
+    description: 'Real-time neural content audit and score.', 
+    category: 'Core',
+    themeColor: 'text-emerald-500',
+    glowColor: 'bg-emerald-500/20',
+    persona: 'Algorithmic Judge AI'
+  },
+  { 
+    id: 'keyword-research', 
+    label: 'Keyword Intel', 
+    icon: Microscope, 
+    description: 'Deep volume, competition, and difficulty scan.', 
+    category: 'Core',
+    themeColor: 'text-amber-500',
+    glowColor: 'bg-amber-500/20',
+    persona: 'Data Miner AI'
+  },
+  
+  // Video SEO Hub
+  { 
+    id: 'vseo-title-desc', 
+    label: 'Title + Description Generator', 
+    icon: Video, 
+    description: 'High-CTR titles and descriptions optimized for growth.', 
+    category: 'Video SEO',
+    themeColor: 'text-red-400',
+    glowColor: 'bg-red-400/20',
+    persona: 'Metadata Architect AI'
+  },
+  { 
+    id: 'vseo-tags', 
+    label: 'Tag Architect', 
+    icon: Tag, 
+    description: 'Neural tag extraction for high-volume ranking.', 
+    category: 'Video SEO',
+    themeColor: 'text-red-500',
+    glowColor: 'bg-red-500/20',
+    persona: 'Semantic Tagging AI'
+  },
+  { 
+    id: 'vseo-scorecard', 
+    label: 'Video Auditor', 
+    icon: Trophy, 
+    description: '1-100 score based on title, tags, and keywords.', 
+    category: 'Video SEO',
+    themeColor: 'text-emerald-400',
+    glowColor: 'bg-emerald-400/20',
+    persona: 'Ranking Auditor AI'
+  },
+  { 
+    id: 'vseo-keywords', 
+    label: 'Keyword Research', 
+    icon: Microscope, 
+    description: 'Data-driven search volume, competition tiers, and related video terms.', 
+    category: 'Video SEO',
+    themeColor: 'text-amber-400',
+    glowColor: 'bg-amber-400/20',
+    persona: 'Query Intelligence AI'
+  },
+  { 
+    id: 'vseo-best-time', 
+    label: 'Post Optimizer', 
+    icon: Clock, 
+    description: 'Data-driven timing for maximum reach.', 
+    category: 'Video SEO',
+    themeColor: 'text-blue-400',
+    glowColor: 'bg-blue-400/20',
+    persona: 'Temporal Reach AI'
+  },
+
+  // Trends Hub
+  { 
+    id: 'trending-topics', 
+    label: 'Trending Topics', 
+    icon: Globe, 
+    description: 'Real-time niche trending topics updated daily with momentum scores.', 
+    category: 'Trends',
+    themeColor: 'text-amber-500',
+    glowColor: 'bg-amber-500/20',
+    persona: 'Global Trend Scout AI'
+  },
+  { 
+    id: 'daily-ideas', 
+    label: 'Daily Video Ideas', 
+    icon: Lightbulb, 
+    description: 'Neural content suggestions based on current niche heatmaps.', 
+    category: 'Trends',
+    themeColor: 'text-yellow-400',
+    glowColor: 'bg-yellow-400/20',
+    persona: 'Creative Pulse AI'
+  },
+  { 
+    id: 'trend-alerts', 
+    label: 'Trend Alerts', 
+    icon: Bell, 
+    description: 'Neural notification protocols for sudden keyword spikes.', 
+    category: 'Trends',
+    themeColor: 'text-pink-500',
+    glowColor: 'bg-pink-500/20',
+    persona: 'Spike Surveillance AI'
+  },
+
+  // Pro Layer
+  { 
+    id: 'ai-script-outline', 
+    label: 'Script Blueprint', 
+    icon: FilePlus2, 
+    description: 'Full narrative architecture from seed keywords.', 
+    category: 'Pro',
+    themeColor: 'text-purple-vibrant',
+    glowColor: 'bg-purple-vibrant/20',
+    persona: 'Narrative Architect AI'
+  },
+  { 
+    id: 'shadowban-solutions', 
+    label: 'Shadowban Solutions', 
+    icon: AlertCircle, 
+    description: 'Audit channel health, check sensitive policy risk indicators and trace 30-day view recovery action steps.', 
+    category: 'Core',
+    themeColor: 'text-red-500',
+    glowColor: 'bg-red-500/20',
+    persona: 'YouTube Policy Expert AI'
   },
 ];
-
-const getCleanFeatureLabel = (label: string): string => {
-  if (!label) return '';
-  
-  // 1. Remove prefixes like ( Feature.), (Feature.), Feature., Feature:, features., etc.
-  let cleaned = label;
-  
-  cleaned = cleaned.replace(/^[\s\(\[\{]*feature[s]?[\s\.\:\-\)\]\}]*/i, '');
-  cleaned = cleaned.replace(/^\s*\.\s*/, '');
-  
-  // 2. If it's a fallback translation key like "features.content-ideas.label"
-  if (cleaned.toLowerCase().includes('.label') || cleaned.toLowerCase().includes('features.')) {
-    const parts = cleaned.split('.');
-    const mainPart = parts.length > 1 ? parts[parts.length - 2] : parts[0];
-    cleaned = mainPart
-      .split(/[\-_]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  cleaned = cleaned.replace(/\.label$/i, '');
-  cleaned = cleaned.trim();
-  
-  return cleaned || label;
-};
 
 // PERF: Elegant micro-skeleton loader to improve core web vitals and provide beautiful instant feedback during lazy-loading component resolution
 const ComponentLoader = () => (
@@ -600,69 +619,6 @@ const ComponentLoader = () => (
 );
 
 // --- HYBRID AI SERVICE ---
-
-const cleanAiResponse = (text: string): string => {
-  if (!text || typeof text !== 'string') return text;
-
-  let cleaned = text;
-
-  // 1. "stop starting From ( respond; )"
-  // Find "respond;" or "( respond; )" and truncate everything starting from it
-  const respondRegex = /(?:\(\s*)?respond\s*;/gi;
-  const matchRespond = cleaned.match(respondRegex);
-  if (matchRespond && matchRespond.index !== undefined) {
-    cleaned = cleaned.substring(0, matchRespond.index);
-  }
-
-  // Also strip standalone occurrences of "( respond; )" or "respond;" if any remain
-  cleaned = cleaned.replace(/\(\s*respond\s*;\s*\)/gi, '');
-  cleaned = cleaned.replace(/respond\s*;/gi, '');
-
-  // 2. Convert digits/numbers to words ("Must List Number words when Needed")
-  const numWords: Record<string, string> = {
-    '10': 'Ten', '9': 'Nine', '8': 'Eight', '7': 'Seven', '6': 'Six',
-    '5': 'Five', '4': 'Four', '3': 'Three', '2': 'Two', '1': 'One'
-  };
-  
-  // Replace list-style numbers (e.g. "1. ", "2) ", etc.) at start of line
-  cleaned = cleaned.split('\n').map(line => {
-    let l = line.trim();
-    const match = l.match(/^(\d+)([\.\)\-\s]+)(.*)/);
-    if (match) {
-      const numStr = match[1];
-      const rest = match[3];
-      const word = numWords[numStr] || numStr;
-      return `${word}: ${rest}`;
-    }
-    // Remove list bullet symbols (*, -, +) at start of lines and replace with clean spacing
-    if (l.startsWith('* ') || l.startsWith('- ') || l.startsWith('+ ')) {
-      return '  ' + l.slice(2);
-    }
-    return line;
-  }).join('\n');
-
-  // Replace other standalone digits/numbers in the text with words if they are separate numbers
-  Object.keys(numWords).forEach(num => {
-    const regex = new RegExp(`\\b${num}\\b`, 'g');
-    cleaned = cleaned.replace(regex, numWords[num]);
-  });
-
-  // 3. Remove all symbols and signs ("No Symbols Or sign Shown")
-  // We keep letters, standard spaces, newlines, and basic punctuation.
-  // We remove all special symbols like * # _ ~ [ ] ( ) { } < > / \ | ^ = + - @ $ % &
-  cleaned = cleaned.replace(/[\*\#\_\~\[\]\(\)\{\}\<\>\/\\\|\^\=\+\-\@\$\%\&]/g, ' ');
-
-  // 4. "ending with Symbols" - remove non-letter trailing punctuation/symbols at the very end
-  cleaned = cleaned.replace(/[^a-zA-Z0-9\s\.\u4e00-\u9fa5\u0600-\u06FF\u0400-\u04FF\u3040-\u30ff\u31f0-\u31ff]+$/, '');
-
-  // 5. "Lots of space and paragraph"
-  // Reduce multiple spaces to single space
-  cleaned = cleaned.replace(/[ \t]+/g, ' ');
-  // Ensure lines have lots of space - let's make paragraphs separated by exactly 2 newlines (double spacing)
-  cleaned = cleaned.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n\n');
-
-  return cleaned.trim();
-};
 
 const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel?: string) => {
   const { i18n } = useTranslation();
@@ -688,23 +644,8 @@ const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel
       }
 
       const data = await res.json();
-      let geminiText = data.text;
+      const geminiText = data.text;
       if (!geminiText) throw new Error("No response from Gemini.");
-
-      if (typeof geminiText === 'string') {
-        geminiText = geminiText
-          .replace(/\\n\\n/g, '\n\n')
-          .replace(/\\n/g, '\n')
-          .replace(/\\r/g, '')
-          .replace(/n\/n\//g, '\n\n')
-          .replace(/\/n\/n\//g, '\n\n')
-          .replace(/\/n\//g, '\n')
-          .replace(/\s*n\/n\s*/g, '\n\n')
-          .trim();
-        
-        // Strictly sanitize response according to the rules
-        geminiText = cleanAiResponse(geminiText);
-      }
 
       setLoading(false);
       return geminiText;
@@ -979,7 +920,7 @@ function ShareButton({ text, title }: { text: string; title: string }) {
   );
 }
 
-const ChidonLiveEngineHub = () => {
+const GeminiLiveEngineHub = () => {
   const [stage, setStage] = useState(0);
   const activeModel = localStorage.getItem('active_gemini_model') || 'gemini-3.5-flash';
   const modelLabel = activeModel.includes('1.5') ? "1.5-FLASH" : "3.5-FLASH";
@@ -1007,7 +948,7 @@ const ChidonLiveEngineHub = () => {
             <span className="absolute inset-0 rounded-full bg-indigo-500/10 animate-ping" />
             <span className="absolute inset-1.5 rounded-full bg-purple-500/20" />
             <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#22D3EE] via-[#6366F1] to-[#A78BFA] flex items-center justify-center text-white text-[9px] font-black">
-              ◈
+              ✦
             </div>
           </div>
           <div>
@@ -1088,9 +1029,9 @@ const FeatureLayout = ({
           </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-              {getCleanFeatureLabel(t(`features.${feature.id}.label`) || feature.label)}
+              {getFeatureLabel(feature, t)}
             </h2>
-            <p className="text-sm text-[var(--text-secondary)]">{t(`features.${feature.id}.desc`) || feature.description}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{getFeatureDesc(feature, t)}</p>
           </div>
         </div>
       </div>
@@ -1105,7 +1046,7 @@ const FeatureLayout = ({
           {children}
         </motion.div>
 
-        {/* Chat History & AI Results - Rendered beautifully underneath at the Bottom in Chidon IQ Intel style */}
+        {/* Chat History & AI Results - Rendered beautifully underneath at the Bottom in Gemini AI style */}
         <span className="block border-t border-slate-200 dark:border-white/5 my-8 h-px" />
         
         <div className="space-y-6">
@@ -1147,8 +1088,8 @@ const FeatureLayout = ({
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-md bg-gradient-to-tr from-[#22D3EE] via-[#6366F1] to-[#A78BFA] text-white flex items-center justify-center text-[10px] leading-none font-sans font-black">◈</span>
-                          <span className="text-[10px] font-mono font-black tracking-widest text-[#6366F1] bg-gradient-to-r from-[#22D3EE] via-[#6366F1] to-[#A78BFA] bg-clip-text text-transparent uppercase">CHIDON COGNITIVE INTEL OUTPUT</span>
+                          <span className="w-5 h-5 rounded-md bg-gradient-to-tr from-[#22D3EE] via-[#6366F1] to-[#A78BFA] text-white flex items-center justify-center text-[10px] leading-none font-sans font-black">✦</span>
+                          <span className="text-[10px] font-mono font-black tracking-widest text-[#6366F1] bg-gradient-to-r from-[#22D3EE] via-[#6366F1] to-[#A78BFA] bg-clip-text text-transparent uppercase">MODEL COMPREHENSIVE OUTPUT</span>
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                         </div>
                       )}
@@ -1189,7 +1130,7 @@ const FeatureLayout = ({
                     <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-slate-200 dark:border-white/5">
                       {actions && actions(msg)}
                       <CopyButton text={msg.content} />
-                      <ShareButton text={msg.content} title={getCleanFeatureLabel(t(`features.${feature.id}.label`) || feature.label)} />
+                      <ShareButton text={msg.content} title={getFeatureLabel(feature, t)} />
                       
                       {onGenerate && originalPrompt && (
                         <button
@@ -1205,7 +1146,7 @@ const FeatureLayout = ({
 
                       {onSendToBook && (
                         <button 
-                          onClick={() => onSendToBook(msg.content, getCleanFeatureLabel(t(`features.${feature.id}.label`) || feature.label))}
+                          onClick={() => onSendToBook(msg.content, getFeatureLabel(feature, t))}
                           className="btn-primary h-8 py-0 px-3 rounded-lg font-mono text-[10px] uppercase font-black tracking-widest transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-white"
                         >
                           <Book size={12} />
@@ -1220,14 +1161,14 @@ const FeatureLayout = ({
 
             {loading && (
               <motion.div
-                key="chidon-live-loading"
+                key="gemini-live-loading"
                 initial={{ opacity: 0, y: 35, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -25, scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 120, damping: 16 }}
                 className="w-full pt-4"
               >
-                <ChidonLiveEngineHub />
+                <GeminiLiveEngineHub />
               </motion.div>
             )}
           </AnimatePresence>
@@ -2747,96 +2688,53 @@ const AppBackground = () => (
   </div>
 );
 
-const getShadowbanRiskInfo = (featureResults?: Record<string, ChatMessage[]>) => {
-  let score: number | null = null;
-  
-  if (featureResults) {
-    const shadowbanMessages = featureResults['shadowban-solutions'];
-    if (shadowbanMessages && shadowbanMessages.length > 0) {
-      const lastResponse = [...shadowbanMessages].reverse().find(m => m.role === 'assistant');
-      if (lastResponse) {
-        const match = lastResponse.content.match(/\[RISK_SCORE\]\s*=\s*(\d+)/i);
-        if (match) {
-          score = parseInt(match[1]);
-        }
-      }
-    }
-  }
-  
-  if (score === null) {
-    try {
-      const stored = localStorage.getItem('chidon_shadowban_risk_score');
-      if (stored) {
-        const parsed = parseInt(stored);
-        if (!isNaN(parsed)) {
-          score = parsed;
-        }
-      }
-    } catch (e) {
-      console.warn("localStorage not available", e);
-    }
-  }
-  
-  if (score === null) return null;
-  
-  if (score > 60) {
-    return {
-      label: 'High Risk',
-      className: 'bg-red-500/10 text-red-500 border border-red-500/20 dark:border-red-500/30',
-      dotColor: 'bg-red-500'
-    };
-  } else if (score > 30) {
-    return {
-      label: 'Medium Risk',
-      className: 'bg-amber-500/10 text-amber-550 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30',
-      dotColor: 'bg-amber-500'
-    };
-  } else {
-    return {
-      label: 'Low Risk',
-      className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30',
-      dotColor: 'bg-emerald-500'
-    };
-  }
-};
-
-const NeuralHub = ({ 
-  onSelectFeature, 
-  onBack,
-  featureResults = {}
-}: { 
-  onSelectFeature: (id: FeatureId) => void, 
-  onBack?: () => void,
-  featureResults?: Record<string, ChatMessage[]>
-}) => {
+const NeuralHub = ({ onSelectFeature, onBack }: { onSelectFeature: (id: FeatureId) => void, onBack?: () => void }) => {
   const { t } = useTranslation();
   return (
-    <div className="relative min-h-screen py-16 px-6 sm:px-12 bg-[var(--bg-app)]">
-      <div className="max-w-7xl mx-auto space-y-12">
-        <header className="space-y-4 text-left">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-brand transition-all group mb-4 w-fit"
-            >
-              <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              <span className="text-xs font-bold uppercase tracking-widest font-mono">{t('common.back') || t('buttons.back') || 'Previous Page'}</span>
-            </button>
-          )}
-          <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)]">{t('common.neuralHub') || 'Intelligence Command'}</h1>
-          <p className="text-[var(--text-secondary)] text-lg max-w-2xl">
-            {t('common.specializedProtocols') || 'Select an operational protocol to begin optimizing your digital growth trajectory.'}
-          </p>
+    <div className="relative py-10 px-6 sm:px-10 bg-[var(--bg-app)] bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] min-h-[calc(100vh-4rem)]">
+      <div className="max-w-7xl mx-auto space-y-10">
+        
+        {/* Top Control Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[var(--border-base)]/60 relative">
+          <div className="space-y-2.5 text-left">
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="flex items-center gap-2 text-slate-500 hover:text-brand dark:text-slate-400 dark:hover:text-brand transition-all group mb-2.5 w-fit font-mono text-[10px] font-bold uppercase tracking-widest cursor-pointer"
+              >
+                <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+                <span>Return to Orbit</span>
+              </button>
+            )}
+            <h1 className="text-3xl font-display font-black tracking-tight text-[var(--text-primary)] uppercase flex items-center gap-3">
+              <span>{t('common.neuralHub') || 'Intelligence Command'}</span>
+              <span className="text-[10px] bg-brand/10 text-brand px-2.5 py-1 rounded-full font-mono font-bold tracking-widest uppercase">Console v4.1</span>
+            </h1>
+            <p className="text-[var(--text-secondary)] text-sm max-w-2xl font-medium leading-relaxed">
+              {t('common.specializedProtocols') || 'Access elite strategic and generative engines to optimize your digital workspace and viral trajectory.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-[var(--border-base)]/80 rounded-xl px-4 py-2.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-[10px] font-mono font-bold text-[var(--text-secondary)] uppercase tracking-wider">Livelink Synchronized</span>
+            </div>
+          </div>
         </header>
 
+        {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-16">
+          
+          {/* Main Protocols Grid */}
+          <div className="lg:col-span-3 space-y-12">
             {categories.map((cat) => (
-              <div key={cat} className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-[0.2em]">{t(`categories.${cat}`) || cat}</h3>
-                  <div className="h-px flex-1 bg-[var(--border-base)]" />
+              <div key={cat} className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-[11px] font-mono font-black text-[var(--text-secondary)] uppercase tracking-[0.25em]">
+                    {t(`categories.${cat}`) || cat} Protocol
+                  </h3>
+                  <div className="h-[1px] flex-1 bg-[var(--border-base)]/60" />
                 </div>
                 
                 <motion.div 
@@ -2845,7 +2743,7 @@ const NeuralHub = ({
                   variants={{
                     visible: {
                       transition: {
-                        staggerChildren: 0.04
+                        staggerChildren: 0.03
                       }
                     }
                   }}
@@ -2856,70 +2754,43 @@ const NeuralHub = ({
                       key={f.id}
                       onClick={() => onSelectFeature(f.id)}
                       variants={{
-                        hidden: { opacity: 0, y: 12, scale: 0.97 },
+                        hidden: { opacity: 0, y: 10, scale: 0.98 },
                         visible: { 
                           opacity: 1, 
                           y: 0, 
                           scale: 1,
-                          transition: { type: "spring", stiffness: 180, damping: 20 }
+                          transition: { type: "spring", stiffness: 220, damping: 22 }
                         }
                       }}
                       whileHover={{ 
-                        y: -4, 
-                        scale: 1.015,
-                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.25)",
-                        transition: { duration: 0.2, ease: "easeOut" }
+                        y: -3, 
+                        scale: 1.01,
+                        boxShadow: "0 12px 24px -10px rgba(0,0,0,0.08)",
+                        transition: { duration: 0.15 }
                       }}
-                      whileTap={{ scale: 0.985, y: -1 }}
-                      className="group p-4 rounded-2xl border border-[var(--border-base)] bg-[var(--bg-card)] hover:border-brand transition-all text-left flex flex-col h-full relative overflow-hidden cursor-pointer"
+                      whileTap={{ scale: 0.99 }}
+                      className="group p-5 rounded-2xl border border-[var(--border-base)]/80 bg-[var(--bg-card)] hover:border-brand/40 dark:hover:border-brand/50 transition-all text-left flex items-start gap-4.5 relative overflow-hidden cursor-pointer shadow-sm"
                     >
                       <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      
-                      {/* CSS-based card header */}
-                      <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3 border border-[var(--border-base)] shrink-0 bg-slate-950 flex items-center justify-center">
-                        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)]" />
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
-                        
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/40 z-10",
-                          f.themeColor
-                        )}>
-                          <f.icon size={20} />
-                        </div>
+                      <div className={cn(
+                        "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-105 border border-transparent group-hover:border-brand/10",
+                        f.glowColor,
+                        f.themeColor
+                      )}>
+                        <f.icon size={20} />
                       </div>
-
-                      {f.id === 'shadowban-solutions' && (() => {
-                        const riskInfo = getShadowbanRiskInfo(featureResults) || {
-                          label: 'Unchecked',
-                          className: 'bg-slate-500/10 text-slate-500 border border-slate-500/20 dark:border-slate-500/30',
-                          dotColor: 'bg-slate-400'
-                        };
-                        return (
-                          <span className={cn(
-                            "absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border backdrop-blur-md z-10",
-                            riskInfo.className
-                          )}>
-                            <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", riskInfo.dotColor)} />
-                            {riskInfo.label}
-                          </span>
-                        );
-                      })()}
-
-                      <div className="flex-1 flex flex-col justify-between">
-                        <div>
+                      <div className="flex-1 min-w-0 pr-2 text-left">
+                        <div className="flex items-center justify-between gap-2">
                           <h4 className="text-sm font-bold text-[var(--text-primary)] mb-1 group-hover:text-brand transition-colors uppercase tracking-tight">
-                            {getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}
+                            {getFeatureLabel(f, t)}
                           </h4>
-                          <p className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed mb-4">
-                            {t(`features.${f.id}.desc`) || f.description}
-                          </p>
+                          <span className="text-[8px] font-mono text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase tracking-widest">LAUNCH</span>
                         </div>
-                        <div className="flex items-center gap-1 text-brand text-[10px] font-black uppercase tracking-widest mt-auto">
-                          <span>Launch Protocol</span>
-                          <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                        </div>
+                        <p className="text-xs text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
+                          {getFeatureDesc(f, t)}
+                        </p>
                       </div>
+                      <ChevronRight size={14} className="text-slate-400 dark:text-slate-600 group-hover:text-brand mt-1 transition-all group-hover:translate-x-0.5" />
                     </motion.button>
                   ))}
                 </motion.div>
@@ -2927,26 +2798,70 @@ const NeuralHub = ({
             ))}
           </div>
 
-          {/* Sidebar Area */}
-          <aside className="space-y-8">
-             <div className="card-base p-6 space-y-4">
-               <div className="flex items-center gap-2 text-brand">
-                 <Zap size={18} />
-                 <h4 className="text-sm font-bold uppercase tracking-wider">System Pulse</h4>
-               </div>
-               <div className="space-y-3">
-                 <div className="flex justify-between text-xs">
-                   <span className="text-[var(--text-secondary)]">Neural Core</span>
-                   <span className="text-success font-bold">Stable</span>
-                 </div>
-                 <div className="h-1.5 bg-[var(--border-base)] rounded-full overflow-hidden">
-                    <div className="h-full bg-brand w-3/4" />
-                 </div>
-                 <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
-                   Synchronizing all strategic nodes with the latest algorithm updates.
-                 </p>
-               </div>
-             </div>
+          {/* Right Monitoring Panel */}
+          <aside className="space-y-6">
+            
+            {/* System Pulse Card */}
+            <div className="p-6 rounded-3xl border border-[var(--border-base)]/80 bg-[var(--bg-card)] shadow-sm space-y-5 text-left">
+              <div className="flex items-center gap-2.5 text-brand pb-3 border-b border-[var(--border-base)]/40">
+                <Cpu size={16} />
+                <h4 className="text-[11px] font-mono font-black uppercase tracking-wider">COGNITIVE METRICS</h4>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-[var(--text-secondary)] font-mono">Neural Core Link</span>
+                    <span className="text-emerald-500 flex items-center gap-1 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      STABLE
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 w-[94%]" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-[var(--text-secondary)] font-mono">Optimizer Core</span>
+                    <span className="text-brand font-bold">ACTIVE</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand w-[88%]" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/45 border border-[var(--border-base)]/60 rounded-xl">
+                    <p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">LATENCY</p>
+                    <p className="text-sm font-black text-[var(--text-primary)] mt-0.5">14ms</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/45 border border-[var(--border-base)]/60 rounded-xl">
+                    <p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">SYNC RATE</p>
+                    <p className="text-sm font-black text-emerald-500 mt-0.5">100%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Premium Upgrade Display card */}
+            <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-600 to-indigo-900 text-white relative overflow-hidden shadow-md space-y-4 flex flex-col justify-between h-56 text-left border border-indigo-500/10">
+              <Zap className="absolute -right-6 -top-6 w-28 h-28 text-white/10 rotate-12 animate-pulse" />
+              <div className="space-y-1.5 relative z-10">
+                <div className="bg-white/10 border border-white/25 w-fit px-2.5 py-0.5 rounded-full text-[8px] font-mono tracking-widest uppercase font-bold">PRO COCKPIT</div>
+                <h4 className="text-lg font-black tracking-tight uppercase">Strategic Control</h4>
+                <p className="text-xs text-indigo-100/80 leading-relaxed font-sans font-medium">
+                  Gain hyper-speed API optimization, trend alerts, and advanced competitive scraping arrays.
+                </p>
+              </div>
+              <button 
+                onClick={() => onSelectFeature('template-library' as any)}
+                className="w-full py-2.5 bg-white hover:bg-slate-50 text-indigo-950 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition-all relative z-10 cursor-pointer active:scale-98"
+              >
+                Access Blueprint Vault
+              </button>
+            </div>
+
           </aside>
         </div>
       </div>
@@ -3060,6 +2975,7 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
       loading={loading}
     >
       <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
+        {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
         <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
           <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
             <feature.icon size={18} />
@@ -3093,9 +3009,9 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
             {feature.id === 'repurposing' && <RepurposePipelineWidget content={lastResponse.content} />}
 
             {/* Standard advisory notes transcript rendering */}
-            <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl text-left">
-              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-black block mb-3">Neural Advice Transcription</span>
-              <div className="text-sm text-slate-300 leading-relaxed max-h-96 overflow-y-auto pr-2 select-text whitespace-pre-line font-sans">
+            <div className="p-8 bg-slate-900/50 border border-white/5 rounded-3xl text-left shadow-lg">
+              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-black block mb-4 border-b border-white/5 pb-2">Neural Advice Transcription</span>
+              <div className="text-sm text-slate-300 max-h-[600px] overflow-y-auto pr-3 select-text font-sans markdown-body">
                 <ReactMarkdown>{lastResponse.content}</ReactMarkdown>
               </div>
             </div>
@@ -3150,18 +3066,16 @@ const Dashboard = ({
   generationTone,
   experienceLevel,
   user,
-  onSignIn,
-  featureResults = {}
+  onSignIn
 }: { 
   onSelectFeature: (id: FeatureId) => void, 
-  onNavigate: (view: 'dashboard' | 'tools' | 'hub' | 'matrix', feature?: FeatureId) => void, 
+  onNavigate: (view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', feature?: FeatureId) => void, 
   geminiActive: boolean,
   systemLanguage: string,
   generationTone: string,
   experienceLevel: string,
   user: User | null,
-  onSignIn: () => void,
-  featureResults?: Record<string, ChatMessage[]>
+  onSignIn: () => void
 }) => {
   const { t } = useTranslation();
   const [qualities, setQualities] = useState<any[]>(STATIC_QUALITIES);
@@ -3180,9 +3094,8 @@ const Dashboard = ({
   const problems = [
     { title: t("dashboard.marketDna"), desc: t("dashboard.marketDnaDesc"), solution: t("dashboard.neuralResearcher"), id: 'keyword-research' as FeatureId, icon: Microscope },
     { title: t("dashboard.engagement"), desc: t("dashboard.engagementDesc"), solution: t("dashboard.trendingDetector"), id: 'trending' as FeatureId, icon: TrendingUp },
-    { title: t("dashboard.creativeBlock"), desc: t("dashboard.creativeBlockDesc"), solution: getCleanFeatureLabel(t("features.content-ideas.label") || t("dashboard.videoIdeas")), id: 'content-ideas' as FeatureId, icon: Lightbulb },
+    { title: t("dashboard.creativeBlock"), desc: t("dashboard.creativeBlockDesc"), solution: t("features.content-ideas.label") || t("dashboard.videoIdeas"), id: 'content-ideas' as FeatureId, icon: Lightbulb },
     { title: t("dashboard.brandVoice"), desc: t("dashboard.brandVoiceDesc"), solution: t("dashboard.identityStrategist"), id: 'personas' as FeatureId, icon: Users },
-    { title: "Shadowban Solutions", desc: "Audit channel health, check sensitive policy risk indicators and trace 30-day view recovery action steps.", solution: "YouTube Policy Expert", id: 'shadowban-solutions' as FeatureId, icon: AlertCircle },
   ];
 
   return (
@@ -3204,23 +3117,6 @@ const Dashboard = ({
           <p className="text-[var(--text-secondary)] text-base max-w-lg leading-relaxed">
             {t("dashboard.subtitle") || "The ultimate SaaS terminal for social performance. Use neural synchronization to scale your channel."}
           </p>
-
-          {/* Dashboard Hero Banner Image */}
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="w-full max-w-lg h-36 rounded-2xl overflow-hidden border border-brand/15 shadow-2xl relative group mt-4 hidden sm:block bg-slate-950"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(168,85,247,0.15),transparent)] animate-pulse" />
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:16px_16px]" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent flex items-end p-4">
-              <span className="text-[9px] font-mono font-bold text-yellow-400 bg-slate-950/80 px-2.5 py-0.5 rounded border border-yellow-500/25 uppercase tracking-wider">
-                Google AI Studio Node
-              </span>
-            </div>
-          </motion.div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto shrink-0">
@@ -3274,69 +3170,55 @@ const Dashboard = ({
              </Button>
           </motion.div>
 
-
+          {/* GigSocial Card */}
+          <motion.div
+             whileHover={{ y: -4 }}
+             className="card-base p-5 border border-brand/10 hover:border-cyan-500/35 w-full md:w-64 cursor-pointer group flex flex-col justify-between"
+             onClick={() => onNavigate('earn')}
+          >
+             <div>
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-primary shrink-0">
+                     <Briefcase size={20} />
+                   </div>
+                   <div>
+                     <h3 className="text-xs font-bold text-[var(--text-primary)]">Chidon Freelance Earn</h3>
+                     <p className="text-[var(--text-secondary)] text-[9px]">Secure Escrow Gig Platform</p>
+                   </div>
+                </div>
+                <p className="text-xs text-[var(--text-secondary)] leading-normal mb-4">
+                   Deliver high-quality work, bid on active job boards, list service gigs, and secure transactions through built-in escrow accounts.
+                </p>
+             </div>
+             <Button variant="secondary" className="w-full text-xs py-1.5 mt-auto border border-cyan-500/25 text-cyan-primary bg-cyan-500/5 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300">
+               Launch Chidon Freelance <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+             </Button>
+          </motion.div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        {problems.map((p, i) => {
-          const feat = FEATURES.find(f => f.id === p.id);
-          return (
-            <motion.div
-              key={p.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              onClick={() => onSelectFeature(p.id)}
-              className="card-base hover:border-brand/40 group cursor-pointer overflow-hidden flex flex-col h-full"
-            >
-              {feat && (
-                <div className="relative w-full h-24 overflow-hidden border-b border-[var(--border-base)] shrink-0 bg-slate-950 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)]" />
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
-                  
-                  <div className="absolute top-3 left-3 w-8 h-8 rounded-lg bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
-                    <p.icon size={16} />
-                  </div>
-                  {p.id === 'shadowban-solutions' && (() => {
-                    const riskInfo = getShadowbanRiskInfo(featureResults);
-                    if (riskInfo) {
-                      return (
-                        <span className={cn(
-                          "absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border bg-black/60 backdrop-blur-md text-white border-white/10 shadow-lg",
-                          riskInfo.className
-                        )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", riskInfo.dotColor)} />
-                          {riskInfo.label}
-                        </span>
-                      );
-                    } else {
-                      return (
-                        <span className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border bg-black/60 backdrop-blur-md text-slate-400 border-white/10 shadow-lg">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                          Unchecked
-                        </span>
-                      );
-                    }
-                  })()}
-                </div>
-              )}
-              <div className="p-5 flex flex-col flex-1 justify-between text-left">
-                <div>
-                  <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2 line-clamp-1 uppercase tracking-tight">{p.title}</h3>
-                  <p className="text-[var(--text-secondary)] text-xs mb-4 leading-normal line-clamp-3">
-                    {p.desc}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-brand text-[10px] font-bold uppercase tracking-widest mt-auto">
-                  <span>{p.solution}</span>
-                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {problems.map((p, i) => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            onClick={() => onSelectFeature(p.id)}
+            className="card-base p-6 hover:border-brand/40 group cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[var(--text-primary)] group-hover:bg-brand group-hover:text-white transition-all mb-6">
+              <p.icon size={24} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">{p.title}</h3>
+            <p className="text-[var(--text-secondary)] text-sm mb-6 leading-relaxed">
+              {p.desc}
+            </p>
+            <div className="flex items-center gap-2 text-brand text-[10px] font-bold uppercase tracking-wider">
+              {p.solution} <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+            </div>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
@@ -3362,8 +3244,7 @@ const MatrixHub = ({
   activeGeminiModel,
   setActiveGeminiModel,
   user,
-  onClearDatabase,
-  featureResults = {}
+  onClearDatabase
 }: any) => {
   const { t } = useTranslation();
   const [matrixView, setMatrixView] = useState<'menu' | 'faq' | 'features'>('menu');
@@ -3412,53 +3293,20 @@ const MatrixHub = ({
                 <button 
                   key={f.id} 
                   onClick={() => onNavigate('tools', f.id)}
-                  className="p-4 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl text-left hover:border-brand/40 hover:shadow-lg transition-all group relative overflow-hidden flex flex-col h-full"
+                  className="p-6 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl text-left hover:border-brand/40 hover:shadow-lg transition-all group relative overflow-hidden"
                 >
-                  {/* CSS-based card header */}
-                  <div className="relative w-full h-24 rounded-2xl overflow-hidden mb-4 border border-[var(--border-base)] shrink-0 bg-slate-950 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-brand/10" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.05),transparent)]" />
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:16px_16px]" />
-                    
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center text-white backdrop-blur-md border border-white/10 bg-black/40 z-10",
-                      f.themeColor
-                    )}>
-                      <Icon size={20} />
-                    </div>
+                  <div className={cn("inline-flex p-3 rounded-2xl bg-gray-100 dark:bg-gray-800/60 mb-4 group-hover:scale-110 transition-transform", f.themeColor)}>
+                    <Icon size={24} />
                   </div>
-
-                  {f.id === 'shadowban-solutions' && (() => {
-                    const riskInfo = getShadowbanRiskInfo(featureResults) || {
-                      label: 'Unchecked',
-                      className: 'bg-slate-500/10 text-slate-500 border border-slate-500/20 dark:border-slate-500/30',
-                      dotColor: 'bg-slate-400'
-                    };
-                    return (
-                      <span className={cn(
-                        "absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[9px] font-black uppercase tracking-wider border backdrop-blur-md",
-                        riskInfo.className
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", riskInfo.dotColor)} />
-                        {riskInfo.label}
-                      </span>
-                    );
-                  })()}
-
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-[var(--text-primary)] font-bold text-base mb-1 uppercase tracking-tight">
-                        {getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}
-                      </h3>
-                      <p className="text-[var(--text-secondary)] text-xs leading-relaxed line-clamp-2 mb-4">
-                        {t(`features.${f.id}.desc`) || f.description}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 text-brand text-[10px] font-black uppercase tracking-widest mt-auto">
-                      <span>Execute Protocol</span>
-                      <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                    </div>
+                  <h3 className="text-[var(--text-primary)] font-bold text-lg mb-2">
+                    {getFeatureLabel(f, t)}
+                  </h3>
+                  <p className="text-[var(--text-secondary)] text-xs leading-relaxed line-clamp-2">
+                    {getFeatureDesc(f, t)}
+                  </p>
+                  
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-[var(--text-primary)]">
+                    <Icon size={64} />
                   </div>
                 </button>
               );
@@ -3635,7 +3483,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
   });
 
   const [systemLanguage, setSystemLanguage] = useState<string>(() => {
@@ -3664,60 +3512,46 @@ export default function App() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  // Safely synchronize i18n language and systemLanguage bi-directionally using a Ref-gated guard to prevent circular updates
-  const lastLangRef = useRef<{ i18n: string; system: string }>({
-    i18n: (i18n.language || 'en').split('-')[0].toLowerCase(),
-    system: systemLanguage
-  });
-
+  // Synchronize systemLanguage state with active i18n translations bi-directionally (safeguarded against circular re-entrant loops and subtags like en-US)
   useEffect(() => {
     const rawLang = i18n.language || 'en';
     const cleanCode = rawLang.split('-')[0].toLowerCase();
-    const matchByCode = LANGUAGES.find(l => l.code === cleanCode) || LANGUAGES[0];
+    const match = LANGUAGES.find(l => l.code === cleanCode) || LANGUAGES[0];
+    const currentLang = match.label;
     
-    // Determine if i18n language changed since last check
-    const i18nChanged = cleanCode !== lastLangRef.current.i18n;
-    // Determine if systemLanguage changed since last check
-    const systemChanged = systemLanguage !== lastLangRef.current.system;
+    if (systemLanguage !== currentLang) {
+      setSystemLanguage(currentLang);
+      localStorage.setItem('system_language', currentLang);
+    }
+  }, [i18n.language]);
 
-    if (i18nChanged && !systemChanged) {
-      // i18n was changed by the user (e.g., via LanguageSelector), update systemLanguage to match
-      setSystemLanguage(matchByCode.label);
-      localStorage.setItem('system_language', matchByCode.label);
-      lastLangRef.current = { i18n: cleanCode, system: matchByCode.label };
-    } else if (systemChanged && !i18nChanged) {
-      // systemLanguage was changed (e.g., loaded from database/settings), update i18n to match
-      const matchBySystemLabel = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage) || LANGUAGES[0];
-      if (cleanCode !== matchBySystemLabel.code) {
-        i18n.changeLanguage(matchBySystemLabel.code);
-      }
-      lastLangRef.current = { i18n: matchBySystemLabel.code, system: systemLanguage };
-    } else if (i18nChanged && systemChanged) {
-      // Both changed (e.g., initial load mismatch or rapid updates)
-      const matchBySystemLabel = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage) || LANGUAGES[0];
-      if (cleanCode !== matchBySystemLabel.code) {
-        i18n.changeLanguage(matchBySystemLabel.code);
-        lastLangRef.current = { i18n: matchBySystemLabel.code, system: systemLanguage };
-      } else {
-        lastLangRef.current = { i18n: cleanCode, system: systemLanguage };
-      }
-    } else {
-      // Neither changed directly, but perform safety checks for misalignment
-      const matchBySystemLabel = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage) || LANGUAGES[0];
-      if (cleanCode !== matchBySystemLabel.code) {
-        i18n.changeLanguage(matchBySystemLabel.code);
-        lastLangRef.current = { i18n: matchBySystemLabel.code, system: systemLanguage };
-      } else {
-        lastLangRef.current = { i18n: cleanCode, system: systemLanguage };
+  // Keep i18n language engine in perfect sync with systemLanguage state updates (safeguarded against circular loops)
+  useEffect(() => {
+    if (systemLanguage) {
+      const match = LANGUAGES.find(l => l.label === systemLanguage || l.native === systemLanguage);
+      if (match) {
+        const cleanI18nCode = (i18n.language || 'en').split('-')[0].toLowerCase();
+        if (cleanI18nCode !== match.code) {
+          i18n.changeLanguage(match.code);
+        }
       }
     }
-  }, [systemLanguage, i18n.language]);
+  }, [systemLanguage]);
 
   const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<'buyer' | 'seller' | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'blog' | 'auth' | 'pricing' | 'freelance' | 'profile'>('dashboard');
-  const [freelanceView, setFreelanceView] = useState<FreelanceView>('explore');
+  const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing' | 'notifications'>('dashboard');
+  
+  const [trialExpiredModalOpen, setTrialExpiredModalOpen] = useState(false);
+  const { 
+    hasAccess, 
+    isTrialing, 
+    trialEndsIn, 
+    loading: accessLoading,
+    trialEndsAt,
+    status: accessStatus
+  } = useAccess();
+
   const [activeFeature, setActiveFeature] = useState<FeatureId>('keyword-research');
   const [toolSearchQuery, setToolSearchQuery] = useState<string>('');
   
@@ -3725,6 +3559,8 @@ export default function App() {
     return {
       'keyword-research': Date.now() - 300000,
       'vseo-title-desc': Date.now() - 600000,
+      'trending-topics': Date.now() - 900000,
+      'daily-ideas': Date.now() - 1200000,
       'ai-script-outline': Date.now() - 1500000,
       'hashtag-engine': Date.now() - 1800000,
       'competitor-lab': Date.now() - 2100000,
@@ -3820,43 +3656,49 @@ export default function App() {
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [resetStatus, setResetStatus] = useState<'idle' | 'clearing' | 'success' | 'error'>('idle');
 
-  // Credit system states
-  const [credits, setCredits] = useState<number | null>(null);
-  const [isOutofCreditsModalOpen, setIsOutofCreditsModalOpen] = useState<boolean>(false);
-  const [showDailyCreditGranted, setShowDailyCreditGranted] = useState<boolean>(false);
+  // Subscription and 3-day Free Trial states
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [userCreatedAt, setUserCreatedAt] = useState<any>(null);
+
+  const getTrialStatus = () => {
+    return {
+      hasTrial: isTrialing,
+      isExpired: !hasAccess && user && accessStatus !== 'active',
+      daysLeft: trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))) : 0,
+      endsIn: trialEndsIn
+    };
+  };
+
+  const trialStatus = getTrialStatus();
+
+  const SIMPLE_FEATURES = ['content-ideas', 'hashtags', 'bio', 'ruled-book', 'template-library'];
+  const PRO_FEATURES = [
+    ...SIMPLE_FEATURES,
+    'scripts',
+    'thumbnails',
+    'competitor-analysis',
+    'posting-schedule',
+    'youtube-seo',
+    'seo-scorecard',
+    'keyword-research',
+    'post-optimizer',
+    'drafts',
+    'vseo-title-desc',
+    'vseo-tags',
+    'vseo-scorecard',
+    'vseo-keywords',
+    'vseo-best-time'
+  ];
+
+  const hasAccessToFeature = (featureId: FeatureId) => {
+    return hasAccess;
+  };
   
-  // Real-time Cloud settings sync hook
+  // Real-time Cloud settings and Subscription sync hook
   useEffect(() => {
     if (!user) return;
-    if (user.uid === 'offline_sandbox_user_id') {
-      setCredits(99);
-      setCustomGeminiApiKey(localStorage.getItem('custom_gemini_api_key') || '');
-      setCustomHfApiKey(localStorage.getItem('custom_hf_api_key') || '');
-      return () => {};
-    }
     const userDocRef = doc(db, 'users', user.uid);
-
-    // Dynamic Admin & Unlimited access initialization for requested developer email
-    if (user.email === 'chideraemmanue98@gmail.com') {
-      setCredits(999999);
-      const grantUnlimited = async () => {
-        try {
-          await setDoc(userDocRef, {
-            credits: 999999,
-            subscriptionPlan: 'Unlimited Enterprise IQ',
-            subscriptionStatus: 'active',
-            email: 'chideraemmanue98@gmail.com',
-            isVerified: true,
-            role: 'seller', // Ensure they can list services and access workspaces
-            hasCompletedSetup: true
-          }, { merge: true });
-        } catch (e) {
-          console.warn("Auto-initializing unlimited developer profile:", e);
-        }
-      };
-      grantUnlimited();
-    }
-
     const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
@@ -3896,83 +3738,104 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
-        if (user.email === 'chideraemmanue98@gmail.com') {
-          setCredits(999999);
-        } else if (data.credits !== undefined) {
-          setCredits(data.credits);
-          
-          // Check for daily 1 credit grant!
-          const todayStr = new Date().toISOString().split('T')[0];
-          if (!data.lastDailyCreditReset || data.lastDailyCreditReset !== todayStr) {
-            const updatedCredits = (data.credits || 0) + 1;
-            setCredits(updatedCredits);
-            updateDoc(userDocRef, {
-              credits: updatedCredits,
-              lastDailyCreditReset: todayStr,
-              updatedAt: serverTimestamp()
-            })
-            .then(() => {
-              // Trigger a high-visibility toast to inform the user about the daily 1 free credit
-              setShowDailyCreditGranted(true);
-            })
-            .catch(err => console.warn("Failed to grant daily credit (offline fallback):", err));
-          }
+        if (data.subscription && data.subscription.status) {
+          setSubscriptionStatus(data.subscription.status);
+          const mappedName = data.subscription.package === 'enterprise' ? 'Enterprise Sovereign Pack' : (data.subscription.package === 'pro' ? 'Pro Strategist Pack' : 'Starter Creator Pack');
+          setSubscriptionPlan(mappedName);
         } else {
-          // Default: Give 3 Free Welcome Credits To every User Who signs Up with a New email
-          const initialCredits = 3;
-          const todayStr = new Date().toISOString().split('T')[0];
-          setCredits(initialCredits);
-          setDoc(userDocRef, { 
-            credits: initialCredits,
-            lastDailyCreditReset: todayStr
-          }, { merge: true })
-            .catch(err => console.warn("Failed to initialize free trial credits (offline fallback):", err));
+          if (data.subscriptionPlan !== undefined) {
+            setSubscriptionPlan(data.subscriptionPlan);
+          } else {
+            setSubscriptionPlan(null);
+          }
+          if (data.subscriptionStatus !== undefined) {
+            setSubscriptionStatus(data.subscriptionStatus);
+          } else {
+            setSubscriptionStatus(null);
+          }
+        }
+        if (data.createdAt !== undefined) {
+          setUserCreatedAt(data.createdAt);
         }
       } else {
-        // Document does not exist: initialize with 3 credits for email signup (except if admin)
-        if (user.email === 'chideraemmanue98@gmail.com') {
-          setCredits(999999);
-        } else {
-          const initialCredits = 3;
-          const todayStr = new Date().toISOString().split('T')[0];
-          setCredits(initialCredits);
-          setDoc(userDocRef, {
-            credits: initialCredits,
-            lastDailyCreditReset: todayStr,
-            email: user.email || '',
-            displayName: user.displayName || '',
-            createdAt: serverTimestamp()
-          }, { merge: true })
-            .catch(err => console.warn("Failed to initialize user document (offline fallback):", err));
-        }
+        // Document does not exist: Initialize user document with active trial
+        const now = Timestamp.now();
+        const trialEndAt = Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000);
+        setSubscriptionPlan("Pro Strategist Pack");
+        setSubscriptionStatus("active");
+        setDoc(userDocRef, {
+          email: user.email || '',
+          displayName: user.displayName || '',
+          createdAt: serverTimestamp(),
+          trialStartAt: now,
+          trialEndAt: trialEndAt,
+          subscription: {
+            status: "trialing",
+            package: "pro",
+            currentPeriodEnd: trialEndAt
+          },
+          subscriptionPlan: "Pro Strategist Pack",
+          subscriptionStatus: "active"
+        }, { merge: true })
+          .catch(err => console.error("Failed to initialize user document:", err));
       }
     }, (error) => {
-      console.warn("User data sync connection offline:", error);
+      handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
     });
     return () => unsubscribe();
   }, [user?.uid]);
 
-  // Credit Deduction System Helper
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+
+  const {
+    messages: chatMessages,
+    loadingHistory,
+    subscribeToHistory,
+    saveMessage,
+    wrapUpMessage,
+    deleteMessage
+  } = useChatHistory(user ? user.uid : null);
+
+  // Real-time chat history subscription for active feature
+  useEffect(() => {
+    if (!user || !activeFeature) return;
+    const unsubscribe = subscribeToHistory(activeFeature);
+    return () => unsubscribe();
+  }, [user?.uid, activeFeature]);
+
+  const handleLoadHistoryItem = (item: any) => {
+    const userMsg = {
+      id: `${item.id}-user`,
+      role: 'user' as const,
+      content: item.prompt,
+      timestamp: item.createdAt?.toDate ? item.createdAt.toDate() : new Date(item.createdAt)
+    };
+    const aiMsg = {
+      id: `${item.id}-ai`,
+      role: 'assistant' as const,
+      content: item.result,
+      timestamp: item.createdAt?.toDate ? item.createdAt.toDate() : new Date(item.createdAt)
+    };
+    
+    setFeatureResults(prev => ({
+      ...prev,
+      [item.feature]: [userMsg, aiMsg]
+    }));
+    setActiveDocId(item.id);
+  };
+
+  const handleNewChat = () => {
+    setFeatureResults(prev => ({
+      ...prev,
+      [activeFeature]: []
+    }));
+    setActiveDocId(null);
+  };
+
+  // Credit Deduction System Helper - Removed for subscription-based access
+  const credits = null;
   const deductCredits = async (amount: number): Promise<boolean> => {
-    if (!user) return false;
-    if (user.email === 'chideraemmanue98@gmail.com') {
-      return true;
-    }
-    const currentCredits = credits ?? 0;
-    if (currentCredits < amount) {
-      setIsOutofCreditsModalOpen(true);
-      return false;
-    }
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        credits: currentCredits - amount
-      });
-      return true;
-    } catch (err) {
-      console.error("Failed to deduct credits:", err);
-      return false;
-    }
+    return true;
   };
 
   // Sync state helpers
@@ -4010,54 +3873,21 @@ export default function App() {
   };
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
-        try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.error("Anonymous authentication fallback error:", e);
-          const offlineUser = {
-            uid: "offline_sandbox_user_id",
-            isAnonymous: true,
-            email: "guest@chidoniq.com",
-            displayName: "Offline Guest",
-          };
-          setUser(offlineUser);
-          setAuthLoading(false);
-        }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+          isSupabase: false
+        });
       } else {
-        setUser(u);
-        setAuthLoading(false);
+        setUser(null);
       }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user?.uid || user.uid === "offline_sandbox_user_id") {
-      setUserRole(null);
-      return;
-    }
-    const userRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data?.role && data?.hasCompletedSetup) {
-          setUserRole(data.role);
-        } else {
-          setUserRole(null);
-        }
-      } else {
-        setUserRole(null);
-      }
-    }, (error) => {
-      console.warn("User profile snapshot subscription error:", error);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, []);
 
   const handleSendToBook = (content: string, title?: string) => {
     setPreFilledContent(prev => ({
@@ -4073,57 +3903,44 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
-    setUser(null);
+    try {
+      await signOut(auth);
+      setUser(null);
+      navigateTo('dashboard');
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
   };
 
   const handleClearDatabase = async () => {
     setResetStatus('clearing');
     try {
-      // 1. Clear local storage settings, features, and mock caches
+      // 1. Clear local storage settings and features
       localStorage.removeItem('pinned_features');
       localStorage.removeItem('security_modes');
       localStorage.removeItem('neural_notifications');
       localStorage.removeItem('theme');
-      localStorage.removeItem('freelance_favs');
-      localStorage.removeItem('guest_drafts');
-      localStorage.removeItem('guest_ruled_pages');
-      localStorage.removeItem('local_blogs');
-      localStorage.removeItem('chidon_shadowban_checklist');
-      localStorage.removeItem('chidon_shadowban_risk_score');
-      
-      if (user?.uid) {
-        localStorage.removeItem(`withdrawals_${user.uid}`);
-        localStorage.removeItem(`chidon_freelance_profile_${user.uid}`);
-      }
       
       // 2. Clear IndexedDB local notes
       try {
-        const { openDB } = await import('idb');
-        const dbInstance = await openDB('chidon_iq_intelligence_db', 1);
-        const tx = dbInstance.transaction('notes_local', 'readwrite');
-        await tx.store.clear();
-        await tx.done;
+        await clearAllNotesLocal();
       } catch (idbErr) {
         console.error("IndexedDB clear error:", idbErr);
       }
 
-      // 3. Clear Firestore collections across both Chidon IQ and Freelance Hub
+      // 3. Clear Firestore collections
       const collectionsToClear = [
         'jobs',
         'job_applications',
+        'earn_jobs',
+        'earn_services',
+        'earn_results',
+        'earn_profiles',
         'drafts',
         'notes',
         'folders',
         'feedback',
-        'global_presence',
-        'gigs',
-        'orders',
-        'messages',
-        'reviews',
-        'disputes',
-        'notifications',
-        'milestone_updates',
-        'blogs'
+        'global_presence'
       ];
       
       for (const colName of collectionsToClear) {
@@ -4156,212 +3973,21 @@ export default function App() {
       setTimeout(() => setResetStatus('idle'), 4000);
     }
   };
-  const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'blog' | 'auth' | 'pricing' | 'freelance', feature: FeatureId}[]>([]);
+  const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing', feature: FeatureId}[]>([]);
   const [apiKey] = useState<string>(process.env.GEMINI_API_KEY || '');
   const [hfKey] = useState<string>(process.env.HUGGINGFACE_API_KEY || '');
   const activeGeminiKey = customGeminiApiKey || apiKey;
   const activeHfKey = customHfApiKey || hfKey;
-  const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>(() => {
-    try {
-      const stored = localStorage.getItem('chidon_feature_results');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        Object.keys(parsed).forEach(featureId => {
-          if (Array.isArray(parsed[featureId])) {
-            parsed[featureId] = parsed[featureId].map((m: any) => ({
-              ...m,
-              timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
-            }));
-          }
-        });
-        return parsed;
-      }
-    } catch (e) {
-      console.error("Error reading featureResults from localStorage:", e);
-    }
-    return {};
-  });
-
-  // Load feature results from Firestore when user logs in
-  useEffect(() => {
-    if (!user || user.uid === 'offline_sandbox_user_id') return;
-    
-    const loadFirestoreChats = async () => {
-      try {
-        const chatsCol = collection(db, 'users', user.uid, 'feature_chats');
-        const qSnap = await getDocs(chatsCol);
-        const firestoreResults: Record<string, ChatMessage[]> = {};
-        qSnap.forEach(docSnap => {
-          const data = docSnap.data();
-          if (data.messages) {
-            firestoreResults[docSnap.id] = data.messages.map((m: any) => ({
-              ...m,
-              timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
-            }));
-          }
-        });
-        
-        if (Object.keys(firestoreResults).length > 0) {
-          setFeatureResults(prev => {
-            const merged = { ...prev };
-            Object.keys(firestoreResults).forEach(fId => {
-              merged[fId] = firestoreResults[fId];
-            });
-            return merged;
-          });
-        }
-      } catch (e) {
-        console.error("Failed to load chat history from Firestore:", e);
-      }
-    };
-    
-    loadFirestoreChats();
-  }, [user]);
-
-  const handleDeleteMessage = async (featureId: string, messageId: string) => {
-    const messages = featureResults[featureId] || [];
-    const index = messages.findIndex(m => m.id === messageId);
-    if (index === -1) return;
-
-    let idsToRemove = [messageId];
-    if (messages[index].role === 'assistant' && index > 0 && messages[index - 1].role === 'user') {
-      idsToRemove.push(messages[index - 1].id);
-    } else if (messages[index].role === 'user' && index < messages.length - 1 && messages[index + 1].role === 'assistant') {
-      idsToRemove.push(messages[index + 1].id);
-    }
-
-    const updatedMessages = messages.filter(m => !idsToRemove.includes(m.id));
-    const newResults = {
-      ...featureResults,
-      [featureId]: updatedMessages
-    };
-
-    setFeatureResults(newResults);
-
-    try {
-      localStorage.setItem('chidon_feature_results', JSON.stringify(newResults));
-    } catch (e) {
-      console.error(e);
-    }
-
-    if (user && user.uid !== 'offline_sandbox_user_id') {
-      try {
-        const chatDocRef = doc(db, 'users', user.uid, 'feature_chats', featureId);
-        if (updatedMessages.length === 0) {
-          await deleteDoc(chatDocRef);
-        } else {
-          await setDoc(chatDocRef, {
-            featureId,
-            messages: updatedMessages.map(m => ({
-              id: m.id,
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
-              language: m.language || 'en'
-            })),
-            updatedAt: serverTimestamp()
-          });
-        }
-      } catch (e) {
-        console.error("Failed to delete message from Firestore:", e);
-      }
-    }
-  };
-
-  const handleClearAllChatData = async (featureId: string) => {
-    const newResults = {
-      ...featureResults,
-      [featureId]: []
-    };
-
-    setFeatureResults(newResults);
-
-    try {
-      localStorage.setItem('chidon_feature_results', JSON.stringify(newResults));
-    } catch (e) {
-      console.error(e);
-    }
-
-    if (user && user.uid !== 'offline_sandbox_user_id') {
-      try {
-        const chatDocRef = doc(db, 'users', user.uid, 'feature_chats', featureId);
-        await deleteDoc(chatDocRef);
-      } catch (e) {
-        console.error("Failed to clear chat history from Firestore:", e);
-      }
-    }
-  };
-
+  const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>({});
   const [isTranslatingResults, setIsTranslatingResults] = useState(false);
   const featureResultsRef = useRef(featureResults);
   useEffect(() => {
     featureResultsRef.current = featureResults;
   }, [featureResults]);
 
-  // Robust automatic translation of existing chat history when the language shift occurs
-  const lastTranslatedLang = useRef<string>(i18n.language || 'en');
+  // Pruned destructive auto-translation of chat history on language shift to prevent crash/infinite loop issues
   useEffect(() => {
-    const targetLang = i18n.language || 'en';
-    const cleanTarget = targetLang.split('-')[0].toLowerCase();
-    
-    if (cleanTarget === lastTranslatedLang.current.split('-')[0].toLowerCase()) {
-      return;
-    }
-    
-    lastTranslatedLang.current = targetLang;
-
-    const translateExistingMessages = async () => {
-      setIsTranslatingResults(true);
-      try {
-        const updatedResults = { ...featureResultsRef.current };
-        let changed = false;
-
-        for (const featureId of Object.keys(updatedResults)) {
-          const messages = updatedResults[featureId] || [];
-          const newMessages = [...messages];
-          let featureChanged = false;
-
-          for (let i = 0; i < newMessages.length; i++) {
-            const msg = newMessages[i];
-            if (msg.role === 'assistant' && msg.language !== cleanTarget) {
-              try {
-                const response = await fetch("/api/gemini/translate", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ text: msg.content, targetLanguage: cleanTarget })
-                });
-                const data = await response.json();
-                if (data && data.text) {
-                  newMessages[i] = {
-                    ...msg,
-                    content: data.text,
-                    language: cleanTarget
-                  };
-                  featureChanged = true;
-                  changed = true;
-                }
-              } catch (e) {
-                console.error("Failed to translate message during language shift", e);
-              }
-            }
-          }
-
-          if (featureChanged) {
-            updatedResults[featureId] = newMessages;
-          }
-        }
-
-        if (changed) {
-          setFeatureResults(updatedResults);
-        }
-      } catch (err) {
-        console.error("Failed to translate existing feature results", err);
-      } finally {
-        setIsTranslatingResults(false);
-      }
-    };
-
-    translateExistingMessages();
+    // Keep results in original generation language, no slow API translation sweeps are done on every language shift
   }, [i18n.language]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -4371,80 +3997,25 @@ export default function App() {
   const [preFilledContent, setPreFilledContent] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to top on feature/view change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeFeature, view]);
+
   const { generate, loading, error } = useHybridAI(activeGeminiKey || null, activeHfKey || null, activeGeminiModel);
 
-  // Absolute Scroll-to-Top Control to guarantee the app and its features always start at the very top (beginning)
-  useEffect(() => {
-    const handleScrollReset = () => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = 0;
-      }
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-    
-    // Execute immediately
-    handleScrollReset();
-    
-    // Execute on short delays to account for dynamic React rendering and layout updates
-    const timer = setTimeout(handleScrollReset, 50);
-    const longerTimer = setTimeout(handleScrollReset, 150);
-    
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(longerTimer);
-    };
-  }, [view, activeFeature, loading, featureResults[activeFeature]?.length]);
-
-  // Hash-based state synchronization & routing
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash || '#dashboard';
-      if (hash.startsWith('#freelance/')) {
-        const sub = hash.replace('#freelance/', '') as FreelanceView;
-        setView('freelance');
-        setFreelanceView(sub);
-      } else if (hash === '#freelance') {
-        setView('freelance');
-        setFreelanceView('explore');
-      } else if (hash.startsWith('#tools/')) {
-        const feat = hash.replace('#tools/', '') as FeatureId;
-        const found = FEATURES.some(f => f.id === feat);
-        if (found) {
-          setView('tools');
-          setActiveFeature(feat);
-        } else {
-          setView('dashboard');
-        }
-      } else if (hash === '#dashboard' || hash === '#hub' || hash === '#matrix' || hash === '#blog' || hash === '#auth' || hash === '#pricing' || hash === '#profile') {
-        setView(hash.slice(1) as any);
-      } else {
-        setView('dashboard');
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    // Parse initial URL hash
-    handleHashChange();
-
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  const navigateTo = (
-    newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'blog' | 'auth' | 'pricing' | 'freelance' | 'profile', 
-    newFeature?: FeatureId, 
-    newFreelanceView?: FreelanceView
-  ) => {
+  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing', newFeature?: FeatureId) => {
     const targetFeature = newFeature || activeFeature;
-    const targetFreelance = newFreelanceView || freelanceView;
+    // Don't push if it's the exact same state
+    if (view === newView && activeFeature === targetFeature) return;
 
     setNavigationHistory(prev => {
       const next = [...prev, { view, feature: activeFeature } as any];
       if (next.length > 20) return next.slice(1);
       return next;
     });
-
     if (newFeature) {
       setActiveFeature(newFeature);
       setLastUsedTool(prev => ({
@@ -4452,21 +4023,7 @@ export default function App() {
         [newFeature]: Date.now()
       }));
     }
-
-    if (newFreelanceView) {
-      setFreelanceView(newFreelanceView);
-    }
-
     setView(newView);
-
-    // Update browser address bar hash to ensure bookmarks and shareable URLs work
-    if (newView === 'freelance') {
-      window.location.hash = `freelance/${targetFreelance}`;
-    } else if (newView === 'tools' && newFeature) {
-      window.location.hash = `tools/${newFeature}`;
-    } else {
-      window.location.hash = newView;
-    }
   };
 
   const goBack = () => {
@@ -4539,9 +4096,37 @@ export default function App() {
     }
   };
 
+  const getFeatureCreditCost = (featureId: FeatureId | string): number => {
+    switch (featureId) {
+      case 'ai-script-outline':
+        return 5;
+      case 'shadowban-solutions':
+        return 4;
+      case 'scripts':
+      case 'competitor-analysis':
+      case 'trending':
+      case 'trending-topics':
+      case 'trend-alerts':
+        return 3;
+      case 'content-ideas':
+      case 'thumbnails':
+      case 'daily-ideas':
+        return 2;
+      default:
+        return 1;
+    }
+  };
+
   const handleGenerate = async (prompt: string, displayPrompt?: string) => {
-    // Determine the credit cost of this run
-    const cost = activeFeature === 'ai-script-outline' ? 5 : 1;
+    // Explicitly block users from initiating any AI generation if trial is expired and they have no active subscription
+    if (!hasAccess) {
+      setView('pricing');
+      setTrialExpiredModalOpen(true);
+      return;
+    }
+
+    // Determine the credit cost of this run dynamically using secure tool calculator
+    const cost = getFeatureCreditCost(activeFeature);
     const canProceed = await deductCredits(cost);
     if (!canProceed) return;
 
@@ -4554,62 +4139,14 @@ export default function App() {
       originalPrompt: prompt
     };
 
-    const initialMsgs = [...(featureResults[activeFeature] || []), userMsg];
     setFeatureResults(prev => ({
       ...prev,
-      [activeFeature]: initialMsgs
+      [activeFeature]: [...(prev[activeFeature] || []), userMsg]
     }));
-
-    // Helper to persist both local and firestore
-    const persistMessages = async (featureId: string, msgs: ChatMessage[]) => {
-      try {
-        const stored = localStorage.getItem('chidon_feature_results');
-        const parsed = stored ? JSON.parse(stored) : {};
-        parsed[featureId] = msgs;
-        localStorage.setItem('chidon_feature_results', JSON.stringify(parsed));
-      } catch (e) {
-        console.error("Failed to persist messages to localStorage", e);
-      }
-
-      if (user && user.uid !== 'offline_sandbox_user_id') {
-        try {
-          const chatDocRef = doc(db, 'users', user.uid, 'feature_chats', featureId);
-          await setDoc(chatDocRef, {
-            featureId,
-            messages: msgs.map(m => ({
-              id: m.id,
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
-              language: m.language || 'en'
-            })),
-            updatedAt: serverTimestamp()
-          });
-        } catch (e) {
-          console.error("Failed to persist messages to Firestore", e);
-        }
-      }
-    };
-
-    await persistMessages(activeFeature, initialMsgs);
 
     let finalPrompt = prompt;
     if (generationTone) {
       finalPrompt = `${prompt}\n\n[STYLE PROTOCOL: Generate response in a highly distinct '${generationTone.toUpperCase()}' default writing tone.]`;
-    }
-
-    // STYLING PROTOCOL: Enforce Gemini-like beautiful, highly structured, and listed outputs (No long book-like text)
-    finalPrompt = `${finalPrompt}\n\n[STRICT VISUAL LAYOUT & ANALYTICAL COMPACTNESS PROTOCOL]:
-- STRICTLY DO NOT output long-form, wordy book text, verbose paragraphs, essays, or generic explanations.
-- ALWAYS use highly structured, compact, listed or table-based Markdown layouts with high visual clarity.
-- For SEO & Optimization features (e.g., SEO scorecards, title generators, tag architects, keyword research): Output clean, well-spaced, listed SEO terms with their 'High Ranking Power' (e.g. [RANKING POWER: 98%], [SEARCH VOLUME: 45k/mo], [DIFFICULTY: LOW]), short-form metrics, and high-impact CTR markers. Do not write full chapters or explanations.
-- For Content Creation features (e.g., video ideas, script templates, headlines): Output short bulleted guides, formats, and structural layouts with concrete markers. Keep explanations under 2 lines per bullet.
-- For Branding & Strategy features (e.g., competitor scans, personas): Output concise profiles and tactical key-value attributes.
-- Ensure all generated text is neatly arranged, attractive, readable, and highly professional, mirroring Google Gemini's standard-setting, crisp tabular results.`;
-
-    const activeLangObj = LANGUAGES.find(l => l.code === (i18n.language || 'en').split('-')[0].toLowerCase()) || LANGUAGES[0];
-    if (activeLangObj && activeLangObj.code !== 'en') {
-      finalPrompt = `${finalPrompt}\n\n[CRITICAL TRANSLATION MANDATE]: You MUST output your entire response, including all headers, tables, explanations, and generated content, fully translated into the ${activeLangObj.label} (${activeLangObj.native}) language. Do not mix with English unless explicitly requested.`;
     }
 
     const result = await generate(finalPrompt, activeFeature);
@@ -4620,117 +4157,146 @@ export default function App() {
         role: 'assistant',
         content: result,
         timestamp: new Date(),
-        language: (i18n.language || 'en').split('-')[0].toLowerCase()
+        language: i18n.language || 'en'
       };
-      
-      const finalMsgs = [...initialMsgs, aiMsg];
       setFeatureResults(prev => ({
         ...prev,
-        [activeFeature]: finalMsgs
+        [activeFeature]: [...(prev[activeFeature] || []), aiMsg]
       }));
 
-      await persistMessages(activeFeature, finalMsgs);
+      // Auto-save to Firestore history
+      const savedId = await saveMessage(activeFeature, displayPrompt || prompt, result, cost);
+      if (savedId) {
+        setActiveDocId(savedId);
+      }
     }
   };
 
   const renderActiveContent = () => {
     if (view === 'dashboard') {
       return (
-        <Dashboard 
-          onSelectFeature={(id) => navigateTo('tools', id)} 
-          onNavigate={navigateTo}
-          geminiActive={!!apiKey}
-          systemLanguage={systemLanguage}
-          generationTone={generationTone}
-          experienceLevel={experienceLevel}
+        <PaywallGate
+          hasAccess={hasAccess}
+          isTrialing={isTrialing}
+          trialEndsIn={trialEndsIn}
+          loading={accessLoading}
           user={user}
-          onSignIn={handleSignIn}
-          featureResults={featureResults}
-        />
+          onRedirectToPricing={() => setView('pricing')}
+          onShowExpiredModal={() => setTrialExpiredModalOpen(true)}
+        >
+          <Dashboard 
+            onSelectFeature={(id) => navigateTo('tools', id)} 
+            onNavigate={navigateTo}
+            geminiActive={!!apiKey}
+            systemLanguage={systemLanguage}
+            generationTone={generationTone}
+            experienceLevel={experienceLevel}
+            user={user}
+            onSignIn={handleSignIn}
+          />
+        </PaywallGate>
       );
     }
 
     if (view === 'hub') {
-      return <NeuralHub onSelectFeature={(id) => navigateTo('tools', id)} onBack={goBack} featureResults={featureResults} />;
+      return (
+        <PaywallGate
+          hasAccess={hasAccess}
+          isTrialing={isTrialing}
+          trialEndsIn={trialEndsIn}
+          loading={accessLoading}
+          user={user}
+          onRedirectToPricing={() => setView('pricing')}
+          onShowExpiredModal={() => setTrialExpiredModalOpen(true)}
+        >
+          <NeuralHub onSelectFeature={(id) => navigateTo('tools', id)} onBack={goBack} />
+        </PaywallGate>
+      );
     }
 
     if (view === 'matrix') {
       return (
-        <MatrixHub 
-          onNavigate={navigateTo} 
-          onBack={goBack} 
-          neuralNotifications={neuralNotifications}
-          setNeuralNotifications={(u: any) => { setNeuralNotifications(u); saveUserSetting('neuralNotifications', u); }}
-          generationTone={generationTone}
-          setGenerationTone={(u: any) => { setGenerationTone(u); saveUserSetting('generationTone', u); }}
-          experienceLevel={experienceLevel}
-          setExperienceLevel={(u: any) => { setExperienceLevel(u); saveUserSetting('experienceLevel', u); }}
-          systemLanguage={systemLanguage}
-          setSystemLanguage={(u: any) => { setSystemLanguage(u); saveUserSetting('systemLanguage', u); }}
-          activeSecurityModes={activeSecurityModes}
-          setActiveSecurityModes={(u: any) => { setActiveSecurityModes(u); saveUserSetting('activeSecurityModes', u); }}
-          pinnedFeatures={pinnedFeatures}
-          setPinnedFeatures={(u: any) => { setPinnedFeatures(u); saveUserSetting('pinnedFeatures', u); }}
-          autoOptimize={autoOptimize}
-          setAutoOptimize={(u: any) => { setAutoOptimize(u); saveUserSetting('autoOptimize', u); }}
-          activeGeminiModel={activeGeminiModel}
-          setActiveGeminiModel={setActiveGeminiModel}
+        <PaywallGate
+          hasAccess={hasAccess}
+          isTrialing={isTrialing}
+          trialEndsIn={trialEndsIn}
+          loading={accessLoading}
           user={user}
-          onClearDatabase={() => setIsResetConfirmOpen(true)}
-          featureResults={featureResults}
-        />
+          onRedirectToPricing={() => setView('pricing')}
+          onShowExpiredModal={() => setTrialExpiredModalOpen(true)}
+        >
+          <MatrixHub 
+            onNavigate={navigateTo} 
+            onBack={goBack} 
+            neuralNotifications={neuralNotifications}
+            setNeuralNotifications={(u: any) => { setNeuralNotifications(u); saveUserSetting('neuralNotifications', u); }}
+            generationTone={generationTone}
+            setGenerationTone={(u: any) => { setGenerationTone(u); saveUserSetting('generationTone', u); }}
+            experienceLevel={experienceLevel}
+            setExperienceLevel={(u: any) => { setExperienceLevel(u); saveUserSetting('experienceLevel', u); }}
+            systemLanguage={systemLanguage}
+            setSystemLanguage={(u: any) => { setSystemLanguage(u); saveUserSetting('systemLanguage', u); }}
+            activeSecurityModes={activeSecurityModes}
+            setActiveSecurityModes={(u: any) => { setActiveSecurityModes(u); saveUserSetting('activeSecurityModes', u); }}
+            pinnedFeatures={pinnedFeatures}
+            setPinnedFeatures={(u: any) => { setPinnedFeatures(u); saveUserSetting('pinnedFeatures', u); }}
+            autoOptimize={autoOptimize}
+            setAutoOptimize={(u: any) => { setAutoOptimize(u); saveUserSetting('autoOptimize', u); }}
+            activeGeminiModel={activeGeminiModel}
+            setActiveGeminiModel={setActiveGeminiModel}
+            user={user}
+            onClearDatabase={() => setIsResetConfirmOpen(true)}
+          />
+        </PaywallGate>
       );
     }
 
-
+    if (view === 'earn') {
+      return (
+        <PaywallGate
+          hasAccess={hasAccess}
+          isTrialing={isTrialing}
+          trialEndsIn={trialEndsIn}
+          loading={accessLoading}
+          user={user}
+          onRedirectToPricing={() => setView('pricing')}
+          onShowExpiredModal={() => setTrialExpiredModalOpen(true)}
+        >
+          <ChidonFreelanceEarn 
+            onBack={goBack}
+            user={user}
+            onSignIn={handleSignIn}
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+          />
+        </PaywallGate>
+      );
+    }
 
     if (view === 'blog') {
       return (
-        <ChidonIqBlog
-          onSaveDraft={handleSaveDraft}
-          onBack={goBack}
-        />
-      );
-    }
-
-    if (view === 'auth') {
-      return (
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-center justify-center relative">
-          <div className="absolute top-4 left-6 z-10">
-            <button 
-              onClick={goBack}
-              className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--text-secondary)] hover:text-brand transition-colors bg-[var(--bg-card)] border border-[var(--border-base)]/60 px-4 py-2 rounded-xl shadow-sm cursor-pointer"
-            >
-              ← Back to Control Terminal
-            </button>
-          </div>
-          <ChidonAuth 
-            onAuthSuccess={(u) => setUser(u)} 
-            currentUser={user}
-            onClose={goBack}
+        <PaywallGate
+          hasAccess={hasAccess}
+          isTrialing={isTrialing}
+          trialEndsIn={trialEndsIn}
+          loading={accessLoading}
+          user={user}
+          onRedirectToPricing={() => setView('pricing')}
+          onShowExpiredModal={() => setTrialExpiredModalOpen(true)}
+        >
+          <ChidonIqBlog
+            onSaveDraft={handleSaveDraft}
+            onBack={goBack}
           />
-        </div>
+        </PaywallGate>
       );
     }
 
-    if (view === 'freelance') {
+    if (view === 'notifications') {
       return (
-        <ChidonFreelance 
-          currentUser={user}
-          onTriggerAuth={handleSignIn}
-          subView={freelanceView}
-          onSubViewChange={(v) => navigateTo('freelance', undefined, v)}
-          onSendToNotepad={handleSendToBook}
-        />
-      );
-    }
-
-    if (view === 'profile') {
-      return (
-        <ProfilePage 
-          currentUser={user}
-          onTriggerAuth={handleSignIn}
+        <NotificationsPage 
           onBack={goBack}
+          onNavigateToMessages={() => setView('earn')}
         />
       );
     }
@@ -4741,6 +4307,17 @@ export default function App() {
           user={user}
           onBack={goBack}
           db={db}
+          showTrialEndedModal={trialExpiredModalOpen}
+          onCloseTrialEndedModal={() => setTrialExpiredModalOpen(false)}
+        />
+      );
+    }
+
+    if (view === 'auth') {
+      return (
+        <AuthPage 
+          onBack={goBack} 
+          onSuccess={() => setView('dashboard')}
         />
       );
     }
@@ -4750,13 +4327,19 @@ export default function App() {
       messages: featureResults[activeFeature] || [],
       loading,
       error,
-      feature: FEATURES.find(f => f.id === activeFeature) || FEATURES[0],
+      feature: FEATURES.find(f => f.id === activeFeature)!,
       onGenerateFeedback: openFeedback,
       onSaveDraft: handleSaveDraft,
       onRestoreDraft: handleRestoreDraft,
       onBack: goBack,
-      onDeleteMessage: handleDeleteMessage,
-      onClearAllChatData: handleClearAllChatData
+      credits,
+      activeDocId,
+      chatMessages,
+      loadingHistory,
+      onLoadHistoryItem: handleLoadHistoryItem,
+      onWrapUpMessage: wrapUpMessage,
+      onDeleteMessage: deleteMessage,
+      onNewChat: handleNewChat
     };
 
     const renderFeature = () => {
@@ -4774,12 +4357,13 @@ export default function App() {
         case 'vseo-scorecard':
         case 'vseo-keywords':
         case 'vseo-best-time':
+        case 'trending-topics':
+        case 'daily-ideas':
+        case 'trend-alerts':
         case 'ai-script-outline':
-          return <AdvancedNeuralTool {...commonProps} />;
-
         case 'shadowban-solutions':
-          return <ShadowbanSolutions {...commonProps} />;
-
+          return <AdvancedNeuralTool {...commonProps} />;
+          
         case 'post-scheduler': return (
           <Suspense fallback={<ComponentLoader />}>
             <PostScheduler 
@@ -4798,7 +4382,6 @@ export default function App() {
             <ChidonVault 
               onBack={commonProps.onBack}
               onSignIn={handleSignIn}
-              onSendToNotepad={handleSendToBook}
             />
           </Suspense>
         );
@@ -4827,32 +4410,88 @@ export default function App() {
       }
     };
 
-    return (
-      <div className="flex flex-col space-y-6">
-        <div className="flex items-center justify-end px-2">
-           <div className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/5 rounded-full scale-75 origin-right">
-              <div className="w-2 h-2 rounded-full bg-cyan-primary animate-pulse" />
-              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Protocol: Active</span>
-           </div>
+    const content = hasAccessToFeature(activeFeature) ? (
+      renderFeature()
+    ) : (
+      <div className="max-w-md mx-auto p-8 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl shadow-xl text-center space-y-6 my-12">
+        <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto">
+          <Lock size={32} />
         </div>
         
-        <motion.div
-           initial={{ opacity: 0, y: 20 }}
-           animate={{ opacity: 1, y: 0 }}
-           className="relative"
-        >
-           {renderFeature()}
-        </motion.div>
-
-        {/* Global Footer Status during Tools usage */}
-        <div className="pt-10 opacity-30 pointer-events-none group-hover:opacity-100 transition-opacity">
-           <SystemStatus activeNodes={0} />
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-[var(--text-primary)]">
+            {trialStatus.isExpired ? 'Trial Expired' : 'Access Restricted'}
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+            {trialStatus.isExpired ? (
+              "Your 3-Day Free Trial has expired. Please subscribe to a monthly pack to reactivate all workspace tools."
+            ) : !subscriptionStatus || subscriptionStatus !== 'active' ? (
+              `You are currently on a 3-Day Free Trial! You only have access to Simple Features. To unlock the '${FEATURES.find(f => f.id === activeFeature)?.label || activeFeature}' tool, please subscribe to a premium plan.`
+            ) : (
+              `Your current subscription plan ('${subscriptionPlan}') does not include access to the '${FEATURES.find(f => f.id === activeFeature)?.label || activeFeature}' tool. Please upgrade to a higher tier plan.`
+            )}
+          </p>
+        </div>
+        
+        {trialStatus.hasTrial && (
+          <div className="py-2.5 px-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 font-mono text-xs font-bold uppercase tracking-wider">
+            ⏱️ {trialStatus.daysLeft} Days remaining on free trial
+          </div>
+        )}
+        
+        <div className="flex flex-col gap-3 pt-2">
+          <button
+            onClick={() => setView('pricing')}
+            className="w-full py-3 bg-brand hover:bg-brand/90 text-white font-black text-xs font-mono uppercase tracking-widest rounded-xl transition-all shadow-md shadow-brand/10 cursor-pointer"
+          >
+            View Subscription Packs
+          </button>
+          <button
+            onClick={goBack}
+            className="w-full py-3 bg-[var(--bg-app)] hover:bg-slate-100 dark:hover:bg-slate-850 text-[var(--text-secondary)] font-bold text-xs font-mono uppercase tracking-widest rounded-xl border border-[var(--border-base)] transition-all cursor-pointer"
+          >
+            Back to Terminal
+          </button>
         </div>
       </div>
     );
+
+    return (
+      <PaywallGate
+        hasAccess={hasAccess}
+        isTrialing={isTrialing}
+        trialEndsIn={trialEndsIn}
+        loading={accessLoading}
+        user={user}
+        onRedirectToPricing={() => setView('pricing')}
+        onShowExpiredModal={() => setTrialExpiredModalOpen(true)}
+      >
+        <div className="flex flex-col space-y-6">
+          <div className="flex items-center justify-end px-2">
+             <div className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/5 rounded-full scale-75 origin-right">
+                <div className="w-2 h-2 rounded-full bg-cyan-primary animate-pulse" />
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Protocol: Active</span>
+             </div>
+          </div>
+          
+          <motion.div
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             className="relative"
+          >
+             {content}
+          </motion.div>
+
+          {/* Global Footer Status during Tools usage */}
+          <div className="pt-10 opacity-30 pointer-events-none group-hover:opacity-100 transition-opacity">
+             <SystemStatus activeNodes={0} />
+          </div>
+        </div>
+      </PaywallGate>
+    );
   };
 
-  const currentFeature = FEATURES.find(f => f.id === activeFeature) || FEATURES[0];
+  const currentFeature = FEATURES.find(f => f.id === activeFeature);
 
   if (authLoading) {
     return <LoadingOverlay />;
@@ -4929,147 +4568,6 @@ export default function App() {
                 <span>{t("common.overviewDashboard") || "Overview Dashboard"}</span>
               </button>
 
-              {/* ChidonFreelance section immediately following the app Dashboard */}
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    navigateTo('freelance', undefined, 'explore');
-                    setIsMenuOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
-                    view === 'freelance'
-                      ? "bg-brand/10 text-brand border-brand/20 shadow-sm"
-                      : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
-                  )}
-                >
-                  <Briefcase size={15} className="text-brand" />
-                  <span>ChidonFreelance Hub</span>
-                </button>
-
-                {/* Sub-navigation for Freelance Features */}
-                {view === 'freelance' && (
-                  <div className="pl-4 pr-1 py-2 space-y-3 border-l-2 border-brand/20 ml-5 animate-in slide-in-from-top-2 duration-200">
-                    
-                    {/* Buyer Portal Subsection */}
-                    {(!userRole || userRole === 'buyer') && (
-                      <div className="space-y-1 text-left">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
-                          Buyer Portal
-                        </div>
-                        <button
-                          onClick={() => {
-                            navigateTo('freelance', undefined, 'explore');
-                            setIsMenuOpen(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                            freelanceView === 'explore' || freelanceView === 'gig_detail'
-                              ? "text-brand bg-brand/5 dark:text-emerald-400 dark:bg-emerald-500/5 font-extrabold"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                          )}
-                        >
-                          <Compass size={12} className="text-emerald-500" />
-                          Explore Gigs
-                        </button>
-                        <button
-                          onClick={() => {
-                            navigateTo('freelance', undefined, 'job_board');
-                            setIsMenuOpen(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                            freelanceView === 'job_board'
-                              ? "text-brand bg-brand/5 dark:text-emerald-400 dark:bg-emerald-500/5 font-extrabold"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                          )}
-                        >
-                          <Briefcase size={12} className="text-emerald-500" />
-                          Active Jobs Board
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Seller Portal Subsection */}
-                    {(!userRole || userRole === 'seller') && (
-                      <div className="space-y-1 text-left">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
-                          Seller Portal
-                        </div>
-                        <button
-                          onClick={() => {
-                            navigateTo('freelance', undefined, 'dashboard');
-                            setIsMenuOpen(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                            freelanceView === 'dashboard' || freelanceView === 'order_detail'
-                              ? "text-brand bg-brand/5 dark:text-cyan-400 dark:bg-cyan-500/5 font-extrabold"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                          )}
-                        >
-                          <Briefcase size={12} className="text-cyan-500" />
-                          Seller Workspace
-                        </button>
-                        <button
-                          onClick={() => {
-                            navigateTo('freelance', undefined, 'create_gig');
-                            setIsMenuOpen(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                            freelanceView === 'create_gig'
-                              ? "text-brand bg-brand/5 dark:text-cyan-400 dark:bg-cyan-500/5 font-extrabold"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                          )}
-                        >
-                          <Plus size={12} className="text-cyan-500" />
-                          List Service Gig
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Shared Collaboration channels */}
-                    <div className="space-y-1 text-left border-t border-slate-200/40 dark:border-slate-800 pt-2">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 pl-2.5 pb-1 select-none font-mono">
-                        Shared Channels
-                      </div>
-                      <button
-                        onClick={() => {
-                          navigateTo('freelance', undefined, 'chats');
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                          freelanceView === 'chats'
-                            ? "text-brand bg-brand/5 font-extrabold"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        )}
-                      >
-                        <MessageSquare size={12} className="text-indigo-500" />
-                        Messenger
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigateTo('freelance', undefined, 'projects');
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                          freelanceView === 'projects'
-                            ? "text-brand bg-brand/5 font-extrabold"
-                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        )}
-                      >
-                        <Activity size={12} className="text-brand" />
-                        Contracts Tracker
-                      </button>
-                    </div>
-
-                  </div>
-                )}
-              </div>
-
               <button
                 onClick={() => {
                   navigateTo('hub');
@@ -5084,6 +4582,22 @@ export default function App() {
               >
                 <Compass size={15} />
                 <span>{t("common.intelligenceCommand") || "Intelligence Command"}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigateTo('earn');
+                  setIsMenuOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-left cursor-pointer",
+                  (view as string) === 'earn'
+                    ? "bg-cyan-primary/10 text-cyan-primary border-cyan-primary/20 shadow-sm animate-pulse-glow"
+                    : "text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-[var(--text-primary)] border-transparent"
+                )}
+              >
+                <Briefcase size={15} className="text-cyan-primary" />
+                <span>Chidon Freelance Earn</span>
               </button>
 
               <button
@@ -5117,6 +4631,7 @@ export default function App() {
                 <Crown size={15} className="text-amber-500" />
                 <span>Chidon Pricing</span>
               </button>
+
             </div>
 
             {/* Search Input field inside the navigation sidebar to help users quickly filter */}
@@ -5144,8 +4659,8 @@ export default function App() {
 
             {categories.map((cat) => {
               const catFeatures = FEATURES.filter(f => {
-                const labelMatch = getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label).toLowerCase().includes(toolSearchQuery.toLowerCase());
-                const descMatch = (t(`features.${f.id}.desc`) || f.description || "").toLowerCase().includes(toolSearchQuery.toLowerCase());
+                const labelMatch = getFeatureLabel(f, t).toLowerCase().includes(toolSearchQuery.toLowerCase());
+                const descMatch = getFeatureDesc(f, t).toLowerCase().includes(toolSearchQuery.toLowerCase());
                 return f.category === cat && (labelMatch || descMatch);
               });
               if (catFeatures.length === 0) return null;
@@ -5174,7 +4689,7 @@ export default function App() {
                           <f.icon size={16} className={cn(
                             isActive ? "text-brand" : "text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]"
                           )} />
-                          <span className="truncate">{getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label)}</span>
+                          <span className="truncate">{getFeatureLabel(f, t)}</span>
 
                           {/* Quick Share action button */}
                           {isActive && (
@@ -5214,8 +4729,8 @@ export default function App() {
 
             {/* If no filters matched at all, show a simple no-results message */}
             {categories.every(cat => FEATURES.filter(f => {
-              const labelMatch = getCleanFeatureLabel(t(`features.${f.id}.label`) || f.label).toLowerCase().includes(toolSearchQuery.toLowerCase());
-              const descMatch = (t(`features.${f.id}.desc`) || f.description || "").toLowerCase().includes(toolSearchQuery.toLowerCase());
+              const labelMatch = getFeatureLabel(f, t).toLowerCase().includes(toolSearchQuery.toLowerCase());
+              const descMatch = getFeatureDesc(f, t).toLowerCase().includes(toolSearchQuery.toLowerCase());
               return f.category === cat && (labelMatch || descMatch);
             }).length === 0) && (
               <div className="px-3 py-6 text-center text-xs text-[var(--text-secondary)] space-y-1">
@@ -5225,24 +4740,81 @@ export default function App() {
             )}
           </div>
 
-          <div className="p-6 border-t border-[var(--border-base)]">
-            <button 
-              onClick={() => {
-                setView('auth');
-                setIsMenuOpen(false);
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 hover:bg-gray-100 dark:hover:bg-gray-800/60 border border-[var(--border-base)]/40 transition-all text-left cursor-pointer group"
-            >
-              <UserCircle className="w-8 h-8 text-cyan-500 group-hover:scale-105 transition-transform shrink-0" />
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
-                  {user && !user.isAnonymous ? (user.displayName || user.email?.split('@')[0] || 'Authorized Agent') : 'Guest Session'}
-                </p>
-                <p className="text-[9px] font-mono text-[var(--text-secondary)] truncate">
-                  {user && !user.isAnonymous ? user.email : 'Tap to sign in / register'}
-                </p>
+          <div className="p-4 border-t border-[var(--border-base)]">
+            {user && subscriptionStatus !== 'active' && (
+              <div className="mb-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-left space-y-2 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1 font-mono">
+                    <Clock size={11} className="animate-pulse" />
+                    {trialStatus.isExpired ? "Trial Expired" : "Free Trial"}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-amber-500">
+                    {trialStatus.isExpired ? "Expired" : trialStatus.endsIn}
+                  </span>
+                </div>
+                <div className="relative w-full h-1 bg-amber-500/10 rounded-full overflow-hidden">
+                  <div 
+                    style={{ width: `${trialStatus.isExpired ? 0 : trialEndsAt ? Math.min(100, ((trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) * 100) : 100}%` }} 
+                    className="absolute h-full left-0 top-0 bg-amber-500 transition-all duration-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <span className="text-[10px] font-medium text-[var(--text-secondary)]">Simple Features only</span>
+                  <button
+                    onClick={() => {
+                      setView('pricing');
+                      setIsMenuOpen(false);
+                    }}
+                    className="text-[9px] font-mono font-bold text-amber-500 hover:text-amber-400 transition-colors uppercase tracking-widest cursor-pointer hover:underline"
+                  >
+                    Upgrade →
+                  </button>
+                </div>
               </div>
-            </button>
+            )}
+            {user ? (
+              <div className="w-full flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 border border-[var(--border-base)]/40">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <UserCircle className="w-8 h-8 text-cyan-500 shrink-0" />
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                      {user.displayName || 'Operator'}
+                    </p>
+                    <p className="text-[9px] font-mono text-[var(--text-secondary)] truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors shrink-0 cursor-pointer"
+                  title="Sign Out"
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50/50 dark:bg-gray-800/20 border border-[var(--border-base)]/40">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <UserCircle className="w-8 h-8 text-slate-400 shrink-0" />
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                      Guest Operator
+                    </p>
+                    <p className="text-[9px] font-mono text-[var(--text-secondary)] truncate">
+                      Sign in to save work
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignIn}
+                  className="p-2 text-brand hover:bg-brand/5 rounded-lg transition-colors shrink-0 cursor-pointer"
+                  title="Sign In"
+                >
+                  <LogIn size={14} />
+                </button>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -5259,7 +4831,7 @@ export default function App() {
               </button>
               <h2 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                 <span className="md:hidden"><ChidonLogo size="xs" iconOnly /></span>
-                <span>{view === 'dashboard' ? t('common.overview') : view === 'blog' ? "Chidon Blog" : view === 'pricing' ? "Chidon Pricing Matrix" : view === 'matrix' ? t('common.commandMatrix') : view === 'profile' || view === 'auth' ? "Security Authentication Portal" : view === 'freelance' ? "ChidonFreelance Hub" : (currentFeature ? getCleanFeatureLabel(t(`features.${currentFeature.id}.label`) || currentFeature.label) : '')}</span>
+                <span>{view === 'dashboard' ? t('common.overview') : (view as string) === 'earn' ? "CHIDON Earn Portal" : view === 'blog' ? "Chidon Blog" : view === 'pricing' ? "Chidon Pricing Matrix" : view === 'matrix' ? t('common.commandMatrix') : (currentFeature ? getFeatureLabel(currentFeature, t) : '')}</span>
               </h2>
             </div>
 
@@ -5327,7 +4899,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 flex flex-col justify-start min-h-[calc(100vh-4rem)]"
+                className="w-full"
               >
                 {renderActiveContent()}
               </motion.div>
@@ -5349,115 +4921,6 @@ export default function App() {
         />
         <ChidonIqGuide credits={credits} onDeductCredits={deductCredits} />
       </Suspense>
-
-      {/* FLOATING TRANSLATION PROCESS INDICATOR */}
-      <AnimatePresence>
-        {isTranslatingResults && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 right-6 bg-slate-950 border border-brand/50 text-brand px-5 py-3.5 rounded-2xl flex items-center gap-3 shadow-2xl z-[9999] text-xs font-mono font-bold"
-          >
-            <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-            <div className="flex flex-col text-left">
-              <span className="text-white font-extrabold tracking-wide uppercase">Translating Workspace Assets</span>
-              <span className="text-brand/70 font-bold text-[10px]">Converting generated features into selected language...</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* DAILY RECHARGE TOAST */}
-      <AnimatePresence>
-        {showDailyCreditGranted && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 left-6 bg-slate-950 border border-emerald-500 text-emerald-400 px-5 py-4 rounded-2xl flex flex-col gap-1 shadow-[0_10px_30px_rgba(16,185,129,0.25)] z-[9999] text-xs max-w-sm"
-          >
-            <div className="flex items-center gap-2">
-              <Coins size={16} className="text-emerald-400 animate-bounce" />
-              <span className="text-white font-extrabold tracking-wide uppercase">Daily Recharge Active</span>
-            </div>
-            <p className="text-slate-300 font-semibold text-[10px] leading-relaxed">
-              You have been granted your <span className="text-emerald-400 font-black">+1 Free Daily Credit</span> for today! Keep powering your social workspace.
-            </p>
-            <button 
-              onClick={() => setShowDailyCreditGranted(false)}
-              className="mt-1.5 self-start text-[9px] font-black uppercase text-emerald-300 hover:text-white underline cursor-pointer"
-            >
-              Acknowledge
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* OUT OF CREDITS DYNAMIC DIALOG */}
-      <AnimatePresence>
-        {isOutofCreditsModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 z-[999] flex items-center justify-center p-4 backdrop-blur-md"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="w-full max-w-md bg-[#0D0D11] border border-white/10 rounded-3xl p-6 relative overflow-hidden text-center"
-            >
-              {/* Top Accent Strip */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 via-amber-500 to-brand" />
-
-              {/* Icon */}
-              <div className="mx-auto w-16 h-16 bg-brand/10 border border-brand/20 rounded-2xl flex items-center justify-center text-brand mb-5 animate-bounce">
-                <Coins size={32} />
-              </div>
-
-              <h3 className="text-xl font-black text-white uppercase tracking-tight">
-                WORKSPACE ENGINE EMPTY
-              </h3>
-              <p className="text-xs text-slate-400 font-mono mt-1 uppercase tracking-wider">
-                Credits replenishment protocol required
-              </p>
-
-              <div className="my-6 p-4 bg-black/40 border border-white/5 rounded-2xl text-left space-y-2.5">
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Your active Chidon IQ workspace is currently out of credits. Standard features consume **1 credit**, while premium script outlines consume **5 credits**.
-                </p>
-                <p className="text-[11px] text-amber-400 font-bold leading-normal">
-                  ⚡ Note: New accounts receive exactly 3 Welcome Credits (one-time) and 1 Free Daily Credit. To continue uninterrupted, please purchase a premium fuel package.
-                </p>
-                <div className="flex justify-between items-center text-[10px] font-mono border-t border-white/5 pt-2 text-slate-500">
-                  <span>CURRENT REPLENISH RATE:</span>
-                  <span className="text-amber-400 font-bold">1 USD = 10-16 Credits</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    setIsOutofCreditsModalOpen(false);
-                    navigateTo('pricing');
-                  }}
-                  className="w-full py-3 bg-gradient-to-r from-[#22D3EE] to-[#6366F1] text-black font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                >
-                  Purchase Credit Bundles
-                </button>
-                <button
-                  onClick={() => setIsOutofCreditsModalOpen(false)}
-                  className="w-full py-2.5 border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
-                >
-                  Return to Dashboard
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Maintenance Purge / Reset Confirmation Overlay */}
       <ConfirmationDialog 

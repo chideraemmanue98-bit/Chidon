@@ -1,0 +1,41 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper to check if the user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper to retrieve the chat document from Firestore
+    function getChat(chatId) {
+      return firestore.get(/databases/(default)/documents/chats/$(chatId));
+    }
+
+    // Helper to check if the user is a participant in the given chat
+    function isChatParticipant(chatId) {
+      return isSignedIn() && 
+        (request.auth.uid == chatId || 
+         (getChat(chatId) != null && request.auth.uid in getChat(chatId).data.participants));
+    }
+
+    // 1. Marketplace Post files (Images, illustrations for freelance gigs)
+    match /posts/{fileName} {
+      // Posts are publicly readable so anyone can view products on the marketplace
+      allow read: if true;
+      // Creation/updates require authentication, file size limit (10MB), and image type validation
+      allow write: if isSignedIn()
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // 2. Chat Images/Files
+    match /chats/{chatId}/{fileName} {
+      // Only chat participants are allowed to read chat attachments
+      allow read: if isChatParticipant(chatId);
+      // Only chat participants can upload files to a chat, with a 10MB limit and image safety checks
+      allow write: if isChatParticipant(chatId)
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

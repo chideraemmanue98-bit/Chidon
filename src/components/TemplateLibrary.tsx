@@ -256,20 +256,7 @@ ${paramsSummary}
         throw new Error("No text response received from Gemini engine proxy.");
       }
 
-      let textResult = data.text;
-      if (typeof textResult === 'string') {
-        textResult = textResult
-          .replace(/\\n\\n/g, '\n\n')
-          .replace(/\\n/g, '\n')
-          .replace(/\\r/g, '')
-          .replace(/n\/n\//g, '\n\n')
-          .replace(/\/n\/n\//g, '\n\n')
-          .replace(/\/n\//g, '\n')
-          .replace(/\s*n\/n\s*/g, '\n\n')
-          .trim();
-      }
-
-      setGeneratedOutput(textResult);
+      setGeneratedOutput(data.text);
     } catch (err: any) {
       console.error("Template library generation failure:", err);
       setErrorStatus(err.message || 'An internal error occurred during the cognitive generation cycle.');
@@ -638,7 +625,7 @@ ${paramsSummary}
                 </>
               ) : (
                 <>
-                  <Zap size={14} className="text-black fill-current" />
+                  <Zap size={14} className="text-black fill-current animate-pulse" />
                   Populate Selected Blueprint
                 </>
               )}
@@ -794,29 +781,9 @@ ${paramsSummary}
                     animate={{ opacity: 1 }}
                     className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4"
                   >
-                    <div className="w-full max-w-sm h-28 rounded-xl overflow-hidden border border-[var(--border-base)] relative group shadow-lg bg-slate-950 flex items-center justify-center">
-                      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-yellow-950/25" />
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:12px_12px]" />
-                      
-                      {/* Blueprint mock layout */}
-                      <div className="relative z-10 w-4/5 h-2/3 border border-yellow-500/20 rounded-lg p-2 flex flex-col justify-between bg-slate-900/60 backdrop-blur-sm">
-                        <div className="flex gap-1.5 items-center">
-                          <div className="w-2 h-2 rounded-full bg-yellow-500/40" />
-                          <div className="h-1.5 w-1/2 bg-yellow-500/10 rounded" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="h-1 w-full bg-slate-800 rounded" />
-                          <div className="h-1 w-3/4 bg-slate-800 rounded" />
-                        </div>
-                      </div>
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-2.5">
-                        <span className="text-[8px] font-mono font-bold text-yellow-400 bg-slate-950/80 px-2 py-0.5 rounded border border-yellow-500/25 uppercase tracking-wider z-20">
-                          Interactive Blueprint Outline
-                        </span>
-                      </div>
+                    <div className="w-10 h-10 rounded-full border border-dashed border-slate-700 flex items-center justify-center text-slate-500">
+                      <BookOpen size={18} />
                     </div>
-                    
                     <div className="space-y-1 max-w-sm">
                       <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-slate-300">Selected Blueprint Skeleton</h4>
                       <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">

@@ -9,7 +9,6 @@ import {
   Download, 
   ExternalLink,
   ChevronLeft,
-  Cpu,
   Lock,
   Calendar,
   Layers,
@@ -36,6 +35,7 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import emptyVaultImg from '../assets/images/empty_vault_1781319190599.jpg';
 
 interface SavedDraft {
   id: string;
@@ -49,7 +49,6 @@ interface SavedDraft {
 interface ChidonVaultProps {
   onBack?: () => void;
   onSignIn?: () => void;
-  onSendToNotepad?: (content: string, title: string) => void;
 }
 
 const CATEGORIES = [
@@ -60,7 +59,7 @@ const CATEGORIES = [
   { id: 'seo', label: 'SEO & Tech', icon: Award, features: ['competitor-analysis', 'keyword-research', 'youtube-seo', 'seo-scorecard', 'thumbnails', 'posting-schedule', 'post-optimizer'] }
 ];
 
-export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSendToNotepad }) => {
+export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) => {
   const [drafts, setDrafts] = useState<SavedDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,18 +101,8 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
       `Are you sure you want to permanently discard all ${selectedIds.length} selected blueprints from your CHIDON Vault? This operation is irreversible.`,
       async () => {
         try {
-          if (auth.currentUser) {
-            const promises = selectedIds.map(id => deleteDoc(doc(db, 'drafts', id)));
-            await Promise.all(promises);
-          } else {
-            const guestDrafts = localStorage.getItem('guest_drafts');
-            if (guestDrafts) {
-              const list = JSON.parse(guestDrafts);
-              const updated = list.filter((item: any) => !selectedIds.includes(item.id));
-              localStorage.setItem('guest_drafts', JSON.stringify(updated));
-              setDrafts(prev => prev.filter(item => !selectedIds.includes(item.id)));
-            }
-          }
+          const promises = selectedIds.map(id => deleteDoc(doc(db, 'drafts', id)));
+          await Promise.all(promises);
           if (selectedDraft && selectedIds.includes(selectedDraft.id)) {
             setSelectedDraft(null);
           }
@@ -158,22 +147,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
         setLoading(false);
       });
     } else {
-      // Guest local storage fallback
-      const local = localStorage.getItem('guest_drafts');
-      if (local) {
-        try {
-          const list = JSON.parse(local).map((d: any) => ({
-            ...d,
-            createdAt: new Date(d.createdAt)
-          }));
-          setDrafts(list);
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        setDrafts([]);
-      }
-      setLoading(false);
+      setLoading(true);
     }
 
     return () => unsubscribe();
@@ -192,18 +166,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
       "Are you sure you want to permanently discard this blueprint from your CHIDON Vault? This blueprint will be deleted from the database.",
       async () => {
         try {
-          if (auth.currentUser) {
-            await deleteDoc(doc(db, 'drafts', id));
-          } else {
-            // Guest delete
-            const guestDrafts = localStorage.getItem('guest_drafts');
-            if (guestDrafts) {
-              const list = JSON.parse(guestDrafts);
-              const updated = list.filter((item: any) => item.id !== id);
-              localStorage.setItem('guest_drafts', JSON.stringify(updated));
-              setDrafts(prev => prev.filter(item => item.id !== id));
-            }
-          }
+          await deleteDoc(doc(db, 'drafts', id));
           if (selectedDraft?.id === id) {
             setSelectedDraft(null);
           }
@@ -221,22 +184,22 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
 
   // Prepares the feature label badge
   const getFeatureLabel = (featureId: string) => {
-    let label = '';
-    switch (featureId) {
-      case 'content-ideas': label = 'Video Ideas'; break;
-      case 'scripts': label = 'Script Writer'; break;
-      case 'bio': label = 'Bio Optimizer'; break;
-      case 'competitor-analysis': label = 'Competitor Lab'; break;
-      case 'posting-schedule': label = 'Schedule Lab'; break;
-      case 'youtube-seo': label = 'Youtube SEO'; break;
-      case 'seo-scorecard': label = 'SEO Scorecard'; break;
-      case 'keyword-research': label = 'Keyword Intel'; break;
-      case 'post-optimizer': label = 'Time Optimizer'; break;
-      case 'ai-script-outline': label = 'Script Outline'; break;
-      case 'daily-ideas': label = 'Daily Ideas'; break;
-      default: label = featureId.replace('-', ' ').toUpperCase(); break;
+    if (!featureId) return '';
+    const cleanId = featureId.replace(/^features\./i, '').replace(/^Feature\./i, '').replace(/Feature\./gi, '');
+    switch (cleanId) {
+      case 'content-ideas': return 'Video Ideas';
+      case 'scripts': return 'Script Writer';
+      case 'bio': return 'Bio Optimizer';
+      case 'competitor-analysis': return 'Competitor Lab';
+      case 'posting-schedule': return 'Schedule Lab';
+      case 'youtube-seo': return 'Youtube SEO';
+      case 'seo-scorecard': return 'SEO Scorecard';
+      case 'keyword-research': return 'Keyword Intel';
+      case 'post-optimizer': return 'Time Optimizer';
+      case 'ai-script-outline': return 'Script Outline';
+      case 'daily-ideas': return 'Daily Ideas';
+      default: return cleanId.replace('-', ' ').toUpperCase();
     }
-    return label.replace(/^Feature\.\s*/i, '').replace(/^Feature:\s*/i, '');
   };
 
   // Safe helper to obtain JavaScript Date from database Timestamp or standard Date representations
@@ -346,7 +309,7 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
               CHIDON SAVED INTEL
             </h1>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest bg-brand/10 text-brand uppercase border border-brand/20">
-              <Cpu size={10} className="mr-1 inline animate-pulse" /> Vault
+              <Lock size={10} className="mr-1 inline animate-pulse" /> Vault
             </span>
           </div>
           <p className="text-xs text-[var(--text-secondary)] max-w-2xl leading-relaxed">
@@ -561,10 +524,13 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
             </div>
           ) : filteredDrafts.length === 0 ? (
             <div className="text-center py-12 px-6 bg-[var(--card-bg)] border border-[var(--border-base)] rounded-3xl space-y-5 flex flex-col items-center justify-center overflow-hidden">
-              <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-[var(--border-base)]/50 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 flex items-center justify-center group">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.1),transparent)]" />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px]" />
-                <Lock size={48} className="text-indigo-400 relative z-10 transition-transform duration-500 group-hover:scale-110" />
+              <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-xl border border-[var(--border-base)]/50 bg-slate-900/40">
+                <img 
+                  src={emptyVaultImg} 
+                  alt="Empty Vault State" 
+                  className="w-full h-full object-cover select-none pointer-events-none" 
+                  referrerPolicy="no-referrer"
+                />
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/80 to-transparent pointer-events-none" />
               </div>
               <div className="max-w-md space-y-2">
@@ -702,17 +668,6 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn, onSe
                     {copiedId === 'selected' ? <Check size={14} className="text-brand" /> : <Copy size={14} />}
                     {copiedId === 'selected' ? 'Copied' : 'Copy'}
                   </button>
-
-                  {onSendToNotepad && (
-                    <button
-                      onClick={() => onSendToNotepad(selectedDraft.content, selectedDraft.title || 'Saved Intel')}
-                      className="p-2 border border-brand/20 bg-brand/5 text-brand hover:bg-brand/10 rounded-xl transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-                      title="Send to Notepad (Notebook with Lines)"
-                    >
-                      <BookOpen size={14} />
-                      <span>Notepad</span>
-                    </button>
-                  )}
 
                   {/* Edit button removed */}
 
