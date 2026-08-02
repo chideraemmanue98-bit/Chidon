@@ -92,9 +92,9 @@ let aiClient: GoogleGenAI | null = null;
 
 function getGeminiClient(): GoogleGenAI {
   if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY;
+    const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!key) {
-      throw new Error("GEMINI_API_KEY environment variable is required but missing from server configuration");
+      throw new Error("GEMINI_API_KEY, VITE_GEMINI_API_KEY, or GOOGLE_API_KEY environment variable is required but missing from server configuration");
     }
     aiClient = new GoogleGenAI({
       apiKey: key,
@@ -337,7 +337,22 @@ app.use(express.json({
       status: "online", 
       system: "CHIDON IQ Neural OS",
       protocol: "v4.0.8",
-      backend: "Node.js/Express"
+      backend: "Node.js/Express",
+      geminiActive: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY)
+    });
+  });
+
+  app.get("/api/diagnostics", (req, res) => {
+    res.json({
+      gemini_configured: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
+      huggingface_configured: !!(process.env.HUGGINGFACE_API_KEY || process.env.VITE_HUGGINGFACE_API_KEY),
+      supabase_configured: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_ANON_KEY),
+      paystack_configured: !!(process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_PUBLIC_KEY),
+      firebase_admin_configured: !!firestoreAdminDb,
+      node_env: process.env.NODE_ENV,
+      env_keys: Object.keys(process.env).filter(k => 
+        k.includes("KEY") || k.includes("SECRET") || k.includes("API") || k.includes("TOKEN") || k.includes("URL") || k.includes("SQL")
+      ).map(k => `${k} (Configured: ${!!process.env[k]})`)
     });
   });
 
@@ -354,8 +369,9 @@ app.use(express.json({
       const videos = await queryClient.fetchQuery({
         queryKey,
         queryFn: async () => {
-          if (!process.env.GEMINI_API_KEY) {
-            console.warn("[Crawler Browser] GEMINI_API_KEY is not defined, running in High-Fidelity Simulation Mode.");
+          const hasKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+          if (!hasKey) {
+            console.warn("[Crawler Browser] No Gemini API key is defined, running in High-Fidelity Simulation Mode.");
             return generateMockTrends(platform, category, searchQuery);
           }
 
