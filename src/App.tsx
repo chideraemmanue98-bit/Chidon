@@ -3483,7 +3483,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-    return true;
+    return false;
   });
 
   const [systemLanguage, setSystemLanguage] = useState<string>(() => {
