@@ -7,11 +7,28 @@ import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import crypto from "crypto";
+import dotenv from "dotenv";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ENV LOADER: When running locally via `tsx server.ts`, Node does not auto-load
+// .env files. Load them here so process.env has the API keys (Gemini, Supabase,
+// Paystack, etc). On Vercel, process.env is already populated by the platform,
+// and dotenv (which never overrides existing vars) becomes a harmless no-op.
+// Files are tried in priority order; the first value found for a key wins.
+for (const envFile of [
+  ".env.local",
+  ".env.development.local",
+  ".env",
+]) {
+  const envPath = path.join(process.cwd(), envFile);
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
 
 // Initialize Firebase Admin dynamically to avoid failures if credentials are not configured
 let firestoreAdminDb: any = null;
