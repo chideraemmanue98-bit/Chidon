@@ -1155,7 +1155,7 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
                               <span>Merchant Key Setup Guide</span>
                             </div>
                             <p className="text-slate-300 text-[11px] leading-relaxed">
-                              You have not yet configured <code className="bg-black/50 px-1 py-0.5 rounded font-mono text-yellow-400">PAYSTACK_SECRET_KEY</code> in Google AI Studio's Secret Tab. Please add it to unlock live payment gateway channels.
+                              <code className="bg-black/50 px-1 py-0.5 rounded font-mono text-yellow-400">PAYSTACK_SECRET_KEY</code> is not available from Netlify Environment Variables. Add it to unlock live payment gateway channels.
                             </p>
                           </div>
                         )}

@@ -1,0 +1,57 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/gemini/generate"
+  to = "/.netlify/functions/gemini-generate"
+  status = 200
+
+[[redirects]]
+  from = "/api/gemini/generate-image"
+  to = "/.netlify/functions/gemini-image"
+  status = 200
+
+[[redirects]]
+  from = "/api/trends/videos"
+  to = "/.netlify/functions/trends-videos"
+  status = 200
+
+[[redirects]]
+  from = "/api/paystack/config"
+  to = "/.netlify/functions/paystack-config"
+  status = 200
+
+[[redirects]]
+  from = "/api/paystack/calculator"
+  to = "/.netlify/functions/paystack-calculator"
+  status = 200
+
+[[redirects]]
+  from = "/api/paystack/initialize"
+  to = "/.netlify/functions/paystack-initialize"
+  status = 200
+
+[[redirects]]
+  from = "/api/paystack/verify"
+  to = "/.netlify/functions/paystack-verify"
+  status = 200
+
+[[redirects]]
+  from = "/api/paystack/webhook"
+  to = "/.netlify/functions/paystack-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/chidon_iq/qualities"
+  to = "/.netlify/functions/app-qualities"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

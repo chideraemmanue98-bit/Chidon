@@ -620,7 +620,7 @@ const ComponentLoader = () => (
 
 // --- HYBRID AI SERVICE ---
 
-const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel?: string) => {
+const useHybridAI = (_geminiKey: string | null, _hfKey: string | null, geminiModel?: string) => {
   const { i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -3974,8 +3974,8 @@ export default function App() {
     }
   };
   const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing', feature: FeatureId}[]>([]);
-  const [apiKey] = useState<string>(process.env.GEMINI_API_KEY || '');
-  const [hfKey] = useState<string>(process.env.HUGGINGFACE_API_KEY || '');
+  const [apiKey] = useState<string>('server-configured');
+  const [hfKey] = useState<string>('');
   const activeGeminiKey = customGeminiApiKey || apiKey;
   const activeHfKey = customHfApiKey || hfKey;
   const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>({});
