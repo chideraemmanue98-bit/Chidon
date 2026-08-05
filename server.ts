@@ -5,7 +5,6 @@ import { GoogleGenAI } from "@google/genai";
 import { QueryClient } from "@tanstack/query-core";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
-import fs from "fs";
 import crypto from "crypto";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -19,22 +18,16 @@ let firestoreAdminDb: any = null;
 function getFirestoreAdminDb(): any {
   if (!firestoreAdminDb) {
     try {
-      const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-      if (fs.existsSync(configPath)) {
-        const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-        
-        if (getApps().length === 0) {
-          initializeApp({
-            projectId: firebaseConfig.projectId
-          });
-        }
-        
-        // Correctly target the specific Firestore database instance configured
-        firestoreAdminDb = getFirestore(undefined, firebaseConfig.firestoreDatabaseId);
-        console.log("[Firebase Admin] Initialized Firestore Admin SDK successfully.");
-      } else {
-        console.warn("[Firebase Admin] firebase-applet-config.json not found. Firestore Admin operations will be disabled.");
+      const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+      const databaseId = process.env.VITE_FIREBASE_DATABASE_ID || process.env.FIREBASE_DATABASE_ID;
+      if (!projectId) {
+        console.warn("[Firebase Admin] Firebase project environment variables are not configured.");
+        return null;
       }
+
+      if (getApps().length === 0) initializeApp({ projectId });
+      firestoreAdminDb = getFirestore(undefined, databaseId);
+      console.log("[Firebase Admin] Initialized Firestore Admin SDK successfully.");
     } catch (err) {
       console.error("[Firebase Admin] Initialization failed:", err);
     }
@@ -664,7 +657,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
     if (!secretKey) {
       return res.status(500).json({
         success: false,
-        message: "Paystack Secret Key is not configured on the server. Please add PAYSTACK_SECRET_KEY in your Google AI Studio Secret panel."
+        message: "Paystack Secret Key is not configured on the server. Please add PAYSTACK_SECRET_KEY in Netlify Environment Variables."
       });
     }
 
