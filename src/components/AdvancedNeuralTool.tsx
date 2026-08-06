@@ -25,7 +25,6 @@ import {
   Check,
   History as HistoryIcon,
   Trash2,
-  Sparkles,
   Clock,
   Loader2
 } from 'lucide-react';
@@ -51,7 +50,8 @@ import {
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
   RepurposePipelineWidget,
-  GoogleBrowserEngineWidget
+  ChidonIQCrawlerWidget,
+  TrendHeatmapWidget
 } from './SpecializedWidgets';
 
 // --- FORMATTING PROTOCOL ---
@@ -791,7 +791,12 @@ ${FORMATTING_PROTOCOL}`;
         </div>
       </div>
 
-      {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
+      {feature.id === 'trending' && <ChidonIQCrawlerWidget />}
+      {feature.id === 'trending' && (
+        <div className="mb-6">
+          <TrendHeatmapWidget />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         
@@ -1048,7 +1053,7 @@ ${FORMATTING_PROTOCOL}`;
                           ) : currentMessageFromHistory?.wrappedUp ? (
                             <Check size={12} />
                           ) : (
-                            <Sparkles size={11} />
+                            <Zap size={11} />
                           )}
                           <span>{currentMessageFromHistory?.wrappedUp ? 'Wrapped Up' : 'Wrap Up (0.5c)'}</span>
                         </button>
@@ -1105,7 +1110,7 @@ ${FORMATTING_PROTOCOL}`;
                 {currentMessageFromHistory?.wrappedUp && (
                   <div className="p-5 mb-6 bg-brand/5 border border-brand/10 rounded-2xl shadow-sm text-left relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="absolute top-0 right-0 p-3">
-                      <Sparkles size={16} className="text-brand animate-pulse" />
+                      <Zap size={16} className="text-brand animate-pulse" />
                     </div>
                     <h4 className="text-xs font-mono font-bold text-brand uppercase tracking-[0.2em] mb-2.5">✓ 3-Bullet Strategic Wrap-Up</h4>
                     <ul className="space-y-2.5 font-sans text-xs text-[var(--text-secondary)]">

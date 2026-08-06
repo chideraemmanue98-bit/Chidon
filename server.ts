@@ -664,7 +664,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
     if (!secretKey) {
       return res.status(500).json({
         success: false,
-        message: "Paystack Secret Key is not configured on the server. Please add PAYSTACK_SECRET_KEY in your Google AI Studio Secret panel."
+        message: "Paystack Secret Key is not configured on the server. Please add PAYSTACK_SECRET_KEY in your AI Studio's Secrets panel."
       });
     }
 
@@ -877,7 +877,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
   // PERF: Server-side Gemini proxy backed by TanStack Query client caching to reuse previous outputs and minimize upstream API request latency to ~0ms
   app.post("/api/gemini/generate", apiRateLimiter, cargoSanitizer, async (req, res) => {
     try {
-      const { prompt, language, model } = req.body;
+      const { prompt, language, model, feature } = req.body;
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
       }
@@ -914,10 +914,211 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
         }
       }
 
+      const FEATURE_MAP: Record<string, string[]> = {
+        "Video Ideas": ["content-ideas", "video ideas"],
+        "Hashtag Engine": ["hashtags", "hashtag engine"],
+        "Script Writer": ["scripts", "script writer"],
+        "Bio Optimizer": ["bio", "bio optimizer"],
+        "Thumbnail Designer": ["thumbnails", "thumbnail designer"],
+        "Competitor Lab": ["competitor-analysis", "competitor lab"],
+        "Schedule Lab": ["posting-schedule", "schedule lab"],
+        "Engagement Advisor": ["engagement-calc", "engagement advisor"],
+        "Trend Detector": ["trending", "trend detector"],
+        "Audience Builder": ["personas", "audience builder"],
+        "Headline Hook": ["headlines", "headline hook"],
+        "Repurpose AI": ["repurposing", "repurpose ai"],
+        "Command Calendar": ["post-scheduler", "command calendar"],
+        "CHIDON Vault": ["drafts", "chidon vault"],
+        "Book with Lines": ["ruled-book", "book with lines"],
+        "CHIDON IQ Template Library": ["template-library", "chidon iq template library"],
+        "Organic Video Feed": ["youtube-seo", "organic video feed"],
+        "SEO Scorecard": ["seo-scorecard", "seo scorecard"],
+        "Keyword Intel": ["keyword-research", "keyword intel", "vseo-keywords"],
+        "Shadowban Solutions": ["shadowban-solutions", "shadowban solutions"],
+        "Title + Description": ["vseo-title-desc", "title + description"],
+        "Tag Architect": ["vseo-tags", "tag architect"],
+        "Video Auditor": ["vseo-scorecard", "video auditor"],
+        "Post Optimizer": ["post-optimizer", "post optimizer"],
+        "Trending Topics": ["trending-topics", "trending topics"],
+        "Daily Video Ideas": ["daily-ideas", "daily video ideas"],
+        "Trend Alerts": ["trend-alerts", "trend alerts"],
+        "Time Optimizer": ["vseo-best-time", "time optimizer"]
+      };
+
+      const FEATURE_PROTOCOLS: Record<string, { outputType: string; task: string; format: string }> = {
+        "Video Ideas": {
+          outputType: "LIST",
+          task: "Generate 20 viral video ideas for specified niche + audience.",
+          format: "Numbered list 1-20. Every item MUST follow this exact format: '1. Hook: ... | Angle: ... | Why it works: ...'"
+        },
+        "Hashtag Engine": {
+          outputType: "LIST",
+          task: "Generate 30 hashtags for specified platform + topic.",
+          format: "3 groups of 10. Exactly: 'BROAD 10: ...', 'NICHE 10: ...', 'BRANDED 10: ...'"
+        },
+        "Script Writer": {
+          outputType: "LONG PROMPT",
+          task: "Write 60-second script for specified topic + tone.",
+          format: "Structure: HOOK 0-3s, PROBLEM, 3 STEP SOLUTION, CTA. Full script with [B-ROLL] and [TEXT ON SCREEN]. Minimum 250 words, highly detailed, tactical, and actionable."
+        },
+        "Bio Optimizer": {
+          outputType: "LIST",
+          task: "Write 5 optimized bios for specified platform + niche.",
+          format: "Numbered list 1-5. Every item MUST follow: 'Bio X: Line1 Value | Line2 Proof | Line3 CTA'. CONSTRAINT: Max 150 characters total."
+        },
+        "Thumbnail Designer": {
+          outputType: "LONG PROMPT",
+          task: "Describe 5 thumbnail concepts for specified video title.",
+          format: "Exactly 5 paragraphs. Each paragraph MUST describe: Visual, Text (3 words max), Colors, Emotion, and Why it gets clicks."
+        },
+        "Competitor Lab": {
+          outputType: "LONG PROMPT",
+          task: "Analyze competitors in specified niche + platform.",
+          format: "Report detailing: Top 3 Competitors, What They Do Well, Gaps, How We Win, and 5 Content Angles They Missed."
+        },
+        "Schedule Lab": {
+          outputType: "LIST",
+          task: "Generate best posting schedule for specified platform + audience + timezone.",
+          format: "7 days schedule. Each day format: 'Day: Time: Reason'"
+        },
+        "Engagement Advisor": {
+          outputType: "LIST",
+          task: "Provide 20 ways to boost comments on specified platform + topic.",
+          format: "Numbered list 1-20. Each format: '1. Tactic: ... | Example: ...'"
+        },
+        "Trend Detector": {
+          outputType: "LIST",
+          task: "Find 10 trends in specified niche + platform.",
+          format: "List of 10 items. Each format: 'Trend: | Platform: | How to use: | Expires:'"
+        },
+        "Audience Builder": {
+          outputType: "LONG PROMPT",
+          task: "Define ideal audience for specified brand/niche.",
+          format: "300+ word deep-dive persona containing: Demographics, Pain Points, Desires, Where they hang out, and How to speak to them."
+        },
+        "Headline Hook": {
+          outputType: "LIST",
+          task: "Generate 50 hooks for specified topic.",
+          format: "Numbered list 1-50. Max 10 words each."
+        },
+        "Repurpose AI": {
+          outputType: "LONG PROMPT",
+          task: "Repurpose specified long content into 10 pieces.",
+          format: "Must provide: 5 Shorts, 3 Tweets, 2 Carousels, 1 Email. All with full copy and scripts."
+        },
+        "Command Calendar": {
+          outputType: "LIST",
+          task: "Create 30-day content calendar for specified niche + platform.",
+          format: "30 days schedule. Each day format: 'Day X: Topic | Format | Hook | CTA'"
+        },
+        "CHIDON Vault": {
+          outputType: "LIST",
+          task: "Generate 15 swipeable templates for specified content type + niche.",
+          format: "Numbered list 1-15. Each format: 'X. Template: | Formula: | Example:'"
+        },
+        "Book with Lines": {
+          outputType: "LONG PROMPT",
+          task: "Create book outline for specified book title and audience.",
+          format: "Must contain: Title, Subtitle, exactly 12 Chapters with 3 bullets each, and Target reader details."
+        },
+        "CHIDON IQ Template Library": {
+          outputType: "LIST",
+          task: "Generate 20 plug-and-play templates for specified task + niche.",
+          format: "Numbered list 1-20. Each format: 'X. Template: | When to use: | Copy:'"
+        },
+        "Organic Video Feed": {
+          outputType: "LIST",
+          task: "Generate 20 $0 ad spend video ideas for specified niche.",
+          format: "Numbered list 1-20. Each format: 'X. Idea: | Why Organic: | First 3 Seconds:'"
+        },
+        "SEO Scorecard": {
+          outputType: "LONG PROMPT",
+          task: "Audit specified title/description/video for SEO.",
+          format: "Score /100 + What's Good + What's Bad + 10 Action Steps."
+        },
+        "Keyword Intel": {
+          outputType: "LIST",
+          task: "Generate 50 keywords for specified topic/niche with search intent.",
+          format: "Numbered list 1-50. Each line format: 'Keyword | Intent: Info/Buy | Difficulty: Low/Med/High'"
+        },
+        "Shadowban Solutions": {
+          outputType: "LONG PROMPT",
+          task: "Create shadowban diagnostic report for specified platform.",
+          format: "5 Signs + 7 Reasons + 10-Step Recovery + What NOT to do."
+        },
+        "Title + Description": {
+          outputType: "LIST",
+          task: "Generate 10 SEO titles + descriptions for specified topic.",
+          format: "Numbered list 1-10. Each format: 'Title X: | Description X: 2 sentences with keywords + CTA'"
+        },
+        "Tag Architect": {
+          outputType: "LIST",
+          task: "Generate 500 characters of YouTube tags for specified topic.",
+          format: "Output ONLY a single line of comma-separated tags (broad, niche, and long-tail tags). No list formatting, no intros, no quotes."
+        },
+        "Video Auditor": {
+          outputType: "LONG PROMPT",
+          task: "Audit specified video link or script.",
+          format: "Hook Score /10 + Retention Risks + SEO Score + 5 Improvements + Next Video Idea."
+        },
+        "Post Optimizer": {
+          outputType: "LONG PROMPT",
+          task: "Optimize specified post for specified platform.",
+          format: "Actionable Feedback + 3 Complete Rewrites + Why each rewrite is strategically better."
+        },
+        "Trending Topics": {
+          outputType: "LIST",
+          task: "Find 15 trending topics in specified niche this week.",
+          format: "Numbered list 1-15. Each line format: 'Topic | Why Trending | Content Angle'"
+        },
+        "Daily Video Ideas": {
+          outputType: "LIST",
+          task: "Generate 7 video ideas for specified niche, one per day.",
+          format: "Format: 'Monday: ...', 'Tuesday: ...', 'Wednesday: ...', 'Thursday: ...', 'Friday: ...', 'Saturday: ...', 'Sunday: ...'"
+        },
+        "Trend Alerts": {
+          outputType: "LONG PROMPT",
+          task: "Brief on specified trend.",
+          format: "What is it + Why it matters + How to use + 3 Examples + Expires when."
+        },
+        "Time Optimizer": {
+          outputType: "LIST",
+          task: "Find best 3 times to post on specified platform + audience + country.",
+          format: "Exactly 3 entries: 'Time X: | Reason: | Engagement Expectation:'"
+        }
+      };
+
       const text = await queryClient.fetchQuery({
-        queryKey: ["gemini-generate", prompt, language, targetModel],
+        queryKey: ["gemini-generate", prompt, language, targetModel, feature],
         queryFn: async () => {
-          const systemInstruction = `You are a professional social media optimizer. Output your entire response exclusively in public human ${languageName}. Always maintain perfect native slang, correct localization, and natural phrasing appropriate for ${languageName}. NEVER output any part of your answer in English or any other language, unless the requested language name itself is English, or the user specifically requests translation to other tongues. All titles, scripts, hashtags, strategy documents, lists, schedules, analyses, and tables MUST be in ${languageName} completely. Keep formatting beautiful with clean markdown.`;
+          let systemInstruction = `You are CHIDON IQ, an elite AI Growth Architect for creators, brands, and agencies.
+Your job: Force viral growth on YouTube, TikTok, Instagram, X, LinkedIn.
+Tone: Expert, confident, growth-obsessed.
+
+CORE RULES FOR ALL OUTPUTS:
+1. Be direct. No fluff, no intros like "Here you go" or "Here is...". Start directly with the content.
+2. If the feature protocol requires a LIST output type, output ONLY the list. Absolutely no side-explanations, conversational filler, introductory remarks, or summaries.
+3. If the feature protocol requires a LONG PROMPT or report output type, write a minimum of 300 words. Be extremely detailed, tactical, and actionable.
+4. Always use data, formulas, and the psychology of virality.
+5. All outputs must be beautifully formatted in clean, clear markdown.
+
+Output your entire response exclusively in public human ${languageName}. Always maintain perfect native slang, correct localization, and natural phrasing appropriate for ${languageName}. NEVER output any part of your answer in English or any other language, unless the requested language name itself is English, or the user specifically requests translation to other tongues. All titles, scripts, hashtags, strategy documents, lists, schedules, analyses, and tables MUST be in ${languageName} completely.`;
+
+          if (feature) {
+            const matchedKey = Object.keys(FEATURE_MAP).find(key => {
+              return key.toLowerCase() === feature.toLowerCase() || 
+                     FEATURE_MAP[key].some(val => val.toLowerCase() === feature.toLowerCase());
+            });
+            if (matchedKey && FEATURE_PROTOCOLS[matchedKey]) {
+              const protocol = FEATURE_PROTOCOLS[matchedKey];
+              systemInstruction += `\n\n=== CHIDON IQ PROTOCOL MANDATE ===
+Feature Name: ${matchedKey}
+Output Type: ${protocol.outputType}
+Task: ${protocol.task}
+Required Format: ${protocol.format}
+Strictly satisfy this mandate. Do not deviate under any circumstance. Ensure compliance with output types (if LIST, return ONLY the formatted items; if LONG PROMPT, ensure comprehensive 300+ word output with deep structural density).`;
+            }
+          }
 
           const response = await generateContentWithRetryAndFallback(prompt, {
             model: targetModel,
@@ -1065,7 +1266,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
         queryFn: async () => {
           return [
             { id: "realtime", label: "Real-time Intelligence", description: "Hyper-speed neural synchronization across global nodes." },
-            { id: "ai-native", label: "Gemini-Native", description: "Deep integration with Google's most advanced AI models." },
+            { id: "ai-native", label: "Neural-Native", description: "Deep integration with our most advanced sovereign AI models." },
             { id: "tactical", label: "Tactical Design", description: "Military-grade UX for high-performance content operations." },
             { id: "secure", label: "Secure Vault", description: "Fragmented intelligence storage with encrypted signal protocols." }
           ];

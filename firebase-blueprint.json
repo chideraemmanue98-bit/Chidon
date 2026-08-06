@@ -294,9 +294,46 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["type", "description", "amount", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A real-time user notification record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["credit", "message", "ai_result", "system"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "link": { "type": "string" },
+        "image": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "title", "body", "isRead", "createdAt"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "User saved generated results or content favorites",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "featureId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "featureId", "title", "content", "createdAt"]
     }
   },
   "firestore": {
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": "Favorite",
+      "description": "Collection of saved results / favorites per user"
+    },
+    "/notifications/{userId}/items/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of secure notifications delivered to a user"
+    },
     "/chats/{userId}/features/{featureId}/messages/{messageId}": {
       "schema": "ChatMessage",
       "description": "Real-time AI generation messages stored for 7 days per feature page"

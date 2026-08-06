@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Trash2, 
-  Sparkles, 
   Clock, 
   Check, 
   Loader2, 
@@ -205,7 +204,7 @@ export default function HistorySidebar({
                               {isWrapping ? (
                                 <Loader2 size={12} className="animate-spin" />
                               ) : (
-                                <Sparkles size={11} />
+                                <Zap size={11} />
                               )}
                               <span>Wrap Up</span>
                             </button>

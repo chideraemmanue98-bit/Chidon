@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShoppingBag, ShieldCheck, Zap, Sparkles, Check, ArrowRight } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Zap, Check, ArrowRight } from 'lucide-react';
 
 interface JoinBuyerProps {
   onProceed: () => void;
@@ -52,7 +52,7 @@ export const JoinBuyer: React.FC<JoinBuyerProps> = ({ onProceed, onSkip, onBack 
             </span>
           </h1>
           <p className="text-xs md:text-sm text-gray-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            Connect instantly with verified Instagram, TikTok, and YouTube specialists. Build your brand profile with our integrated Google AI wizard and list tasks in seconds.
+            Connect instantly with verified Instagram, TikTok, and YouTube specialists. Build your brand profile with our integrated Chidon AI wizard and list tasks in seconds.
           </p>
         </div>
 

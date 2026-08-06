@@ -225,6 +225,14 @@ service cloud.firestore {
     }
 
     // Rules Definitions
+    match /notifications/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     match /users/{userId} {
       allow read, write: if true;
 
@@ -234,6 +242,10 @@ service cloud.firestore {
 
       match /transactions/{transactionId} {
         allow read, write: if true;
+      }
+
+      match /favorites/{favoriteId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 

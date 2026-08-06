@@ -63,7 +63,7 @@ const CHANNEL_PRESETS = [
         description: "Unproven health claims violating medical suppression parameters. High spam flags."
       },
       {
-        title: "Earn $400 every hour copy-pasting Google Translator files (Easy student method)",
+        title: "Earn $400 every hour copy-pasting Online Translator files (Easy student method)",
         thumbnail: "A student holding thick cash blocks. Text 'INSTANT PAYOUT'",
         description: "High density of keyword triggers about passive income. Low-quality reuse guide."
       },

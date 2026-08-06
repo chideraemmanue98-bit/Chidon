@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { auth } from '../firebase';
 import { getSupabaseClient } from '../lib/supabase';
+import { triggerNotification } from '../hooks/useNotifications';
 
 import { useChat } from '../hooks/useChat';
 import { MarketplacePage } from './marketplace/MarketplacePage';
@@ -413,6 +414,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           proposals_count: 0
         }]);
       if (error) throw error;
+      
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'system',
+        title: 'Chidon Freelance: Job Posted',
+        body: `Your job listing "${jobData.title}" was published successfully with a budget of $${jobData.budget}.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -437,6 +447,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           delivery_date: gig.deliveryTime
         }]);
       if (error) throw error;
+
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'credit',
+        title: 'Chidon Freelance: Gig Purchase & Escrow Initialized',
+        body: `Successfully placed order for "${gig.title}" for $${gig.price}. Funds are secured in escrow.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -464,6 +483,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           reviews_count: 0
         }]);
       if (error) throw error;
+
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'system',
+        title: 'Chidon Freelance: Gig Created',
+        body: `Your growth service gig "${gigData.title}" is now live in the Marketplace at $${gigData.price}.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -495,6 +523,17 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         })
         .eq('id', orderId);
       if (error) throw error;
+
+      // Real-time notification trigger
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'ai_result',
+          title: 'Chidon Freelance: Assets Delivered',
+          body: `You have successfully submitted deliverables for Order ID: ${orderId}.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -520,6 +559,16 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         }]);
       if (revErr) throw revErr;
 
+      // Real-time notification trigger
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'credit',
+          title: 'Chidon Freelance: Order Completed',
+          body: `Order ID: ${orderId} has been successfully completed and reviewed! Escrow funds cleared.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -534,6 +583,17 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         .update({ status: 'cancelled' })
         .eq('id', orderId);
       if (error) throw error;
+
+      // Real-time notification trigger
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'system',
+          title: 'Chidon Freelance: Order Cancelled',
+          body: `Order ID: ${orderId} was cancelled. Any pending escrow holds have been released.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -564,6 +624,14 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         
       if (error) throw error;
       
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'credit',
+        title: 'Chidon Freelance: Quick Escrow Started',
+        body: `Secure checkout for "${gig.title}" completed. $${gig.price} holds active in escrow.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       setHomePaystackSuccess(true);
       await new Promise(resolve => setTimeout(resolve, 1200));
       setHomeCheckoutGig(null);
@@ -589,6 +657,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           text
         }]);
       if (error) throw error;
+
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'message',
+        title: 'Chidon Freelance: Message Dispatched',
+        body: `You sent a message inside Order ${orderId}: "${text.slice(0, 45)}..."`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);

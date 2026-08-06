@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, Shield, Briefcase, FileText, Check, Plus, Trash2, 
-  Sparkles, Loader2, ArrowRight, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon 
+  Cpu, Loader2, ArrowRight, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon 
 } from 'lucide-react';
 
 interface SetupProfileProps {
@@ -53,7 +53,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
     setAiPrompt(prompt);
   };
 
-  const handleRunGoogleAI = async () => {
+  const handleRunChidonAI = async () => {
     if (!aiPrompt.trim()) {
       setErrorText("Please write or select a concept/prompt first.");
       return;
@@ -121,7 +121,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
       setSetupMode('manual'); // Transition to review & save manually
     } catch (err: any) {
       console.error(err);
-      setErrorText("Google AI was unable to parse structured JSON. Please retry or enter manual parameters.");
+      setErrorText("Chidon AI was unable to parse structured JSON. Please retry or enter manual parameters.");
     } finally {
       setGenerating(false);
     }
@@ -218,7 +218,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
             <span className={`text-[10px] font-mono font-black border px-2.5 py-1 rounded-full uppercase tracking-widest ${
               role === 'buyer' ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400' : 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400'
             }`}>
-              Google AI Setup Portal
+              Chidon AI Setup Portal
             </span>
             <h2 className="text-xl font-display font-black text-gray-900 dark:text-white uppercase">
               Configure Your sovereign Profile
@@ -298,19 +298,19 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
               </div>
 
               <button
-                onClick={handleRunGoogleAI}
+                onClick={handleRunChidonAI}
                 disabled={generating}
                 className="w-full py-4 bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 text-white font-mono font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 shadow-xl shadow-indigo-500/10"
               >
                 {generating ? (
                   <>
                     <Loader2 size={14} className="animate-spin text-white" />
-                    <span>Gemini AI Generating Node...</span>
+                    <span>Chidon AI Generating Node...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles size={14} className="text-white animate-pulse" />
-                    <span>⚡ Generate Profile & Portfolio with Google AI</span>
+                    <Cpu size={14} className="text-white animate-pulse" />
+                    <span>⚡ Generate Profile & Portfolio with Chidon AI</span>
                   </>
                 )}
               </button>
@@ -325,7 +325,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
               <form onSubmit={handleSubmit} className="space-y-5">
                 {aiSuccess && (
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs text-emerald-800 dark:text-emerald-300">
-                    🎉 Profile drafted successfully with Google AI! Review and tweak the values below before completing.
+                    🎉 Profile drafted successfully with Chidon AI! Review and tweak the values below before completing.
                   </div>
                 )}
 

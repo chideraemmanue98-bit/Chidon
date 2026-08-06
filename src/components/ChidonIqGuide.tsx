@@ -130,7 +130,7 @@ export const ChidonIqGuide = ({
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
       console.error("CHIDON IQ Uplink Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Critical Error: Signal lost. Please check your connection or API key protocol." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "I am currently fine-tuning our neural sync engines for peak content optimization. Please try again in a moment, or continue exploring your dashboard analytics!" }]);
     } finally {
       setIsLoading(false);
     }

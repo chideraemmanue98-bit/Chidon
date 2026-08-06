@@ -631,7 +631,7 @@ export default function ChidonPricing({
                         <span>Development Sandbox Mode</span>
                       </div>
                       <p className="text-[11px]">
-                        Please ensure <code className="bg-black/40 text-yellow-400 px-1 py-0.5 rounded font-mono text-[10px]">PAYSTACK_SECRET_KEY</code> is correctly set in your Google AI Studio Secret tab to unlock real payment processing.
+                        Please ensure <code className="bg-black/40 text-yellow-400 px-1 py-0.5 rounded font-mono text-[10px]">PAYSTACK_SECRET_KEY</code> is correctly set in your AI Studio Developer Secrets Panel to unlock real payment processing.
                       </p>
                     </div>
                   )}
