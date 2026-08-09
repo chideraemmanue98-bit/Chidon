@@ -163,7 +163,7 @@ export const ScriptPrompterWidget = ({ content }: { content: string }) => {
 };
 
 // --- WIDGET 2: HIGH-FIDELITY SMARTPHONE PREVIEW (For Social Bios) ---
-export const ProfilePreviewWidget = ({ content }: { content: string }) => {
+export const ProfilePreviewWidget = ({ content, checkAndDeductCredits }: { content: string, checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean> }) => {
   const [activeBioIndex, setActiveBioIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -194,6 +194,13 @@ export const ProfilePreviewWidget = ({ content }: { content: string }) => {
   };
 
   const handleGenerateAvatar = async () => {
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, 'Generated Bio Profile Avatar');
+      if (!allowed) {
+        setGenerating(false);
+        return;
+      }
+    }
     setGenerating(true);
     setError(null);
     setAvatarUrl(null);
@@ -380,7 +387,7 @@ export const ProfilePreviewWidget = ({ content }: { content: string }) => {
 
 
 // --- WIDGET 3: BLUEPRINT DESIGN CANVAS (For Thumbnails) ---
-export const ThumbnailCanvasWidget = ({ content }: { content: string }) => {
+export const ThumbnailCanvasWidget = ({ content, checkAndDeductCredits }: { content: string, checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean> }) => {
   const [activeConceptIndex, setActiveConceptIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -427,6 +434,13 @@ export const ThumbnailCanvasWidget = ({ content }: { content: string }) => {
   }, [activeConceptIndex]);
 
   const handleGenerateImage = async () => {
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, `Rendered YouTube Thumbnail Design: ${details.headline}`);
+      if (!allowed) {
+        setGenerating(false);
+        return;
+      }
+    }
     setGenerating(true);
     setError(null);
     setViewMode('render');

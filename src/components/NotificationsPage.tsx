@@ -11,7 +11,7 @@ interface NotificationsPageProps {
   onNavigateToMessages?: () => void;
 }
 
-type TabType = 'all' | 'unread' | 'credit' | 'message';
+type TabType = 'all' | 'unread' | 'system' | 'message';
 
 export const NotificationsPage: React.FC<NotificationsPageProps> = ({ 
   onBack,
@@ -26,7 +26,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     clearAllNotifications 
   } = useNotifications();
 
-  // Exactly requested tabs: All | Unread | Credits | Messages
+  // Exactly requested tabs: All | Unread | System | Messages
   const [activeTab, setActiveTab] = useState<TabType>('all');
 
   const getNotificationIcon = (type: NotificationItem['type']) => {
@@ -61,8 +61,8 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     switch (activeTab) {
       case 'unread':
         return notifications.filter(item => !item.isRead);
-      case 'credit':
-        return notifications.filter(item => item.type === 'credit');
+      case 'system':
+        return notifications.filter(item => item.type === 'system');
       case 'message':
         return notifications.filter(item => item.type === 'message');
       case 'all':
@@ -137,16 +137,16 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
           <Bell size={28} className="text-indigo-500" /> Notifications
         </h2>
         <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-          Real-time logs for system updates, earned credits, deal messages, and automated workspace insights.
+          Real-time logs for system updates, platform notifications, deal messages, and automated workspace insights.
         </p>
       </div>
 
-      {/* Tabs list (Exactly: All | Unread | Credits | Messages) */}
+      {/* Tabs list (Exactly: All | Unread | System | Messages) */}
       <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-950 border border-slate-850 rounded-2xl" id="notifications-tabs-container">
         {[
           { id: 'all', label: `All (${notifications.length})` },
           { id: 'unread', label: `Unread (${unreadCount})` },
-          { id: 'credit', label: 'Credits' },
+          { id: 'system', label: 'System' },
           { id: 'message', label: 'Messages' }
         ].map((tab) => (
           <button

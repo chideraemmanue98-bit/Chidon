@@ -10,6 +10,7 @@ interface SetupProfileProps {
   onCompleteProfile: (profileData: any, portfolioData?: any) => Promise<void>;
   onSkip: () => void;
   onBack: () => void;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 const PLATFORM_OPTIONS = ['Instagram', 'TikTok', 'YouTube', 'Twitter'];
@@ -26,7 +27,7 @@ const BUYER_QUICK_PROMPTS = [
   "Fitness influencer looking for an experienced copywriter to maintain a daily engaging Twitter flow."
 ];
 
-export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProfile, onSkip, onBack }) => {
+export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProfile, onSkip, onBack, checkAndDeductCredits }) => {
   const [setupMode, setSetupMode] = useState<'ai' | 'manual'>('ai');
   const [aiPrompt, setAiPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -57,6 +58,11 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
     if (!aiPrompt.trim()) {
       setErrorText("Please write or select a concept/prompt first.");
       return;
+    }
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(1, `Freelance Onboarding AI Profile Setup`);
+      if (!allowed) return;
     }
 
     setGenerating(true);

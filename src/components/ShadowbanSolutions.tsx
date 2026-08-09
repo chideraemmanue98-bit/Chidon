@@ -801,9 +801,6 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
               </span>
 
               <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                <span className="text-[11px] font-mono font-bold text-red-500 dark:text-red-400 uppercase tracking-wider">
-                  Cost: 4 Credits
-                </span>
                 <button
                   id="shb_trigger_audit_btn"
                   onClick={triggerAudit}

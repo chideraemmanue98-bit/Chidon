@@ -64,7 +64,7 @@ export const JoinBuyer: React.FC<JoinBuyerProps> = ({ onProceed, onSkip, onBack 
           <div className="space-y-3.5">
             {[
               { title: "Sovereign Escrow Protection", desc: "Your hired budget stays locked securely in our system until you verify the delivered social video, post, or layout." },
-              { title: "Starter Refill Credits Included", desc: "Enjoy a default grant of 250 trial credits immediately to simulate gig orders and platform test posts." },
+              { title: "Starter Test Funds Included", desc: "Enjoy a default grant of 250 test dollars immediately to simulate gig orders and platform test posts." },
               { title: "Direct Realtime Encrypted Chat", desc: "Align on custom deliverables, formats, and milestones using the built-in creator messaging thread." }
             ].map((f, idx) => (
               <div key={idx} className="flex gap-3">

@@ -20,7 +20,6 @@ interface HistorySidebarProps {
   onSelect: (msg: ChatHistoryMessage) => void;
   onWrapUp: (msg: ChatHistoryMessage) => Promise<void>;
   onDelete: (msgId: string) => Promise<void>;
-  credits: number | null;
 }
 
 export default function HistorySidebar({
@@ -30,8 +29,7 @@ export default function HistorySidebar({
   loading,
   onSelect,
   onWrapUp,
-  onDelete,
-  credits
+  onDelete
 }: HistorySidebarProps) {
   const [wrappingIds, setWrappingIds] = useState<string[]>([]);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);

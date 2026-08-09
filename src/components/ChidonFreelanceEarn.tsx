@@ -32,6 +32,7 @@ interface ChidonFreelanceEarnProps {
   onSignIn?: () => void;
   isDarkMode?: boolean;
   setIsDarkMode?: (dark: boolean) => void;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({ 
@@ -39,7 +40,8 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
   user, 
   onSignIn, 
   isDarkMode = true, 
-  setIsDarkMode 
+  setIsDarkMode,
+  checkAndDeductCredits
 }) => {
   // Navigation states: 'welcome' | 'role_selection' | 'join_buyer' | 'join_seller' | 'profile_setup' | 'portal'
   const [step, setStep] = useState<'welcome' | 'role_selection' | 'join_buyer' | 'join_seller' | 'profile_setup' | 'portal'>('welcome');
@@ -786,6 +788,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
               onCompleteProfile={handleCompleteProfile}
               onSkip={handleSkipOnboarding}
               onBack={() => setStep(selectedRole === 'buyer' ? 'join_buyer' : 'join_seller')}
+              checkAndDeductCredits={checkAndDeductCredits}
             />
           </motion.div>
         )}
@@ -886,12 +889,12 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                 <button 
                   onClick={() => setPortalTab('profile')}
                   className="flex items-center gap-2 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 px-3 py-2 rounded-2xl cursor-pointer transition-all"
-                  title="Go to profile to add credits"
+                  title="Go to profile to add mock funds"
                 >
                   <Coins size={14} className="text-cyan-400" />
                   <div className="text-left">
                     <span className="text-[8px] block font-mono text-slate-500 uppercase font-black tracking-wider leading-none">Wallet balance</span>
-                    <span className="text-xs font-bold text-cyan-400 leading-none">${myProfile?.credits || 0} credits</span>
+                    <span className="text-xs font-bold text-cyan-400 leading-none">${myProfile?.credits || 0} USD</span>
                   </div>
                 </button>
 
@@ -920,69 +923,8 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     </div>
                   </div>
                 </div>
-
-                {/* Developer Board button */}
-                <button
-                  onClick={() => setShowAdminPanel(!showAdminPanel)}
-                  className="p-2 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-400 hover:text-purple-400 cursor-pointer transition-all"
-                  title="Toggle admin board"
-                >
-                  <Cpu size={14} className={showAdminPanel ? 'text-purple-400 animate-spin' : ''} />
-                </button>
               </div>
             </div>
-
-            {/* Admin Panel Panel */}
-            <AnimatePresence>
-              {showAdminPanel && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="p-6 bg-slate-950/90 border border-purple-500/30 rounded-3xl text-left space-y-4 shadow-xl overflow-hidden"
-                >
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                    <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full tracking-widest uppercase flex items-center gap-2">
-                      <Cpu size={12} /> Verification Board (Developer Admin Sandbox)
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-500">Live Profiles: {profiles.length} detected</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {profiles.map(profile => (
-                      <div key={profile.id} className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 flex flex-col justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <img src={profile.avatarURL} alt="" className="w-6 h-6 rounded-full border border-slate-800" />
-                            <span className="text-xs font-bold text-white">@{profile.fullName}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-mono">Role: {profile.role} | Credits: ${profile.credits}</p>
-                          <p className="text-[10px] text-slate-500 italic max-w-xs truncate">"{profile.bio || 'No bio written'}"</p>
-                        </div>
-
-                        <button
-                          onClick={async () => {
-                            if (!supabase) return;
-                            await supabase
-                              .from('profiles')
-                              .update({ is_verified: !profile.isVerified })
-                              .eq('id', profile.id);
-                            await fetchData();
-                          }}
-                          className={`w-full py-1.5 rounded-lg font-mono text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                            profile.isVerified
-                              ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                          }`}
-                        >
-                          {profile.isVerified ? 'Revoke seller badge' : 'Verify seller profile'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* MAIN PORTAL PAGES SECTION */}
             <AnimatePresence mode="wait">
@@ -1468,18 +1410,18 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         </div>
                       </div>
 
-                      {/* Wallet credits instant Top-up node */}
+                      {/* Wallet Balance top-up node */}
                       <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-1.5">
                             <Coins size={14} className="text-cyan-400" />
                             <span className="text-xs font-bold text-white font-mono">My Wallet Balance</span>
                           </div>
-                          <span className="text-sm font-bold text-cyan-400 font-mono">${myProfile?.credits || 0}</span>
+                          <span className="text-sm font-bold text-cyan-400 font-mono">${myProfile?.credits || 0} USD</span>
                         </div>
                         
                         <p className="text-[9px] text-slate-500 leading-normal">
-                          Need more test credits to lock escrow or order gigs? Simulate a mock fund reload instantly.
+                          Need more test funds to lock escrow or order gigs? Simulate a mock fund reload instantly.
                         </p>
 
                         <button
@@ -1765,7 +1707,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     </span>
                     <h2 className="text-2xl font-display font-black tracking-tight text-white uppercase">Platform Navigation Directory</h2>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      Navigate between sovereign nodes, active escrow tracking gates, profile setups, and admin sandbox configurations instantly.
+                      Navigate between sovereign nodes, active escrow tracking gates, and seller profile setups instantly.
                     </p>
                   </div>
 
@@ -1880,22 +1822,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">5. Swap Mode perspective</h4>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                           Toggle between Buyer Client mode to purchase or Seller Creator mode to fulfill social growth gigs.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Card 6: Admin panel */}
-                    <div 
-                      onClick={() => setShowAdminPanel(!showAdminPanel)}
-                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
-                    >
-                      <div className="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
-                        <Cpu size={18} />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">6. Admin Sandbox Board</h4>
-                        <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Open developer board to grant verified badges to other sovereign node sellers or review live profiles logs.
                         </p>
                       </div>
                     </div>

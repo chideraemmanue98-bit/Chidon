@@ -30,6 +30,7 @@ import {
   Sliders, 
   Loader2, 
   AlertCircle,
+  AlertTriangle,
   RefreshCcw,
   ChevronRight,
   ChevronDown,
@@ -3738,6 +3739,10 @@ export default function App() {
   const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing' | 'notifications'>('dashboard');
   
   const [trialExpiredModalOpen, setTrialExpiredModalOpen] = useState(false);
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [showNoCreditsModal, setShowNoCreditsModal] = useState<boolean>(false);
+  const [neededCredits, setNeededCredits] = useState<number>(0);
+
   const { 
     hasAccess, 
     isTrialing, 
@@ -3933,6 +3938,12 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
+        if (data.credits !== undefined) {
+          setUserCredits(data.credits);
+        } else {
+          setUserCredits(25);
+          updateDoc(userDocRef, { credits: 25 }).catch(err => console.error(err));
+        }
         setSubscriptionStatus("active");
         setSubscriptionPlan("Enterprise Sovereign Pack");
         if (data.createdAt !== undefined) {
@@ -3956,7 +3967,8 @@ export default function App() {
             currentPeriodEnd: trialEndAt
           },
           subscriptionPlan: "Pro Strategist Pack",
-          subscriptionStatus: "active"
+          subscriptionStatus: "active",
+          credits: 25
         }, { merge: true })
           .catch(err => console.error("Failed to initialize user document:", err));
       }
@@ -4011,12 +4023,6 @@ export default function App() {
       [activeFeature]: []
     }));
     setActiveDocId(null);
-  };
-
-  // Credit Deduction System Helper - Removed for subscription-based access
-  const credits = null;
-  const deductCredits = async (amount: number): Promise<boolean> => {
-    return true;
   };
 
   // Sync state helpers
@@ -4279,23 +4285,83 @@ export default function App() {
 
   const getFeatureCreditCost = (featureId: FeatureId | string): number => {
     switch (featureId) {
+      // PRO FEATURES - 5 Credits
       case 'ai-script-outline':
-        return 5;
       case 'shadowban-solutions':
-        return 4;
+        return 5;
+
+      // BIG FEATURES - 3 Credits
       case 'scripts':
       case 'competitor-analysis':
       case 'trending':
       case 'trending-topics':
-      case 'trend-alerts':
-        return 3;
       case 'content-ideas':
       case 'thumbnails':
+      case 'youtube-seo':
+      case 'seo-scorecard':
+      case 'keyword-research':
+      case 'vseo-title-desc':
+      case 'vseo-scorecard':
+      case 'vseo-keywords':
+      case 'template-library':
+      case 'repurposing':
+      case 'personas':
+        return 3;
+
+      // MINI FEATURES - 2 Credits
+      case 'hashtags':
+      case 'bio':
+      case 'posting-schedule':
+      case 'engagement-calc':
+      case 'headlines':
+      case 'post-scheduler':
+      case 'drafts':
+      case 'ruled-book':
+      case 'post-optimizer':
+      case 'vseo-tags':
+      case 'vseo-best-time':
       case 'daily-ideas':
-        return 2;
+      case 'trend-alerts':
       default:
-        return 1;
+        return 2;
     }
+  };
+
+  const checkAndDeductCredits = async (cost: number, description: string): Promise<boolean> => {
+    // Explicitly block users if trial is expired and they have no active subscription
+    if (!hasAccess) {
+      setView('pricing');
+      setTrialExpiredModalOpen(true);
+      return false;
+    }
+
+    if (userCredits < cost) {
+      setNeededCredits(cost);
+      setShowNoCreditsModal(true);
+      return false;
+    }
+
+    // Deduct credits in Firestore
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      try {
+        await updateDoc(userRef, {
+          credits: increment(-cost),
+          updatedAt: serverTimestamp()
+        });
+
+        // Log transaction history
+        await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+          type: 'debit',
+          amount: cost,
+          description: description,
+          createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error("Failed to deduct/log credits:", err);
+      }
+    }
+    return true;
   };
 
   const handleGenerate = async (prompt: string, displayPrompt?: string) => {
@@ -4306,10 +4372,29 @@ export default function App() {
       return;
     }
 
-    // Determine the credit cost of this run dynamically using secure tool calculator
     const cost = getFeatureCreditCost(activeFeature);
-    const canProceed = await deductCredits(cost);
-    if (!canProceed) return;
+    if (userCredits < cost) {
+      setNeededCredits(cost);
+      setShowNoCreditsModal(true);
+      return;
+    }
+
+    // Deduct credits in Firestore
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        credits: increment(-cost),
+        updatedAt: serverTimestamp()
+      }).catch(err => console.error("Failed to deduct credits:", err));
+
+      // Log transaction history
+      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+        type: 'debit',
+        amount: cost,
+        description: `Ran analysis on ${activeFeature.toUpperCase().replace('-', ' ')}`,
+        createdAt: serverTimestamp()
+      }).catch(err => console.error("Failed to log debit transaction:", err));
+    }
 
     const userMsg: ChatMessage = {
       id: `${Math.random().toString(36).substr(2, 9)}-${Date.now()}`,
@@ -4362,7 +4447,7 @@ export default function App() {
         triggerNotification(user.uid, {
           type: 'ai_result',
           title: `Chidon IQ: ${featureLabel} Analysis Complete`,
-          body: `High-fidelity neural results prepared successfully. Deducted ${cost} credit(s).`,
+          body: `High-fidelity neural results prepared successfully.`,
           link: `/tools?tool=${activeFeature}`
         }).catch(err => console.error("Notification dispatch failed", err));
       }
@@ -4465,6 +4550,7 @@ export default function App() {
             onSignIn={handleSignIn}
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
+            checkAndDeductCredits={checkAndDeductCredits}
           />
         </PaywallGate>
       );
@@ -4484,6 +4570,7 @@ export default function App() {
           <ChidonIqBlog
             onSaveDraft={handleSaveDraft}
             onBack={goBack}
+            checkAndDeductCredits={checkAndDeductCredits}
           />
         </PaywallGate>
       );
@@ -4506,6 +4593,7 @@ export default function App() {
           db={db}
           showTrialEndedModal={trialExpiredModalOpen}
           onCloseTrialEndedModal={() => setTrialExpiredModalOpen(false)}
+          onNavigate={navigateTo}
         />
       );
     }
@@ -4529,14 +4617,14 @@ export default function App() {
       onSaveDraft: handleSaveDraft,
       onRestoreDraft: handleRestoreDraft,
       onBack: goBack,
-      credits,
       activeDocId,
       chatMessages,
       loadingHistory,
       onLoadHistoryItem: handleLoadHistoryItem,
       onWrapUpMessage: wrapUpMessage,
       onDeleteMessage: deleteMessage,
-      onNewChat: handleNewChat
+      onNewChat: handleNewChat,
+      checkAndDeductCredits: checkAndDeductCredits
     };
 
     const renderFeature = () => {
@@ -4569,8 +4657,7 @@ export default function App() {
               feature={commonProps.feature} 
               onBack={commonProps.onBack} 
               user={user}
-              credits={credits}
-              onDeductCredits={deductCredits}
+              checkAndDeductCredits={checkAndDeductCredits}
             />
           </Suspense>
         );
@@ -4597,8 +4684,7 @@ export default function App() {
             <TemplateLibrary 
               onBack={commonProps.onBack} 
               onSaveDraft={commonProps.onSaveDraft}
-              credits={credits}
-              onDeductCredits={deductCredits}
+              checkAndDeductCredits={checkAndDeductCredits}
             />
           </Suspense>
         );
@@ -4706,7 +4792,7 @@ export default function App() {
             triggerNotification(user.uid, {
               type: 'system',
               title: 'Welcome to Chidon IQ',
-              body: 'Welcome to Chidon IQ. Here are 3 credits!',
+              body: 'Welcome to Chidon IQ. Start exploring your premium features today!',
               link: '/dashboard'
             });
           }
@@ -5131,7 +5217,7 @@ export default function App() {
           featureId={feedbackFeatureId} 
           generatedContent={feedbackContent}
         />
-        <ChidonIqGuide credits={credits} onDeductCredits={deductCredits} />
+        <ChidonIqGuide checkAndDeductCredits={checkAndDeductCredits} />
       </Suspense>
 
       {/* Maintenance Purge / Reset Confirmation Overlay */}
@@ -5200,6 +5286,82 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Insufficient Credits Modal Alert Overlay */}
+      <AnimatePresence>
+        {showNoCreditsModal && (
+          <div 
+            className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-[4px]"
+            onClick={() => setShowNoCreditsModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.15)] overflow-hidden relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500" />
+
+              <button
+                onClick={() => setShowNoCreditsModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="p-6 md:p-8 space-y-6 text-left">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl shrink-0">
+                    <AlertTriangle size={24} className="animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono font-bold tracking-widest text-amber-500 uppercase leading-none">
+                      INSUFFICIENT FUNDS
+                    </span>
+                    <h3 className="text-lg font-black text-white tracking-tight pt-1 leading-tight uppercase font-sans">
+                      Refill Wallet Balance
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                    You need <strong className="text-amber-400">{neededCredits} credits</strong> to run this high-fidelity cognitive engine, but you only have <strong className="text-white">{userCredits} credits</strong> remaining in your secure wallet.
+                  </p>
+                  <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                    Refill your balance instantly using our secure Paystack payments gateway to unlock professional features.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNoCreditsModal(false);
+                      setView('pricing');
+                    }}
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90 text-white rounded-xl text-xs font-black tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Recharge Wallet</span>
+                    <ArrowRight size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNoCreditsModal(false);
+                    }}
+                    className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <ToastNotification />
       </div>
     </BookContext.Provider>

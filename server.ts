@@ -190,7 +190,7 @@ app.use(express.json({
 }));
 
   // =========================================================================
-  // SECURE OS V4 ENGINE: GOOGLE AI STUDIO STANDARDS DEFENSE-IN-DEPTH SYSTEM
+  // SECURE OS V4 ENGINE: CHIDON AI STANDARDS DEFENSE-IN-DEPTH SYSTEM
   // =========================================================================
   
   // 1. Hardened HTTP Response Headers to obstruct frame exploitation, XSS, and payload sniffing
@@ -339,6 +339,93 @@ app.use(express.json({
       protocol: "v4.0.8",
       backend: "Node.js/Express"
     });
+  });
+
+  // DYNAMIC SITEMAP ENGINE FOR SEARCH ENGINE OPTIMIZATION (SEO)
+  app.get("/sitemap.xml", (req, res) => {
+    res.header("Content-Type", "application/xml");
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- 1. Main Cognitive Workspace Terminal -->
+  <url>
+    <loc>https://chidoniq.com.ng/</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- 2. GigSocial Sovereign Freelance Portal -->
+  <url>
+    <loc>https://chidoniq.com.ng/freelance</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- 3. Credit Packages & Billing Gateway -->
+  <url>
+    <loc>https://chidoniq.com.ng/pricing</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 4. Chidon IQ Training Academy & Guide -->
+  <url>
+    <loc>https://chidoniq.com.ng/guide</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 5. Chidon IQ News & System Blogs -->
+  <url>
+    <loc>https://chidoniq.com.ng/blog</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 6. Chidon Vault Saved Generations Archive -->
+  <url>
+    <loc>https://chidoniq.com.ng/vault</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- 7. Copywriting Templates & Hook Libraries -->
+  <url>
+    <loc>https://chidoniq.com.ng/templates</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- 8. Shadowban Analytics & Recovery Solutions -->
+  <url>
+    <loc>https://chidoniq.com.ng/shadowban</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- 9. Specialized Developer Diagnostics & Widgets -->
+  <url>
+    <loc>https://chidoniq.com.ng/widgets</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- 10. Secure Authentication Gateway -->
+  <url>
+    <loc>https://chidoniq.com.ng/auth</loc>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>`);
   });
 
   // REAL-TIME CRAWLING WEB BROWSER ENGINE: FETCH TRENDING VIDEOS FROM YOUTUBE, FACEBOOK, AND TIKTOK
@@ -836,19 +923,38 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
         // Update User Doc in Firestore securely using admin privileges
         const userRef = firestoreAdmin.collection("users").doc(userId);
         
+        // Check if transaction has already been processed to avoid double-crediting
+        const receiptRef = userRef.collection("receipts").doc(reference);
+        const receiptDoc = await receiptRef.get();
+        
+        if (receiptDoc.exists) {
+          console.log(`[Paystack Webhook] Transaction ${reference} was already processed. Skipping duplicate grant.`);
+          return res.json({ success: true, message: "Transaction already processed" });
+        }
+
         // Calculate USD value of plan (can fallback to metadata properties if present)
         const usdPrice = metadata.originalAmountUsd || (amountKobo / 100);
+
+        // Map credits: Enterprise = 500, Pro = 300, Starter = 120
+        const creditsGranted = planName === 'Enterprise Sovereign Pack' ? 500 : (planName === 'Pro Strategist Pack' ? 300 : 120);
+        const mappedPackage = planName === 'Enterprise Sovereign Pack' ? 'enterprise' : (planName === 'Pro Strategist Pack' ? 'pro' : 'basic');
+        const oneMonthLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
         await userRef.update({
           subscriptionPlan: planName || "Starter Creator Pack",
           subscriptionStatus: "active",
           subscriptionPrice: usdPrice,
           paystackSubscriptionRef: reference,
-          updatedAt: FieldValue.serverTimestamp()
+          credits: FieldValue.increment(creditsGranted),
+          updatedAt: FieldValue.serverTimestamp(),
+          subscription: {
+            status: 'active',
+            package: mappedPackage,
+            currentPeriodEnd: oneMonthLater
+          }
         });
 
         // Log payment receipt as a subcollection document to create a robust historical billing ledger
-        const receiptRef = userRef.collection("receipts").doc(reference);
         await receiptRef.set({
           amountNgn: currency === "NGN" ? (amountKobo / 100) : null,
           amountUsd: usdPrice,
@@ -861,8 +967,17 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
           gatewayResponse: data.gateway_response || "Successful"
         });
 
-        console.log(`[Paystack Webhook] Sync successful! User ${userId} active subscription updated to '${planName}'.`);
-        return res.json({ success: true, message: "Webhook processed and Firestore updated successfully" });
+        // Log transaction history for credit grant
+        const txRef = userRef.collection("transactions").doc(reference);
+        await txRef.set({
+          type: "credit",
+          amount: creditsGranted,
+          description: `Purchased ${planName || "Starter Creator Pack"} (+${creditsGranted} credits)`,
+          createdAt: FieldValue.serverTimestamp()
+        });
+
+        console.log(`[Paystack Webhook] Sync successful! User ${userId} granted ${creditsGranted} credits & subscription updated to '${planName}'.`);
+        return res.json({ success: true, message: "Webhook processed, credits granted, and Firestore updated successfully" });
 
       } catch (err: any) {
         console.error("[Paystack Webhook] Error writing updates to Firestore:", err);
@@ -1124,7 +1239,8 @@ Strictly satisfy this mandate. Do not deviate under any circumstance. Ensure com
             model: targetModel,
             config: { 
               temperature: 0.8,
-              systemInstruction: systemInstruction
+              systemInstruction: systemInstruction,
+              tools: [{ googleSearch: {} }]
             }
           });
           if (!response || !response.text) {

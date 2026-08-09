@@ -13,6 +13,7 @@ import { getSupabaseClient } from '../lib/supabase';
 interface ChidonIqBlogProps {
   onSaveDraft?: (featureId: string, content: string, title: string) => Promise<void>;
   onBack?: () => void;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 interface BlogPost {
@@ -49,7 +50,7 @@ const CATEGORIES = [
   { name: 'Tech & AI Systems', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
 ];
 
-export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack }) => {
+export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack, checkAndDeductCredits }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'synthesizer'>('feed');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -315,6 +316,12 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
 
   const triggerSynthesis = async () => {
     if (!synthTopic.trim()) return;
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(3, `AI Blog Post Synthesis: ${synthTopic}`);
+      if (!allowed) return;
+    }
+
     setGenerating(true);
     setErrorStatus('');
     setGeneratedBlog('');
@@ -428,6 +435,12 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
 
   const executeConsultation = async (blogPostTitle: string) => {
     if (!consultQuestion.trim()) return;
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(1, `Blog Consult: "${consultQuestion.slice(0, 30)}..."`);
+      if (!allowed) return;
+    }
+
     setConsultLoading(true);
     setConsultAnswer('');
     
