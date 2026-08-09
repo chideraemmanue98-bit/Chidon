@@ -43,6 +43,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { doc, getDoc, updateDoc, serverTimestamp, onSnapshot, Timestamp, collection, addDoc, query, orderBy, limit, increment } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 
 export interface PricingPlan {
   id: string;
@@ -98,6 +99,40 @@ export default function ChidonPricing({
   const [paySuccess, setPaySuccess] = useState<boolean>(false);
   const [callbackSuccess, setCallbackSuccess] = useState<boolean>(false);
   const [callbackPlanName, setCallbackPlanName] = useState<string>('');
+
+  // Free promo credits states
+  const [claimedFreeCredits, setClaimedFreeCredits] = useState<boolean>(false);
+  const [claimingFree, setClaimingFree] = useState<boolean>(false);
+
+  const handleClaimFreeCredits = async () => {
+    if (!user) {
+      toast.error("Please authenticate to claim free credits.");
+      return;
+    }
+    setClaimingFree(true);
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        credits: increment(3),
+        claimedFreeCredits: true
+      });
+
+      // Log a transaction history entry
+      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+        type: 'credit',
+        amount: 3,
+        description: `Claimed Free Promo Credits (+3 credits)`,
+        createdAt: serverTimestamp()
+      });
+
+      toast.success("Successfully claimed 3 free working credits!");
+    } catch (err: any) {
+      console.error("Failed to claim free credits:", err);
+      toast.error("Error claiming credits: " + err.message);
+    } finally {
+      setClaimingFree(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -244,10 +279,16 @@ export default function ChidonPricing({
         } else {
           setUserCredits(0);
         }
+        if (data.claimedFreeCredits !== undefined) {
+          setClaimedFreeCredits(data.claimedFreeCredits);
+        } else {
+          setClaimedFreeCredits(false);
+        }
       } else {
         setActivePlan('Free Workspace Tier');
         setSubStatus('inactive');
         setUserCredits(0);
+        setClaimedFreeCredits(false);
       }
     }, (error) => {
       console.error("Firestore user sub snapshot error:", error);
@@ -575,6 +616,40 @@ export default function ChidonPricing({
               <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
                 This balance fuels your Chidon IQ cognitive runs. Standard analyses burn 1–2 credits; high-volume script designs and competitor sweeps burn 3–5.
               </p>
+            </div>
+
+            {/* Gift/Claim Promo Section */}
+            <div className="pt-4 border-t border-slate-800/60">
+              {claimedFreeCredits ? (
+                <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono">
+                  <Check className="text-emerald-400 shrink-0" size={14} />
+                  <span>Promo Claimed! +3 Free Credits added to secure wallet.</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Free Working Credits Promo</span>
+                    <span className="px-1.5 py-0.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-400 text-[8px] font-mono font-bold uppercase">Gift</span>
+                  </div>
+                  <button
+                    onClick={handleClaimFreeCredits}
+                    disabled={claimingFree}
+                    className="w-full py-2 px-3 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 text-white font-mono uppercase font-black tracking-widest text-[10px] rounded-xl flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all"
+                  >
+                    {claimingFree ? (
+                      <>
+                        <RefreshCw size={12} className="animate-spin" />
+                        <span>Claiming Credits...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={12} className="animate-pulse" />
+                        <span>Claim 3 Free Credits</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
