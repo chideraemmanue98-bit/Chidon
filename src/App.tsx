@@ -3657,8 +3657,8 @@ export default function App() {
   const [resetStatus, setResetStatus] = useState<'idle' | 'clearing' | 'success' | 'error'>('idle');
 
   // Subscription and 3-day Free Trial states
-  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>("Enterprise Sovereign Pack");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>("active");
   const [userCreatedAt, setUserCreatedAt] = useState<any>(null);
 
   const getTrialStatus = () => {
@@ -3738,20 +3738,15 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
+        setSubscriptionStatus("active");
         if (data.subscription && data.subscription.status) {
-          setSubscriptionStatus(data.subscription.status);
           const mappedName = data.subscription.package === 'enterprise' ? 'Enterprise Sovereign Pack' : (data.subscription.package === 'pro' ? 'Pro Strategist Pack' : 'Starter Creator Pack');
           setSubscriptionPlan(mappedName);
         } else {
           if (data.subscriptionPlan !== undefined) {
             setSubscriptionPlan(data.subscriptionPlan);
           } else {
-            setSubscriptionPlan(null);
-          }
-          if (data.subscriptionStatus !== undefined) {
-            setSubscriptionStatus(data.subscriptionStatus);
-          } else {
-            setSubscriptionStatus(null);
+            setSubscriptionPlan("Enterprise Sovereign Pack");
           }
         }
         if (data.createdAt !== undefined) {
