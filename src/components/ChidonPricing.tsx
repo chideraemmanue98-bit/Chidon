@@ -244,37 +244,48 @@ export default function ChidonPricing({
   ];
 
   const handleCheckoutInitiate = async (plan: PricingPlan) => {
-    if (!user) return;
+    setSelectedPlan(plan);
     setLoading(true);
     setVerifyError('');
+    setCheckoutUrl('');
+    setPayRef('');
     setPaySuccess(false);
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const mappedPackage = plan.id === 'enterprise' ? 'enterprise' : (plan.id === 'pro' ? 'pro' : 'basic');
-      const foreverDate = Timestamp.fromMillis(Date.now() + 3650 * 24 * 60 * 60 * 1000); // 10 years free
-      
-      await updateDoc(userRef, {
-        subscriptionPlan: plan.name,
-        subscriptionStatus: 'active',
-        subscriptionPrice: 0,
-        paystackSubscriptionRef: 'FREE_UPGRADE_' + plan.id.toUpperCase(),
-        updatedAt: serverTimestamp(),
-        subscription: {
-          status: 'active',
-          package: mappedPackage,
-          currentPeriodEnd: foreverDate
-        }
+      const response = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: payerEmail || user?.email || 'subscriber@chidon.iq',
+          amount: plan.price,
+          currency: 'USD',
+          orderId: `sub_${plan.id}_${Date.now()}`,
+          metadata: {
+            planId: plan.id,
+            planName: plan.name,
+            userId: user?.uid,
+            isSubscription: true
+          }
+        })
       });
 
-      setPaySuccess(true);
-      setCallbackSuccess(true);
-      setCallbackPlanName(plan.name);
-      setActivePlan(plan.name);
-      setSubStatus('active');
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        throw new Error(resData.message || 'Initialization request failed.');
+      }
+
+      const { authorization_url, reference } = resData.data;
+      setCheckoutUrl(authorization_url);
+      setPayRef(reference);
+
+      // Open secure window
+      window.open(authorization_url, '_blank', 'noopener,noreferrer');
+
     } catch (err: any) {
-      console.error('Plan free activation client error:', err);
-      setVerifyError(err.message || 'Failed to activate free plan.');
+      console.error('Paystack initialization client error:', err);
+      setVerifyError(err.message || 'Failed to initialize Paystack checkout.');
     } finally {
       setLoading(false);
     }
@@ -341,15 +352,15 @@ export default function ChidonPricing({
       {/* HEADER HERO AREA */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[var(--border-base)]/60">
         <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] uppercase tracking-wider font-bold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-full text-brand text-[10px] uppercase tracking-wider font-bold">
             <Crown size={12} className="animate-pulse" />
-            <span>100% Free Lifetime Sovereign Active</span>
+            <span>Workspace Upgrades</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-[var(--text-primary)] leading-none">
-            CHIDON IQ: Fully Unlocked & Free
+            Chidon Pricing Matrix
           </h1>
           <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-            Enjoy unrestricted, free access to all our premier cognitive social media and SEO engines. Select any premium package below to activate its professional workflows instantly.
+            Unlock premium cognitive social media engines. Choose a monthly subscription pack to activate professional workflows. Connected securely to Paystack.
           </p>
         </div>
         
@@ -498,11 +509,11 @@ export default function ChidonPricing({
                 {/* Pricing indicators */}
                 <div className="py-6 border-y border-[var(--border-base)]/40 my-6 space-y-1 text-left">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black tracking-tight text-emerald-500 font-mono">
-                      FREE
+                    <span className="text-4xl font-black tracking-tight text-[var(--text-primary)] font-mono bg-clip-text text-transparent bg-gradient-to-r from-[var(--text-primary)] via-indigo-400 to-[var(--text-primary)]">
+                      ${plan.price}
                     </span>
                     <span className="text-xs text-[var(--text-secondary)] font-mono uppercase font-bold">
-                      COGNITIVE LIFETIME PLAN
+                      USD / MONTHLY
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-brand font-extrabold font-mono">
@@ -544,7 +555,7 @@ export default function ChidonPricing({
                       : 'bg-slate-50 dark:bg-slate-800/80 border border-[var(--border-base)] hover:bg-slate-100 dark:hover:bg-slate-700 text-[var(--text-primary)]'
                   }`}
                 >
-                  {isSelectedPlan ? 'Active Plan' : 'Activate Plan for Free'}
+                  {isSelectedPlan ? 'Currently Subscribed' : 'Subscribe to Pack'}
                 </button>
               </motion.div>
             );
