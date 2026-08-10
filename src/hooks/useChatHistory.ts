@@ -124,7 +124,9 @@ export function useChatHistory(userId: string | null) {
   const wrapUpMessage = async (
     featureId: string,
     messageId: string,
-    resultText: string
+    resultText: string,
+    currentCredits?: any,
+    onOutOfCredits?: () => void
   ) => {
     if (!userId) return false;
 

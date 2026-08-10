@@ -183,7 +183,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               </div>
               <span className="text-[10px] font-mono font-extrabold text-slate-400 uppercase block tracking-wider">Total Cleared Earnings</span>
               <h3 className="text-3xl font-mono text-white font-black">${totalEarnings}</h3>
-              <p className="text-[10px] text-emerald-400 font-mono">⚡ Funds directly withdrawable to Paystack</p>
+              <p className="text-[10px] text-emerald-400 font-mono">⚡ Credits directly withdrawable to Paystack</p>
             </div>
 
             {/* Locked escrow */}

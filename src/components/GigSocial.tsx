@@ -158,8 +158,9 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
   const [portDelivery, setPortDelivery] = useState('3');
   const [submittingPortfolio, setSubmittingPortfolio] = useState(false);
 
-  // Active order undergoing payment checkout
+  // Stripe Sandbox Simulation state
   const [showStripeSim, setShowStripeSim] = useState<OrderContract | null>(null);
+  const [stripeProcessing, setStripeProcessing] = useState(false);
 
   // Paystack transaction state definitions
   const [paystackConfigured, setPaystackConfigured] = useState<boolean>(false);
@@ -540,7 +541,7 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
 
       const newOrderRef = await addDoc(collection(db, 'orders'), orderPayload);
       
-      // Transition to secure checkout modal for payment gateway processing
+      // Auto transition to Stripe Sandbox for simulated payment
       const checkoutRef: OrderContract = {
         id: newOrderRef.id,
         buyerId: user.uid,
@@ -555,6 +556,28 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
 
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'orders');
+    }
+  };
+
+  // Simulating the secure credit-card processing under 2026 Sandbox Connect framework
+  const handleSimulateStripePayment = async () => {
+    if (!showStripeSim) return;
+    setStripeProcessing(true);
+
+    try {
+      const orderDoc = doc(db, 'orders', showStripeSim.id);
+      // Update DB to secure in_progress / paid status
+      await updateDoc(orderDoc, {
+        status: 'in_progress'
+      });
+
+      alert("Escrow funds settled and initialized inside Stripe Connect sub-ledger! Job is now marked 'In Progress'.");
+      setShowStripeSim(null);
+      setActiveTab('orders');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `orders/${showStripeSim.id}`);
+    } finally {
+      setStripeProcessing(false);
     }
   };
 
@@ -887,10 +910,10 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
                 )}
               </div>
 
-              {/* Gateway Channel */}
+              {/* Sandbox connect */}
               <div className="pt-2 border-t border-dashed border-slate-200/60 dark:border-white/5">
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block text-center">Direct Paystack Gateway Channel</span>
-                <span className="text-[7px] font-mono text-slate-600 block text-center uppercase pt-0.5">Secure Escrow Protection</span>
+                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block text-center">GigSocial Sandbox Connect</span>
+                <span className="text-[7px] font-mono text-slate-600 block text-center uppercase pt-0.5">Secure Escrow V2.6</span>
               </div>
             </div>
           </aside>
@@ -1087,12 +1110,22 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
                   </div>
                 </div>
 
-                {/* PAYSTACK REAL GATEWAY SELECTION */}
-                <div className="p-2.5 bg-[#3AC162]/10 border border-[#3AC162]/20 rounded-xl mb-5 flex items-center justify-between font-mono text-[10px]">
-                  <span className="text-emerald-400 font-bold uppercase">Payment Gateway Active:</span>
-                  <span className="text-white bg-[#3AC162] px-2.5 py-1 rounded font-bold uppercase flex items-center gap-1">
-                    💳 Paystack Secure Direct Channel
-                  </span>
+                {/* TAB SWITCHER: PAYSTACK VS STRIPE SIMULATOR */}
+                <div className="grid grid-cols-2 gap-2 bg-[#050507] p-1 rounded-xl border border-white/5 mb-5 font-mono text-[10px]">
+                  <button
+                    onClick={() => {
+                      // Stay on Paystack view
+                    }}
+                    className="py-2 px-3 rounded-lg text-center font-bold transition-all cursor-pointer bg-[#3AC162] text-white"
+                  >
+                    💳 PAYSTACK (REAL GATEWAY)
+                  </button>
+                  <button
+                    onClick={handleSimulateStripePayment}
+                    className="py-2 px-3 rounded-lg text-center font-bold transition-all cursor-pointer text-slate-500 hover:text-slate-300"
+                  >
+                    ⚙️ SIMULATE WITH STRIPE
+                  </button>
                 </div>
 
                 {/* RENDER ACTIVE PAYMENT SYSTEM FRAME */}
@@ -1122,7 +1155,7 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
                               <span>Merchant Key Setup Guide</span>
                             </div>
                             <p className="text-slate-300 text-[11px] leading-relaxed">
-                              You have not yet configured <code className="bg-black/50 px-1 py-0.5 rounded font-mono text-yellow-400">PAYSTACK_SECRET_KEY</code> in AI Studio's Developer Secrets Panel. Please add it to unlock live payment gateway channels.
+                              You have not yet configured <code className="bg-black/50 px-1 py-0.5 rounded font-mono text-yellow-400">PAYSTACK_SECRET_KEY</code> in Google AI Studio's Secret Tab. Please add it to unlock live payment gateway channels.
                             </p>
                           </div>
                         )}
@@ -1218,6 +1251,18 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
                         </div>
                       </>
                     )}
+
+                    {/* Standard simulated payment triggers instantly for backwards compatibility */}
+                    <div className="pt-3 border-t border-white/5 flex flex-col gap-2">
+                      <span className="text-[9px] font-mono uppercase text-slate-500 font-bold">Simulator Fallback</span>
+                      <button
+                        onClick={handleSimulateStripePayment}
+                        disabled={stripeProcessing}
+                        className="w-full py-2 bg-gradient-to-r from-[#22D3EE] to-[#6366F1] text-[#070709] font-bold text-[10px] font-mono uppercase tracking-widest rounded-xl hover:brightness-110 transition-all cursor-pointer"
+                      >
+                        {stripeProcessing ? "Simulating transaction..." : "SIMULATE WITH STRIPE SANDBOX"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -1886,7 +1931,7 @@ export const GigSocial: React.FC<GigSocialProps> = ({ onBack, user, onSignIn, is
                                     onClick={() => setShowStripeSim(ord)}
                                     className="px-2.5 py-1.5 bg-[#22D3EE] text-[#070709] text-[9px] font-mono uppercase font-black tracking-widest rounded-lg cursor-pointer hover:brightness-110"
                                   >
-                                    Secure Pay Escrow
+                                    Pay Escrow (Stripe)
                                   </button>
                                 )}
                                 {ord.status === 'dispatched' && (

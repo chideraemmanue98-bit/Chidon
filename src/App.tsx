@@ -30,7 +30,6 @@ import {
   Sliders, 
   Loader2, 
   AlertCircle,
-  AlertTriangle,
   RefreshCcw,
   ChevronRight,
   ChevronDown,
@@ -89,8 +88,6 @@ import {
   Area
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
-import toast from 'react-hot-toast';
-import { jsPDF } from 'jspdf';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { exportToJSON, exportToCSV, exportToTXT } from './lib/exportUtils';
@@ -124,8 +121,7 @@ import {
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
   RepurposePipelineWidget,
-  ChidonIQCrawlerWidget,
-  TrendHeatmapWidget
+  GoogleBrowserEngineWidget
 } from './components/SpecializedWidgets';
 
 import { BookContext } from './context/BookContext';
@@ -141,7 +137,6 @@ import { PaywallGate } from './components/PaywallGate';
 import { NotificationBell } from './components/NotificationBell';
 import { NotificationsPage } from './components/NotificationsPage';
 import { ToastNotification } from './components/ToastNotification';
-import { useNotifications, triggerNotification } from './hooks/useNotifications';
 
 import { 
   collection, 
@@ -157,8 +152,7 @@ import {
   limit,
   getDocs,
   increment,
-  Timestamp,
-  where
+  Timestamp
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
@@ -641,7 +635,7 @@ const useHybridAI = (geminiKey: string | null, hfKey: string | null, geminiModel
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt, language: i18n.language, model: geminiModel, feature: featureLabel }),
+        body: JSON.stringify({ prompt, language: i18n.language, model: geminiModel }),
       });
 
       if (!res.ok) {
@@ -1016,153 +1010,6 @@ const FeatureLayout = ({
 }) => {
   const { t } = useTranslation();
   const { onSendToBook } = useContext(BookContext);
-
-  const [userId, setUserId] = useState<string | null>(null);
-  const [savedIds, setSavedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUserId(u ? u.uid : null);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!userId) {
-      setSavedIds([]);
-      return;
-    }
-    const favsRef = collection(db, 'users', userId, 'favorites');
-    const unsubscribe = onSnapshot(favsRef, (snapshot) => {
-      const ids: string[] = [];
-      snapshot.forEach((doc) => {
-        ids.push(doc.id);
-      });
-      setSavedIds(ids);
-    }, (error) => {
-      console.error("Failed to load favorites in FeatureLayout:", error);
-    });
-    return () => unsubscribe();
-  }, [userId]);
-
-  const toggleFavorite = async (msg: ChatMessage) => {
-    if (!userId) {
-      toast.error("Please log in to save favorites.");
-      return;
-    }
-    
-    const path = `users/${userId}/favorites/${msg.id}`;
-    const isSaved = savedIds.includes(msg.id);
-    
-    try {
-      if (isSaved) {
-        await deleteDoc(doc(db, 'users', userId, 'favorites', msg.id));
-        toast.success("Removed from favorites");
-      } else {
-        await setDoc(doc(db, 'users', userId, 'favorites', msg.id), {
-          id: msg.id,
-          featureId: feature.id,
-          title: getFeatureLabel(feature, t),
-          content: msg.content,
-          createdAt: serverTimestamp()
-        });
-        toast.success("Saved to favorites");
-      }
-    } catch (err) {
-      handleFirestoreError(err, isSaved ? OperationType.DELETE : OperationType.WRITE, path);
-    }
-  };
-
-  const downloadAsPDF = (msg: ChatMessage) => {
-    try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const title = getFeatureLabel(feature, t);
-      
-      // Set font
-      doc.setFont('helvetica', 'normal');
-      
-      // Title
-      doc.setFontSize(18);
-      doc.setTextColor(33, 33, 33);
-      doc.text(title, 14, 20);
-      
-      // Divider
-      doc.setLineWidth(0.5);
-      doc.setDrawColor(200, 200, 200);
-      doc.line(14, 25, 196, 25);
-      
-      // Body Content
-      doc.setFontSize(10);
-      doc.setTextColor(50, 50, 50);
-      
-      const lines = msg.content.split('\n');
-      let y = 32;
-      const pageHeight = doc.internal.pageSize.height;
-      
-      lines.forEach(line => {
-        if (y > pageHeight - 20) {
-          doc.addPage();
-          y = 20;
-        }
-        
-        if (line.startsWith('### ')) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(11);
-          const text = line.replace('### ', '');
-          const wrappedLines = doc.splitTextToSize(text, 182);
-          wrappedLines.forEach((wl: string) => {
-            if (y > pageHeight - 20) { doc.addPage(); y = 20; }
-            doc.text(wl, 14, y);
-            y += 6;
-          });
-          y += 2;
-        } else if (line.startsWith('## ')) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(13);
-          const text = line.replace('## ', '');
-          const wrappedLines = doc.splitTextToSize(text, 182);
-          wrappedLines.forEach((wl: string) => {
-            if (y > pageHeight - 20) { doc.addPage(); y = 20; }
-            doc.text(wl, 14, y);
-            y += 7;
-          });
-          y += 2;
-        } else if (line.startsWith('# ')) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(15);
-          const text = line.replace('# ', '');
-          const wrappedLines = doc.splitTextToSize(text, 182);
-          wrappedLines.forEach((wl: string) => {
-            if (y > pageHeight - 20) { doc.addPage(); y = 20; }
-            doc.text(wl, 14, y);
-            y += 8;
-          });
-          y += 3;
-        } else {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          const wrappedLines = doc.splitTextToSize(line, 182);
-          wrappedLines.forEach((wl: string) => {
-            if (y > pageHeight - 20) { doc.addPage(); y = 20; }
-            doc.text(wl, 14, y);
-            y += 5.5;
-          });
-        }
-      });
-      
-      doc.save(`${title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${msg.id}.pdf`);
-      toast.success("PDF downloaded successfully!");
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-      toast.error("Failed to generate PDF");
-    }
-  };
-
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-12">
       {/* Tool Header */}
@@ -1231,7 +1078,7 @@ const FeatureLayout = ({
                   className="w-full flex flex-col space-y-3 p-5 rounded-2xl border border-slate-200 dark:border-white/5 bg-slate-50/40 dark:bg-[#08080C]/75 text-left shadow-md hover:border-slate-300 dark:hover:border-white/10 transition-colors"
                   id={`chat-board-row-${msg.id}`}
                 >
-                  {/* AI Studio Developer Code/System Header Interface */}
+                  {/* Google AI Studio Code/System Header Interface */}
                   <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-2.5">
                     <div className="flex items-center gap-2">
                       {isUser ? (
@@ -1285,27 +1132,6 @@ const FeatureLayout = ({
                       <CopyButton text={msg.content} />
                       <ShareButton text={msg.content} title={getFeatureLabel(feature, t)} />
                       
-                      <button
-                        onClick={() => toggleFavorite(msg)}
-                        className={cn(
-                          "btn-secondary h-8 py-0 px-3 rounded-lg font-mono text-[10px] uppercase font-black tracking-widest transition-all flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer border border-slate-200 dark:border-white/5",
-                          savedIds.includes(msg.id) ? "text-rose-500 bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/30 dark:border-rose-500/30" : "text-[var(--text-secondary)] hover:text-rose-500 hover:bg-rose-500/5"
-                        )}
-                        title={savedIds.includes(msg.id) ? "Remove from favorites" : "Save to favorites"}
-                      >
-                        <Heart size={12} fill={savedIds.includes(msg.id) ? "currentColor" : "none"} />
-                        <span>{savedIds.includes(msg.id) ? "Saved" : "Save"}</span>
-                      </button>
-
-                      <button
-                        onClick={() => downloadAsPDF(msg)}
-                        className="btn-secondary h-8 py-0 px-3 rounded-lg font-mono text-[10px] uppercase font-black tracking-widest transition-colors flex items-center justify-center gap-1.5 active:scale-95 duration-200 cursor-pointer text-[var(--text-secondary)] hover:text-indigo-400 hover:bg-indigo-500/5 border border-slate-200 dark:border-white/5"
-                        title="Download as a formatted PDF"
-                      >
-                        <Download size={12} />
-                        <span>PDF</span>
-                      </button>
-
                       {onGenerate && originalPrompt && (
                         <button
                           onClick={() => onGenerate(originalPrompt, userMsg?.content !== originalPrompt ? userMsg?.content : undefined)}
@@ -3149,8 +2975,7 @@ const GenericFeature = ({ feature, onGenerate, messages, loading, error, onGener
       loading={loading}
     >
       <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
-        {feature.id === 'trending' && <ChidonIQCrawlerWidget />}
-        {feature.id === 'trending' && <TrendHeatmapWidget />}
+        {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
         <GlowingCard className={cn("relative overflow-visible border-opacity-20 translate-y-0", feature.themeColor.replace('text-', 'border-'), feature.glowColor.replace('bg-', 'bg-opacity-5 bg-'))}>
           <div className={cn("absolute -top-3 -left-3 w-8 h-8 rounded-xl text-navy-black flex items-center justify-center shadow-lg z-20", feature.themeColor.replace('text-', 'bg-'))}>
             <feature.icon size={18} />
@@ -3244,7 +3069,7 @@ const Dashboard = ({
   onSignIn
 }: { 
   onSelectFeature: (id: FeatureId) => void, 
-  onNavigate: (view: any, feature?: FeatureId) => void, 
+  onNavigate: (view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn', feature?: FeatureId) => void, 
   geminiActive: boolean,
   systemLanguage: string,
   generationTone: string,
@@ -3254,7 +3079,6 @@ const Dashboard = ({
 }) => {
   const { t } = useTranslation();
   const [qualities, setQualities] = useState<any[]>(STATIC_QUALITIES);
-  const { notifications, unreadCount, markAsRead } = useNotifications();
 
   useEffect(() => {
     fetch('/api/chidon_iq/qualities')
@@ -3278,32 +3102,14 @@ const Dashboard = ({
     <div className="space-y-12 max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
         <div className="max-w-xl text-left space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10 border border-brand/20 text-brand text-[10px] uppercase tracking-wider font-bold"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-              {t("dashboard.systemLive") || "System Live: ACTIVE"}
-            </motion.div>
-
-            <motion.button
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              onClick={() => onNavigate('notifications')}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 hover:text-indigo-350 text-[10px] uppercase tracking-wider font-bold font-mono cursor-pointer transition-all active:scale-95 duration-200"
-              title="Open Notifications Centre"
-            >
-              <Bell size={10} className={unreadCount > 0 ? "animate-bounce text-indigo-400" : "text-slate-400"} />
-              <span>{unreadCount > 0 ? `${unreadCount} Alerts Pending` : "No Alerts"}</span>
-              {unreadCount > 0 && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              )}
-            </motion.button>
-          </div>
-
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10 border border-brand/20 text-brand text-[10px] uppercase tracking-wider font-bold"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+            {t("dashboard.systemLive") || "System Live: ACTIVE"}
+          </motion.div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-[var(--text-primary)] leading-tight">
             {t("dashboard.title1") || "Intelligence for"} <br />
             <span className="text-brand">{t("dashboard.title2") || "Content Domination."}</span>
@@ -3311,8 +3117,6 @@ const Dashboard = ({
           <p className="text-[var(--text-secondary)] text-base max-w-lg leading-relaxed">
             {t("dashboard.subtitle") || "The ultimate SaaS terminal for social performance. Use neural synchronization to scale your channel."}
           </p>
-
-
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto shrink-0">
@@ -3739,10 +3543,6 @@ export default function App() {
   const [view, setView] = useState<'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing' | 'notifications'>('dashboard');
   
   const [trialExpiredModalOpen, setTrialExpiredModalOpen] = useState(false);
-  const [userCredits, setUserCredits] = useState<number>(0);
-  const [showNoCreditsModal, setShowNoCreditsModal] = useState<boolean>(false);
-  const [neededCredits, setNeededCredits] = useState<number>(0);
-
   const { 
     hasAccess, 
     isTrialing, 
@@ -3857,16 +3657,16 @@ export default function App() {
   const [resetStatus, setResetStatus] = useState<'idle' | 'clearing' | 'success' | 'error'>('idle');
 
   // Subscription and 3-day Free Trial states
-  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>("Enterprise Sovereign Pack");
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>("active");
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [userCreatedAt, setUserCreatedAt] = useState<any>(null);
 
   const getTrialStatus = () => {
     return {
-      hasTrial: false,
-      isExpired: false,
-      daysLeft: 9999,
-      endsIn: "unlimited"
+      hasTrial: isTrialing,
+      isExpired: !hasAccess && user && accessStatus !== 'active',
+      daysLeft: trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))) : 0,
+      endsIn: trialEndsIn
     };
   };
 
@@ -3938,14 +3738,22 @@ export default function App() {
           setPinnedFeatures(data.pinnedFeatures);
           localStorage.setItem('pinned_features', JSON.stringify(data.pinnedFeatures));
         }
-        if (data.credits !== undefined) {
-          setUserCredits(data.credits);
+        if (data.subscription && data.subscription.status) {
+          setSubscriptionStatus(data.subscription.status);
+          const mappedName = data.subscription.package === 'enterprise' ? 'Enterprise Sovereign Pack' : (data.subscription.package === 'pro' ? 'Pro Strategist Pack' : 'Starter Creator Pack');
+          setSubscriptionPlan(mappedName);
         } else {
-          setUserCredits(25);
-          updateDoc(userDocRef, { credits: 25 }).catch(err => console.error(err));
+          if (data.subscriptionPlan !== undefined) {
+            setSubscriptionPlan(data.subscriptionPlan);
+          } else {
+            setSubscriptionPlan(null);
+          }
+          if (data.subscriptionStatus !== undefined) {
+            setSubscriptionStatus(data.subscriptionStatus);
+          } else {
+            setSubscriptionStatus(null);
+          }
         }
-        setSubscriptionStatus("active");
-        setSubscriptionPlan("Enterprise Sovereign Pack");
         if (data.createdAt !== undefined) {
           setUserCreatedAt(data.createdAt);
         }
@@ -3967,8 +3775,7 @@ export default function App() {
             currentPeriodEnd: trialEndAt
           },
           subscriptionPlan: "Pro Strategist Pack",
-          subscriptionStatus: "active",
-          credits: 25
+          subscriptionStatus: "active"
         }, { merge: true })
           .catch(err => console.error("Failed to initialize user document:", err));
       }
@@ -4023,6 +3830,12 @@ export default function App() {
       [activeFeature]: []
     }));
     setActiveDocId(null);
+  };
+
+  // Credit Deduction System Helper - Removed for subscription-based access
+  const credits = null;
+  const deductCredits = async (amount: number): Promise<boolean> => {
+    return true;
   };
 
   // Sync state helpers
@@ -4193,7 +4006,7 @@ export default function App() {
 
   const { generate, loading, error } = useHybridAI(activeGeminiKey || null, activeHfKey || null, activeGeminiModel);
 
-  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing' | 'notifications', newFeature?: FeatureId) => {
+  const navigateTo = (newView: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing', newFeature?: FeatureId) => {
     const targetFeature = newFeature || activeFeature;
     // Don't push if it's the exact same state
     if (view === newView && activeFeature === targetFeature) return;
@@ -4285,83 +4098,23 @@ export default function App() {
 
   const getFeatureCreditCost = (featureId: FeatureId | string): number => {
     switch (featureId) {
-      // PRO FEATURES - 5 Credits
       case 'ai-script-outline':
-      case 'shadowban-solutions':
         return 5;
-
-      // BIG FEATURES - 3 Credits
+      case 'shadowban-solutions':
+        return 4;
       case 'scripts':
       case 'competitor-analysis':
       case 'trending':
       case 'trending-topics':
+      case 'trend-alerts':
+        return 3;
       case 'content-ideas':
       case 'thumbnails':
-      case 'youtube-seo':
-      case 'seo-scorecard':
-      case 'keyword-research':
-      case 'vseo-title-desc':
-      case 'vseo-scorecard':
-      case 'vseo-keywords':
-      case 'template-library':
-      case 'repurposing':
-      case 'personas':
-        return 3;
-
-      // MINI FEATURES - 2 Credits
-      case 'hashtags':
-      case 'bio':
-      case 'posting-schedule':
-      case 'engagement-calc':
-      case 'headlines':
-      case 'post-scheduler':
-      case 'drafts':
-      case 'ruled-book':
-      case 'post-optimizer':
-      case 'vseo-tags':
-      case 'vseo-best-time':
       case 'daily-ideas':
-      case 'trend-alerts':
-      default:
         return 2;
+      default:
+        return 1;
     }
-  };
-
-  const checkAndDeductCredits = async (cost: number, description: string): Promise<boolean> => {
-    // Explicitly block users if trial is expired and they have no active subscription
-    if (!hasAccess) {
-      setView('pricing');
-      setTrialExpiredModalOpen(true);
-      return false;
-    }
-
-    if (userCredits < cost) {
-      setNeededCredits(cost);
-      setShowNoCreditsModal(true);
-      return false;
-    }
-
-    // Deduct credits in Firestore
-    if (user) {
-      const userRef = doc(db, 'users', user.uid);
-      try {
-        await updateDoc(userRef, {
-          credits: increment(-cost),
-          updatedAt: serverTimestamp()
-        });
-
-        // Log transaction history
-        await addDoc(collection(db, 'users', user.uid, 'transactions'), {
-          type: 'debit',
-          amount: cost,
-          description: description,
-          createdAt: serverTimestamp()
-        });
-      } catch (err) {
-        console.error("Failed to deduct/log credits:", err);
-      }
-    }
-    return true;
   };
 
   const handleGenerate = async (prompt: string, displayPrompt?: string) => {
@@ -4372,29 +4125,10 @@ export default function App() {
       return;
     }
 
+    // Determine the credit cost of this run dynamically using secure tool calculator
     const cost = getFeatureCreditCost(activeFeature);
-    if (userCredits < cost) {
-      setNeededCredits(cost);
-      setShowNoCreditsModal(true);
-      return;
-    }
-
-    // Deduct credits in Firestore
-    if (user) {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        credits: increment(-cost),
-        updatedAt: serverTimestamp()
-      }).catch(err => console.error("Failed to deduct credits:", err));
-
-      // Log transaction history
-      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
-        type: 'debit',
-        amount: cost,
-        description: `Ran analysis on ${activeFeature.toUpperCase().replace('-', ' ')}`,
-        createdAt: serverTimestamp()
-      }).catch(err => console.error("Failed to log debit transaction:", err));
-    }
+    const canProceed = await deductCredits(cost);
+    if (!canProceed) return;
 
     const userMsg: ChatMessage = {
       id: `${Math.random().toString(36).substr(2, 9)}-${Date.now()}`,
@@ -4434,22 +4168,6 @@ export default function App() {
       const savedId = await saveMessage(activeFeature, displayPrompt || prompt, result, cost);
       if (savedId) {
         setActiveDocId(savedId);
-      }
-
-      // Real-time Chidon IQ notification trigger
-      if (user) {
-        let featureLabel = "AI Generation";
-        if (activeFeature === 'keyword-research') featureLabel = "Market DNA";
-        else if (activeFeature === 'trending') featureLabel = "Engagement / Trending Detector";
-        else if (activeFeature === 'content-ideas') featureLabel = "Creative Video Ideas";
-        else if (activeFeature === 'personas') featureLabel = "Brand Voice Alignment";
-
-        triggerNotification(user.uid, {
-          type: 'ai_result',
-          title: `Chidon IQ: ${featureLabel} Analysis Complete`,
-          body: `High-fidelity neural results prepared successfully.`,
-          link: `/tools?tool=${activeFeature}`
-        }).catch(err => console.error("Notification dispatch failed", err));
       }
     }
   };
@@ -4550,7 +4268,6 @@ export default function App() {
             onSignIn={handleSignIn}
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
-            checkAndDeductCredits={checkAndDeductCredits}
           />
         </PaywallGate>
       );
@@ -4570,7 +4287,6 @@ export default function App() {
           <ChidonIqBlog
             onSaveDraft={handleSaveDraft}
             onBack={goBack}
-            checkAndDeductCredits={checkAndDeductCredits}
           />
         </PaywallGate>
       );
@@ -4593,7 +4309,6 @@ export default function App() {
           db={db}
           showTrialEndedModal={trialExpiredModalOpen}
           onCloseTrialEndedModal={() => setTrialExpiredModalOpen(false)}
-          onNavigate={navigateTo}
         />
       );
     }
@@ -4617,14 +4332,14 @@ export default function App() {
       onSaveDraft: handleSaveDraft,
       onRestoreDraft: handleRestoreDraft,
       onBack: goBack,
+      credits,
       activeDocId,
       chatMessages,
       loadingHistory,
       onLoadHistoryItem: handleLoadHistoryItem,
       onWrapUpMessage: wrapUpMessage,
       onDeleteMessage: deleteMessage,
-      onNewChat: handleNewChat,
-      checkAndDeductCredits: checkAndDeductCredits
+      onNewChat: handleNewChat
     };
 
     const renderFeature = () => {
@@ -4657,7 +4372,8 @@ export default function App() {
               feature={commonProps.feature} 
               onBack={commonProps.onBack} 
               user={user}
-              checkAndDeductCredits={checkAndDeductCredits}
+              credits={credits}
+              onDeductCredits={deductCredits}
             />
           </Suspense>
         );
@@ -4684,7 +4400,8 @@ export default function App() {
             <TemplateLibrary 
               onBack={commonProps.onBack} 
               onSaveDraft={commonProps.onSaveDraft}
-              checkAndDeductCredits={checkAndDeductCredits}
+              credits={credits}
+              onDeductCredits={deductCredits}
             />
           </Suspense>
         );
@@ -4788,14 +4505,6 @@ export default function App() {
         <WelcomePage onEnter={() => {
           setShowWelcome(false);
           localStorage.setItem('chidon_welcome_dismissed', 'true');
-          if (user?.uid) {
-            triggerNotification(user.uid, {
-              type: 'system',
-              title: 'Welcome to Chidon IQ',
-              body: 'Welcome to Chidon IQ. Start exploring your premium features today!',
-              link: '/dashboard'
-            });
-          }
         }} />
       )}
       <div className="flex-1 flex overflow-hidden">
@@ -5144,13 +4853,6 @@ export default function App() {
 
                <div className="h-6 w-[1px] bg-[var(--border-base)] mx-1" />
 
-               {view !== 'dashboard' && (
-                 <NotificationBell 
-                   onNavigateToNotifications={() => setView('notifications')}
-                   onNavigateToMessages={() => setView('earn')}
-                 />
-               )}
-
                <Tooltip content="CHIDON Vault">
                   <button 
                     onClick={() => navigateTo('tools', 'drafts')}
@@ -5217,7 +4919,7 @@ export default function App() {
           featureId={feedbackFeatureId} 
           generatedContent={feedbackContent}
         />
-        <ChidonIqGuide checkAndDeductCredits={checkAndDeductCredits} />
+        <ChidonIqGuide credits={credits} onDeductCredits={deductCredits} />
       </Suspense>
 
       {/* Maintenance Purge / Reset Confirmation Overlay */}
@@ -5286,83 +4988,6 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Insufficient Credits Modal Alert Overlay */}
-      <AnimatePresence>
-        {showNoCreditsModal && (
-          <div 
-            className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-[4px]"
-            onClick={() => setShowNoCreditsModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.15)] overflow-hidden relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500" />
-
-              <button
-                onClick={() => setShowNoCreditsModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none"
-              >
-                <X size={16} />
-              </button>
-
-              <div className="p-6 md:p-8 space-y-6 text-left">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl shrink-0">
-                    <AlertTriangle size={24} className="animate-pulse" />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-amber-500 uppercase leading-none">
-                      INSUFFICIENT FUNDS
-                    </span>
-                    <h3 className="text-lg font-black text-white tracking-tight pt-1 leading-tight uppercase font-sans">
-                      Refill Wallet Balance
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                    You need <strong className="text-amber-400">{neededCredits} credits</strong> to run this high-fidelity cognitive engine, but you only have <strong className="text-white">{userCredits} credits</strong> remaining in your secure wallet.
-                  </p>
-                  <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                    Refill your balance instantly using our secure Paystack payments gateway to unlock professional features.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNoCreditsModal(false);
-                      setView('pricing');
-                    }}
-                    className="flex-1 py-3 px-4 bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90 text-white rounded-xl text-xs font-black tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Recharge Wallet</span>
-                    <ArrowRight size={12} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNoCreditsModal(false);
-                    }}
-                    className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <ToastNotification />
       </div>
     </BookContext.Provider>
   );

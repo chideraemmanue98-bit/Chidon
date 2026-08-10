@@ -57,7 +57,13 @@ You are the "CHIDON IQ Intelligence Guide," the supreme AI navigator for CHIDON 
 - If they ask about "Notepad", explain it's the supreme refinery where they can edit and download their work.
 `;
 
-export const ChidonIqGuide = ({ checkAndDeductCredits }: { checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean> }) => {
+export const ChidonIqGuide = ({ 
+  credits, 
+  onDeductCredits 
+}: { 
+  credits?: number | null; 
+  onDeductCredits?: (amount: number) => Promise<boolean>;
+}) => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -92,12 +98,12 @@ export const ChidonIqGuide = ({ checkAndDeductCredits }: { checkAndDeductCredits
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
-    if (checkAndDeductCredits) {
-      const allowed = await checkAndDeductCredits(1, `Intelligence Guide: "${userMessage.slice(0, 30)}..."`);
-      if (!allowed) return;
+    if (onDeductCredits) {
+      const canProceed = await onDeductCredits(1);
+      if (!canProceed) return;
     }
 
+    const userMessage = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
@@ -124,7 +130,7 @@ export const ChidonIqGuide = ({ checkAndDeductCredits }: { checkAndDeductCredits
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
       console.error("CHIDON IQ Uplink Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I am currently fine-tuning our neural sync engines for peak content optimization. Please try again in a moment, or continue exploring your dashboard analytics!" }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Critical Error: Signal lost. Please check your connection or API key protocol." }]);
     } finally {
       setIsLoading(false);
     }

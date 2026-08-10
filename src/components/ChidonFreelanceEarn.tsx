@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { auth } from '../firebase';
 import { getSupabaseClient } from '../lib/supabase';
-import { triggerNotification } from '../hooks/useNotifications';
 
 import { useChat } from '../hooks/useChat';
 import { MarketplacePage } from './marketplace/MarketplacePage';
@@ -32,7 +31,6 @@ interface ChidonFreelanceEarnProps {
   onSignIn?: () => void;
   isDarkMode?: boolean;
   setIsDarkMode?: (dark: boolean) => void;
-  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({ 
@@ -40,8 +38,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
   user, 
   onSignIn, 
   isDarkMode = true, 
-  setIsDarkMode,
-  checkAndDeductCredits
+  setIsDarkMode 
 }) => {
   // Navigation states: 'welcome' | 'role_selection' | 'join_buyer' | 'join_seller' | 'profile_setup' | 'portal'
   const [step, setStep] = useState<'welcome' | 'role_selection' | 'join_buyer' | 'join_seller' | 'profile_setup' | 'portal'>('welcome');
@@ -416,15 +413,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           proposals_count: 0
         }]);
       if (error) throw error;
-      
-      // Real-time notification trigger
-      triggerNotification(user.uid, {
-        type: 'system',
-        title: 'Chidon Freelance: Job Posted',
-        body: `Your job listing "${jobData.title}" was published successfully with a budget of $${jobData.budget}.`,
-        link: '/earn'
-      }).catch(err => console.error("Notification dispatch failed", err));
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -449,15 +437,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           delivery_date: gig.deliveryTime
         }]);
       if (error) throw error;
-
-      // Real-time notification trigger
-      triggerNotification(user.uid, {
-        type: 'credit',
-        title: 'Chidon Freelance: Gig Purchase & Escrow Initialized',
-        body: `Successfully placed order for "${gig.title}" for $${gig.price}. Funds are secured in escrow.`,
-        link: '/earn'
-      }).catch(err => console.error("Notification dispatch failed", err));
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -485,15 +464,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           reviews_count: 0
         }]);
       if (error) throw error;
-
-      // Real-time notification trigger
-      triggerNotification(user.uid, {
-        type: 'system',
-        title: 'Chidon Freelance: Gig Created',
-        body: `Your growth service gig "${gigData.title}" is now live in the Marketplace at $${gigData.price}.`,
-        link: '/earn'
-      }).catch(err => console.error("Notification dispatch failed", err));
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -525,17 +495,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         })
         .eq('id', orderId);
       if (error) throw error;
-
-      // Real-time notification trigger
-      if (user) {
-        triggerNotification(user.uid, {
-          type: 'ai_result',
-          title: 'Chidon Freelance: Assets Delivered',
-          body: `You have successfully submitted deliverables for Order ID: ${orderId}.`,
-          link: '/earn'
-        }).catch(err => console.error("Notification dispatch failed", err));
-      }
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -561,16 +520,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         }]);
       if (revErr) throw revErr;
 
-      // Real-time notification trigger
-      if (user) {
-        triggerNotification(user.uid, {
-          type: 'credit',
-          title: 'Chidon Freelance: Order Completed',
-          body: `Order ID: ${orderId} has been successfully completed and reviewed! Escrow funds cleared.`,
-          link: '/earn'
-        }).catch(err => console.error("Notification dispatch failed", err));
-      }
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -585,17 +534,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         .update({ status: 'cancelled' })
         .eq('id', orderId);
       if (error) throw error;
-
-      // Real-time notification trigger
-      if (user) {
-        triggerNotification(user.uid, {
-          type: 'system',
-          title: 'Chidon Freelance: Order Cancelled',
-          body: `Order ID: ${orderId} was cancelled. Any pending escrow holds have been released.`,
-          link: '/earn'
-        }).catch(err => console.error("Notification dispatch failed", err));
-      }
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -626,14 +564,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         
       if (error) throw error;
       
-      // Real-time notification trigger
-      triggerNotification(user.uid, {
-        type: 'credit',
-        title: 'Chidon Freelance: Quick Escrow Started',
-        body: `Secure checkout for "${gig.title}" completed. $${gig.price} holds active in escrow.`,
-        link: '/earn'
-      }).catch(err => console.error("Notification dispatch failed", err));
-
       setHomePaystackSuccess(true);
       await new Promise(resolve => setTimeout(resolve, 1200));
       setHomeCheckoutGig(null);
@@ -659,15 +589,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           text
         }]);
       if (error) throw error;
-
-      // Real-time notification trigger
-      triggerNotification(user.uid, {
-        type: 'message',
-        title: 'Chidon Freelance: Message Dispatched',
-        body: `You sent a message inside Order ${orderId}: "${text.slice(0, 45)}..."`,
-        link: '/earn'
-      }).catch(err => console.error("Notification dispatch failed", err));
-
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -788,7 +709,6 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
               onCompleteProfile={handleCompleteProfile}
               onSkip={handleSkipOnboarding}
               onBack={() => setStep(selectedRole === 'buyer' ? 'join_buyer' : 'join_seller')}
-              checkAndDeductCredits={checkAndDeductCredits}
             />
           </motion.div>
         )}
@@ -889,12 +809,12 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                 <button 
                   onClick={() => setPortalTab('profile')}
                   className="flex items-center gap-2 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 px-3 py-2 rounded-2xl cursor-pointer transition-all"
-                  title="Go to profile to add mock funds"
+                  title="Go to profile to add credits"
                 >
                   <Coins size={14} className="text-cyan-400" />
                   <div className="text-left">
                     <span className="text-[8px] block font-mono text-slate-500 uppercase font-black tracking-wider leading-none">Wallet balance</span>
-                    <span className="text-xs font-bold text-cyan-400 leading-none">${myProfile?.credits || 0} USD</span>
+                    <span className="text-xs font-bold text-cyan-400 leading-none">${myProfile?.credits || 0} credits</span>
                   </div>
                 </button>
 
@@ -923,8 +843,69 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Developer Board button */}
+                <button
+                  onClick={() => setShowAdminPanel(!showAdminPanel)}
+                  className="p-2 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-400 hover:text-purple-400 cursor-pointer transition-all"
+                  title="Toggle admin board"
+                >
+                  <Cpu size={14} className={showAdminPanel ? 'text-purple-400 animate-spin' : ''} />
+                </button>
               </div>
             </div>
+
+            {/* Admin Panel Panel */}
+            <AnimatePresence>
+              {showAdminPanel && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-6 bg-slate-950/90 border border-purple-500/30 rounded-3xl text-left space-y-4 shadow-xl overflow-hidden"
+                >
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full tracking-widest uppercase flex items-center gap-2">
+                      <Cpu size={12} /> Verification Board (Developer Admin Sandbox)
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-500">Live Profiles: {profiles.length} detected</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {profiles.map(profile => (
+                      <div key={profile.id} className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 flex flex-col justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <img src={profile.avatarURL} alt="" className="w-6 h-6 rounded-full border border-slate-800" />
+                            <span className="text-xs font-bold text-white">@{profile.fullName}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-mono">Role: {profile.role} | Credits: ${profile.credits}</p>
+                          <p className="text-[10px] text-slate-500 italic max-w-xs truncate">"{profile.bio || 'No bio written'}"</p>
+                        </div>
+
+                        <button
+                          onClick={async () => {
+                            if (!supabase) return;
+                            await supabase
+                              .from('profiles')
+                              .update({ is_verified: !profile.isVerified })
+                              .eq('id', profile.id);
+                            await fetchData();
+                          }}
+                          className={`w-full py-1.5 rounded-lg font-mono text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            profile.isVerified
+                              ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                          }`}
+                        >
+                          {profile.isVerified ? 'Revoke seller badge' : 'Verify seller profile'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* MAIN PORTAL PAGES SECTION */}
             <AnimatePresence mode="wait">
@@ -1410,18 +1391,18 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         </div>
                       </div>
 
-                      {/* Wallet Balance top-up node */}
+                      {/* Wallet credits instant Top-up node */}
                       <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-1.5">
                             <Coins size={14} className="text-cyan-400" />
                             <span className="text-xs font-bold text-white font-mono">My Wallet Balance</span>
                           </div>
-                          <span className="text-sm font-bold text-cyan-400 font-mono">${myProfile?.credits || 0} USD</span>
+                          <span className="text-sm font-bold text-cyan-400 font-mono">${myProfile?.credits || 0}</span>
                         </div>
                         
                         <p className="text-[9px] text-slate-500 leading-normal">
-                          Need more test funds to lock escrow or order gigs? Simulate a mock fund reload instantly.
+                          Need more test credits to lock escrow or order gigs? Simulate a mock fund reload instantly.
                         </p>
 
                         <button
@@ -1707,7 +1688,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     </span>
                     <h2 className="text-2xl font-display font-black tracking-tight text-white uppercase">Platform Navigation Directory</h2>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      Navigate between sovereign nodes, active escrow tracking gates, and seller profile setups instantly.
+                      Navigate between sovereign nodes, active escrow tracking gates, profile setups, and admin sandbox configurations instantly.
                     </p>
                   </div>
 
@@ -1822,6 +1803,22 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">5. Swap Mode perspective</h4>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                           Toggle between Buyer Client mode to purchase or Seller Creator mode to fulfill social growth gigs.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card 6: Admin panel */}
+                    <div 
+                      onClick={() => setShowAdminPanel(!showAdminPanel)}
+                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+                        <Cpu size={18} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">6. Admin Sandbox Board</h4>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Open developer board to grant verified badges to other sovereign node sellers or review live profiles logs.
                         </p>
                       </div>
                     </div>

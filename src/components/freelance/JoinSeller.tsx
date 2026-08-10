@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Briefcase, ShieldCheck, Zap, Check, ArrowRight } from 'lucide-react';
+import { Briefcase, ShieldCheck, Zap, Sparkles, Check, ArrowRight } from 'lucide-react';
 
 interface JoinSellerProps {
   onProceed: () => void;
@@ -64,7 +64,7 @@ export const JoinSeller: React.FC<JoinSellerProps> = ({ onProceed, onSkip, onBac
           <div className="space-y-3.5">
             {[
               { title: "Direct Escrow Clearance", desc: "No middleman taking massive platform commissions. Earnings clear instantly upon client verification of raw milestone files." },
-              { title: "AI-Optimized Portfolios", desc: "Use our tailored Chidon Neural wizard to immediately translate your manual experience into a highly structured proof-of-work card." },
+              { title: "AI-Optimized Portfolios", desc: "Use our tailored Google Gemini wizard to immediately translate your manual experience into a highly structured proof-of-work card." },
               { title: "Secured Wallet Ledgers", desc: "All funds are validated at the smart backend, preventing arbitrary cancellations or unpaid service requests." }
             ].map((f, idx) => (
               <div key={idx} className="flex gap-3">

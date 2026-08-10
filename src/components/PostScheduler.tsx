@@ -64,14 +64,16 @@ export const PostScheduler = ({
   feature, 
   onBack, 
   user,
-  checkAndDeductCredits
+  credits,
+  onDeductCredits
 }: { 
   initialCaption?: string, 
   onClearPreFill?: () => void, 
   feature?: any, 
   onBack?: () => void, 
   user?: any,
-  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>
+  credits?: number | null,
+  onDeductCredits?: (amount: number) => Promise<boolean>
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -105,9 +107,9 @@ export const PostScheduler = ({
   const handleGenerateAICaption = async () => {
     if (!aiTopic) return;
 
-    if (checkAndDeductCredits) {
-      const allowed = await checkAndDeductCredits(2, `AI Caption for ${platform.toUpperCase()}: ${aiTopic}`);
-      if (!allowed) return;
+    if (onDeductCredits) {
+      const canProceed = await onDeductCredits(1);
+      if (!canProceed) return;
     }
 
     setIsGeneratingAI(true);

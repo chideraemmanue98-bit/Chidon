@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShoppingBag, ShieldCheck, Zap, Check, ArrowRight } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Zap, Sparkles, Check, ArrowRight } from 'lucide-react';
 
 interface JoinBuyerProps {
   onProceed: () => void;
@@ -52,7 +52,7 @@ export const JoinBuyer: React.FC<JoinBuyerProps> = ({ onProceed, onSkip, onBack 
             </span>
           </h1>
           <p className="text-xs md:text-sm text-gray-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            Connect instantly with verified Instagram, TikTok, and YouTube specialists. Build your brand profile with our integrated Chidon AI wizard and list tasks in seconds.
+            Connect instantly with verified Instagram, TikTok, and YouTube specialists. Build your brand profile with our integrated Google AI wizard and list tasks in seconds.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export const JoinBuyer: React.FC<JoinBuyerProps> = ({ onProceed, onSkip, onBack 
           <div className="space-y-3.5">
             {[
               { title: "Sovereign Escrow Protection", desc: "Your hired budget stays locked securely in our system until you verify the delivered social video, post, or layout." },
-              { title: "Starter Test Funds Included", desc: "Enjoy a default grant of 250 test dollars immediately to simulate gig orders and platform test posts." },
+              { title: "Starter Refill Credits Included", desc: "Enjoy a default grant of 250 trial credits immediately to simulate gig orders and platform test posts." },
               { title: "Direct Realtime Encrypted Chat", desc: "Align on custom deliverables, formats, and milestones using the built-in creator messaging thread." }
             ].map((f, idx) => (
               <div key={idx} className="flex gap-3">

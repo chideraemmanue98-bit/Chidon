@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, Shield, Briefcase, FileText, Check, Plus, Trash2, 
-  Cpu, Loader2, ArrowRight, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon 
+  Sparkles, Loader2, ArrowRight, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon 
 } from 'lucide-react';
 
 interface SetupProfileProps {
@@ -10,7 +10,6 @@ interface SetupProfileProps {
   onCompleteProfile: (profileData: any, portfolioData?: any) => Promise<void>;
   onSkip: () => void;
   onBack: () => void;
-  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 const PLATFORM_OPTIONS = ['Instagram', 'TikTok', 'YouTube', 'Twitter'];
@@ -27,7 +26,7 @@ const BUYER_QUICK_PROMPTS = [
   "Fitness influencer looking for an experienced copywriter to maintain a daily engaging Twitter flow."
 ];
 
-export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProfile, onSkip, onBack, checkAndDeductCredits }) => {
+export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProfile, onSkip, onBack }) => {
   const [setupMode, setSetupMode] = useState<'ai' | 'manual'>('ai');
   const [aiPrompt, setAiPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -54,15 +53,10 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
     setAiPrompt(prompt);
   };
 
-  const handleRunChidonAI = async () => {
+  const handleRunGoogleAI = async () => {
     if (!aiPrompt.trim()) {
       setErrorText("Please write or select a concept/prompt first.");
       return;
-    }
-
-    if (checkAndDeductCredits) {
-      const allowed = await checkAndDeductCredits(1, `Freelance Onboarding AI Profile Setup`);
-      if (!allowed) return;
     }
 
     setGenerating(true);
@@ -127,7 +121,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
       setSetupMode('manual'); // Transition to review & save manually
     } catch (err: any) {
       console.error(err);
-      setErrorText("Chidon AI was unable to parse structured JSON. Please retry or enter manual parameters.");
+      setErrorText("Google AI was unable to parse structured JSON. Please retry or enter manual parameters.");
     } finally {
       setGenerating(false);
     }
@@ -224,7 +218,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
             <span className={`text-[10px] font-mono font-black border px-2.5 py-1 rounded-full uppercase tracking-widest ${
               role === 'buyer' ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400' : 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400'
             }`}>
-              Chidon AI Setup Portal
+              Google AI Setup Portal
             </span>
             <h2 className="text-xl font-display font-black text-gray-900 dark:text-white uppercase">
               Configure Your sovereign Profile
@@ -304,19 +298,19 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
               </div>
 
               <button
-                onClick={handleRunChidonAI}
+                onClick={handleRunGoogleAI}
                 disabled={generating}
                 className="w-full py-4 bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 text-white font-mono font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 shadow-xl shadow-indigo-500/10"
               >
                 {generating ? (
                   <>
                     <Loader2 size={14} className="animate-spin text-white" />
-                    <span>Chidon AI Generating Node...</span>
+                    <span>Gemini AI Generating Node...</span>
                   </>
                 ) : (
                   <>
-                    <Cpu size={14} className="text-white animate-pulse" />
-                    <span>⚡ Generate Profile & Portfolio with Chidon AI</span>
+                    <Sparkles size={14} className="text-white animate-pulse" />
+                    <span>⚡ Generate Profile & Portfolio with Google AI</span>
                   </>
                 )}
               </button>
@@ -331,7 +325,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
               <form onSubmit={handleSubmit} className="space-y-5">
                 {aiSuccess && (
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs text-emerald-800 dark:text-emerald-300">
-                    🎉 Profile drafted successfully with Chidon AI! Review and tweak the values below before completing.
+                    🎉 Profile drafted successfully with Google AI! Review and tweak the values below before completing.
                   </div>
                 )}
 

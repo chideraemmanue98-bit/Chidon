@@ -26,13 +26,15 @@ interface CategoryTemplates {
 interface TemplateLibraryProps {
   onBack: () => void;
   onSaveDraft?: (featureId: string, content: string, title: string) => Promise<void>;
-  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
+  credits?: number | null;
+  onDeductCredits?: (amount: number) => Promise<boolean>;
 }
 
 export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ 
   onBack, 
   onSaveDraft,
-  checkAndDeductCredits
+  credits,
+  onDeductCredits
 }) => {
   const { t, i18n } = useTranslation();
   
@@ -176,10 +178,6 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
   // Build the generation prompt dynamically
   const handleGenerateTemplate = async () => {
-    if (checkAndDeductCredits) {
-      const allowed = await checkAndDeductCredits(2, `Template Engine: ${activeTemplate.label}`);
-      if (!allowed) return;
-    }
     setIsLoading(true);
     setErrorStatus(null);
     setGeneratedOutput('');
@@ -233,6 +231,11 @@ ${paramsSummary}
 5. Translate and output the entire block natively in: ${currentLang === 'es' ? 'Spanish' : currentLang === 'zh' ? 'Chinese' : currentLang === 'hi' ? 'Hindi' : currentLang === 'ar' ? 'Arabic' : currentLang === 'fr' ? 'French' : currentLang === 'pt' ? 'Portuguese' : currentLang === 'de' ? 'German' : currentLang === 'ja' ? 'Japanese' : currentLang === 'ru' ? 'Russian' : 'English'}.
 6. Do NOT include any introductory chit-chat, notes, or concluding pleasantries. Begin generating the populated template content immediately.
 `;
+
+    if (onDeductCredits) {
+      const canProceed = await onDeductCredits(1);
+      if (!canProceed) return;
+    }
 
     try {
       const res = await fetch("/api/gemini/generate", {
