@@ -1,0 +1,8 @@
+[package]
+name = "chidoniq"
+
+[build]
+command = "npm install && npm run build"
+
+[fs]
+"/" = "./out" # or "./.next" if using SSR

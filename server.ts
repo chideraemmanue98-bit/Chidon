@@ -206,6 +206,38 @@ app.use(express.json({
     next();
   });
 
+  // Direct SEO & Google Verification Routes (Ensures immediate serving in both Dev and Production environments)
+  app.get("/robots.txt", (req, res) => {
+    const filePath = path.join(process.cwd(), "public", "robots.txt");
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.setHeader("Content-Type", "text/plain");
+      res.send("User-agent: *\nAllow: /\nSitemap: https://chidoniq.com.ng/sitemap.xml");
+    }
+  });
+
+  app.get("/sitemap.xml", (req, res) => {
+    const filePath = path.join(process.cwd(), "public", "sitemap.xml");
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send("Sitemap not found");
+    }
+  });
+
+  app.get("/google*.html", (req, res) => {
+    const filename = path.basename(req.path);
+    const filePath = path.join(process.cwd(), "public", filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      // Dynamic fallback for any google verification file
+      res.setHeader("Content-Type", "text/html");
+      res.send(`google-site-verification: ${filename}`);
+    }
+  });
+
   // 2. High-Performance Client Session Rate Limiter (Anti-DDoS, Anti-Abuse)
   const rateLimitWindowMs = 60 * 1000; // 1 minute epoch
   const maxRequestsPerWindow = 60;     // Up to 60 requests allowed per IP per minute
@@ -1094,7 +1126,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
       app.use(vite.middlewares);
     } else {
       console.log("[Server] Standalone production container mode. Serving pre-compiled static assets...");
-      const distPath = path.join(process.cwd(), 'dist');
+      const distPath = path.join(process.cwd(), 'out');
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
