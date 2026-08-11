@@ -1126,7 +1126,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
       app.use(vite.middlewares);
     } else {
       console.log("[Server] Standalone production container mode. Serving pre-compiled static assets...");
-      const distPath = path.join(process.cwd(), 'out');
+      const distPath = path.join(process.cwd(), 'dist');
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
