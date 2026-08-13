@@ -120,9 +120,8 @@ async function generateContentWithRetryAndFallback(
   const maxRetries = 3;
   const modelsToTry = [
     options.model,
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
   ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
 
   let lastError: any = null;
@@ -700,16 +699,23 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
       });
     }
 
-    if (!email || amount === undefined || amount === null) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and Amount are required to initialize transaction."
-      });
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const numericAmount = typeof amount === "number" ? amount : Number(amount);
+    const supportedCurrencies = new Set(["USD", "NGN"]);
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: "A valid email is required." });
+    }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ success: false, message: "Amount must be a positive number." });
+    }
+    if (!supportedCurrencies.has(currency)) {
+      return res.status(400).json({ success: false, message: "Currency must be USD or NGN." });
     }
 
     try {
       const rate = await getLiveExchangeRate();
-      let convertedAmountNgn = amount;
+      let convertedAmountNgn = numericAmount;
       let finalCurrency = currency;
 
       // Automatically convert USD to NGN for seamless payment gateway options
@@ -720,7 +726,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
 
       const amountInKobo = Math.round(convertedAmountNgn * 100);
       const payload = {
-        email,
+        email: normalizedEmail,
         amount: amountInKobo,
         currency: finalCurrency,
         metadata: {
@@ -907,6 +913,10 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
     return res.json({ success: true, message: `Event '${event}' acknowledged (No sync needed)` });
   });
 
+  app.get("/api/gemini/status", (_req, res) => {
+    res.json({ configured: Boolean(process.env.GEMINI_API_KEY) });
+  });
+
   // PERF: Server-side Gemini proxy backed by TanStack Query client caching to reuse previous outputs and minimize upstream API request latency to ~0ms
   app.post("/api/gemini/generate", apiRateLimiter, cargoSanitizer, async (req, res) => {
     try {
@@ -939,7 +949,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
       }
 
       // Secure model resolution logic mapping alias or deprecated name to active support identifier
-      let targetModel = model || req.headers['x-gemini-model'] || cookieModel || "gemini-3.5-flash";
+      let targetModel = model || req.headers['x-gemini-model'] || cookieModel || "gemini-2.5-flash";
       if (typeof targetModel === "string") {
         const lowerModel = targetModel.toLowerCase();
         if (lowerModel.includes("1.5") || (lowerModel.includes("flash") && !lowerModel.includes("3.1") && !lowerModel.includes("3.5") && !lowerModel.includes("2.5"))) {
@@ -1005,7 +1015,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
       }
 
       // Secure model resolution logic mapping alias or deprecated name to active support identifier
-      let targetModel = model || req.headers['x-gemini-model'] || cookieModel || "gemini-3.5-flash";
+      let targetModel = model || req.headers['x-gemini-model'] || cookieModel || "gemini-2.5-flash";
       if (typeof targetModel === "string") {
         const lowerModel = targetModel.toLowerCase();
         if (lowerModel.includes("1.5") || (lowerModel.includes("flash") && !lowerModel.includes("3.1") && !lowerModel.includes("3.5") && !lowerModel.includes("2.5"))) {

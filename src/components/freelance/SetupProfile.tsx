@@ -75,7 +75,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
       const response = await fetch("/api/gemini/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: systemContext, model: "gemini-3.6-flash" }),
+        body: JSON.stringify({ prompt: systemContext, model: "gemini-2.5-flash" }),
       });
 
       if (!response.ok) {
