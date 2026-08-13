@@ -647,7 +647,7 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
   app.get("/api/paystack/config", async (req, res) => {
     try {
       const secretKey = process.env.PAYSTACK_SECRET_KEY;
-      const publicKey = process.env.VITE_PAYSTACK_PUBLIC_KEY || process.env.PAYSTACK_PUBLIC_KEY;
+      const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || process.env.VITE_PAYSTACK_PUBLIC_KEY || process.env.PAYSTACK_PUBLIC_KEY;
       const rate = await getLiveExchangeRate();
       
       return res.json({
@@ -831,15 +831,16 @@ NEVER wrap the array with markdown blocks or anything. Output ONLY the raw JSON 
     }
 
     // Verify HMAC signature to guarantee authenticity of the payload
-    if (signature) {
-      const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
-      const hash = crypto.createHmac("sha512", secretKey).update(rawBody).digest("hex");
-      if (hash !== signature) {
-        console.error("[Paystack Webhook] Security Alert: HMAC-SHA512 verification failed.");
-        return res.status(401).json({ success: false, message: "Invalid signature" });
-      }
-    } else {
-      console.warn("[Paystack Webhook] Warning: Received unsigned webhook payload.");
+    if (!signature) {
+      console.error("[Paystack Webhook] Security Alert: Missing signature.");
+      return res.status(401).json({ success: false, message: "Missing signature" });
+    }
+
+    const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
+    const hash = crypto.createHmac("sha512", secretKey).update(rawBody).digest("hex");
+    if (hash !== signature) {
+      console.error("[Paystack Webhook] Security Alert: HMAC-SHA512 verification failed.");
+      return res.status(401).json({ success: false, message: "Invalid signature" });
     }
 
     const { event, data } = req.body;
