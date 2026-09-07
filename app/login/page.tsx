@@ -26,7 +26,14 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../lib/supabase';
+import { auth } from '../../src/firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendSignInLinkToEmail,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth';
 import { 
   Mail, 
   Sparkles, 
@@ -67,15 +74,14 @@ export default function LoginPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : 'http://localhost:3000/dashboard',
-        }
-      });
-
-      if (error) {
-        throw error;
+      const actionCodeSettings = {
+        url: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : 'http://localhost:3000/dashboard',
+        handleCodeInApp: true,
+      };
+      await sendSignInLinkToEmail(auth, email.trim(), actionCodeSettings);
+      
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('emailForSignIn', email.trim());
       }
 
       setSuccessMsg({
@@ -84,7 +90,7 @@ export default function LoginPage() {
       });
       setIsSuccess(true);
     } catch (err: any) {
-      console.error('Supabase OTP Request Failed:', err);
+      console.error('Firebase OTP Request Failed:', err);
       setErrorMsg(err.message || 'An error occurred while sending the magic link. Please check your network connectivity.');
     } finally {
       setLoading(false);
@@ -102,49 +108,23 @@ export default function LoginPage() {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
       if (passwordAction === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : 'http://localhost:3000/dashboard',
-          }
+        const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+
+        setSuccessMsg({
+          title: 'Account Created Successfully!',
+          desc: `Your Chidon IQ academic account is ready. Redirecting you to your workspace...`
         });
-
-        if (error) {
-          throw error;
-        }
-
-        // Check if user is auto-confirmed or needs confirmation
-        if (data?.user && data.session) {
-          // Auto-confirmed and logged in
-          setSuccessMsg({
-            title: 'Account Created Successfully!',
-            desc: `Your Chidon IQ academic account is ready. Redirecting you to your workspace...`
-          });
-          setIsSuccess(true);
-          setTimeout(() => {
-            if (typeof window !== 'undefined') window.location.href = '/dashboard';
-          }, 2000);
-        } else {
-          // Needs verification email
-          setSuccessMsg({
-            title: 'Verification Link Sent!',
-            desc: `Please check your educational inbox to confirm your account creation at: `
-          });
-          setIsSuccess(true);
-        }
+        setIsSuccess(true);
+        setTimeout(() => {
+          if (typeof window !== 'undefined') window.location.href = '/dashboard';
+        }, 2000);
       } else {
         // Sign In
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) {
-          throw error;
-        }
+        const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
 
         setSuccessMsg({
           title: 'Welcome Back!',
@@ -156,8 +136,63 @@ export default function LoginPage() {
         }, 1500);
       }
     } catch (err: any) {
-      console.error('Supabase Password Auth Failed:', err);
-      setErrorMsg(err.message || 'Authentication failed. Please verify your credentials and try again.');
+      console.error('Firebase Password Auth Failed:', err);
+      
+      let friendlyError = 'Authentication failed. Please verify your credentials and try again.';
+      if (err.code === 'auth/invalid-credential') {
+        friendlyError = 'Invalid login credentials. Please double check your email and password.';
+      } else if (err.code === 'auth/user-not-found') {
+        friendlyError = 'No account found with this email address. Please register first.';
+      } else if (err.code === 'auth/wrong-password') {
+        friendlyError = 'Incorrect password. Please verify and try again.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        friendlyError = 'This email address is already registered.';
+      } else if (err.code === 'auth/weak-password') {
+        friendlyError = 'Password is too weak. Must be at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        friendlyError = 'The email address is invalid.';
+      } else if (err.message) {
+        friendlyError = err.message;
+      }
+      
+      setErrorMsg(friendlyError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMsg(null);
+    setLoading(true);
+
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user && user.email) {
+        setSuccessMsg({
+          title: 'Welcome Back!',
+          desc: `Authentication successful via Google. Welcome, ${user.displayName || 'Scholar'}!`
+        });
+        setIsSuccess(true);
+        setTimeout(() => {
+          if (typeof window !== 'undefined') window.location.href = '/dashboard';
+        }, 1500);
+      } else {
+        throw new Error("Unable to retrieve email address from Google Account.");
+      }
+    } catch (err: any) {
+      console.error("Google Sign-In failed:", err);
+      let friendlyError = err.message || "Google Authentication failed.";
+      if (err.code === 'auth/popup-blocked') {
+        friendlyError = "The authentication popup was blocked by your browser. Please allow popups and try again.";
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        friendlyError = "The verification window was closed before completion.";
+      }
+      setErrorMsg(friendlyError);
     } finally {
       setLoading(false);
     }
@@ -400,6 +435,43 @@ export default function LoginPage() {
                     </button>
                   </form>
                 )}
+
+                {/* Google Sign-In Divider & Button */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase">
+                    <span className="bg-white dark:bg-slate-900 px-3 text-slate-500 font-mono font-bold tracking-wider">Validated Authentication</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full py-3 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-98 disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.93h6.59c-.28 1.5-1.11 2.76-2.36 3.6v3h3.8c2.22-2.04 3.51-5.05 3.51-8.51z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.8-3c-1.05.7-2.4 1.13-4.13 1.13-3.18 0-5.88-2.15-6.84-5.07H1.32v3.1A12 12 0 0 0 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.16 14.15a7.21 7.21 0 0 1 0-4.3v-3.1H1.32a12 12 0 0 0 0 10.5l3.84-3.1z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43A12 12 0 0 0 1.32 6.75l3.84 3.1c.96-2.92 3.66-5.1 6.84-5.1z"
+                    />
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
               </motion.div>
             ) : (
               /* STATE 2: Success states with generic rendering */
@@ -458,7 +530,7 @@ export default function LoginPage() {
  
           {/* Footer Branding Label */}
           <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-            Protected & Authored by Supabase Identity Framework &bull; Chidon IQ v1.4
+            Protected & Authored by Firebase Identity Framework &bull; Chidon IQ v1.4
           </div>
         </div>
       </div>

@@ -360,7 +360,10 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       <h4 className="font-bold text-xs font-mono text-brand mb-2 tracking-widest uppercase">System Core Specifications:</h4>
                       <ul className="space-y-2 text-xs font-mono text-[var(--text-secondary)]">
                         <li className="flex items-center gap-2">
-                           <Cpu size={12} className="text-brand" /> Engine Model: Linguistic Optimizer Core (v2.0)
+                           <Cpu size={12} className="text-brand" /> Engine Model: Linguistic Optimizer Core (v3.5)
+                        </li>
+                        <li className="flex items-center gap-2">
+                           <Calendar size={12} className="text-brand" /> Release Stamp: September 4, 2026
                         </li>
                         <li className="flex items-center gap-2">
                            <Zap size={12} className="text-brand animate-pulse" /> Delivery State: Organic Video Feed & Video SEO Hubs
@@ -510,8 +513,8 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                             <FileText size={18} className="text-brand" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">Linguistic Optimizer Core Handbook (v2.0)</h4>
-                            <p className="text-[10px] text-[var(--text-secondary)]">240 structured templates to boost high-converting copywriting and content models precision.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider font-mono">Linguistic Optimizer Core Handbook (v3.5)</h4>
+                            <p className="text-[10px] text-[var(--text-secondary)]">240 structured templates to boost high-converting copywriting and content models precision. (Updated September 4, 2026)</p>
                           </div>
                         </div>
                         <button
@@ -832,8 +835,8 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                       <div className="p-5 border border-brand/20 rounded-xl bg-[var(--bg-card)]/80 space-y-3 shadow-md">
                         <span className="text-[11px] font-mono font-bold text-brand uppercase tracking-wider block font-black">SUPPORT CORE UPLINK:</span>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[var(--text-secondary)]">
-                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Mail size={13} className="text-brand shrink-0" /> support@chidon.iq</p>
-                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Users size={13} className="text-brand shrink-0" /> developer@chidon.iq</p>
+                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Mail size={13} className="text-brand shrink-0" /> chidoniq@gmail.com</p>
+                          <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Users size={13} className="text-brand shrink-0" /> Support Team Active</p>
                           <p className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-zinc-900/40 rounded-lg border border-[var(--border-base)]/40"><Calendar size={13} className="text-brand shrink-0" /> Response: Under 4 Hours</p>
                         </div>
                       </div>
@@ -883,7 +886,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                 {/* 6. TERMS OF USE */}
                 {activeModal === 'terms' && (
                   <div className="space-y-4 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    <p className="font-bold text-[var(--text-primary)]">Last Updated: July 25, 2026</p>
+                    <p className="font-bold text-[var(--text-primary)]">Last Updated: September 4, 2026</p>
                     <p>
                       Welcome to <strong>CHIDON IQ</strong> (the "System"). By mapping credentials, accessing cognitive tool sectors, or initiating generation triggers, you agree to comply with the operational conditions outlined within this regulatory frame.
                     </p>
@@ -905,7 +908,7 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                 {/* 7. PRIVACY POLICY */}
                 {activeModal === 'privacy' && (
                   <div className="space-y-4 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    <p className="font-bold text-[var(--text-primary)]">Last Updated: July 25, 2026</p>
+                    <p className="font-bold text-[var(--text-primary)]">Last Updated: September 4, 2026</p>
                     <p>
                       At <strong>CHIDON IQ</strong>, your privacy is decoupled from tracking metrics. We operate clean sandbox configurations as detailed below to preserve candidate and content integrity:
                     </p>
@@ -913,14 +916,25 @@ export const DownbaseFooter: React.FC<DownbaseFooterProps> = () => {
                     <p>
                       All tone choices, customized system preferences, and theme choices are compiled directly inside your client-side browser storage (React state + `localStorage`). We do not scrape parameters outside specified database schemas.
                     </p>
-                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">2. Firebase Core Auth & Database Integration</h4>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">2. Chidon Core Secure Link & Database</h4>
                     <p>
                       When checking your blueprints in the Vault, files are cataloged securely inside Chidon Cloud Database. Authorized rules keep records visible strictly to authenticated owners.
                     </p>
-                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2 font-mono uppercase tracking-wider mt-2">3. Model Prompt Encapsulation</h4>
+                    <h4 className="font-bold text-[var(--text-primary)] uppercase font-mono tracking-wider mt-2">3. Model Prompt Encapsulation</h4>
                     <p>
                       When transmitting input text parameter fields to our generative agents, text feeds do not persist for secondary telemetry modeling or corporate profiling purposes.
                     </p>
+                    <div className="pt-4 border-t border-[var(--border-base)]/40 flex justify-center">
+                      <a 
+                        href="/privacy.html" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="px-4 py-2 bg-brand/10 hover:bg-brand/20 border border-brand/20 text-brand rounded-xl font-mono text-[10px] uppercase tracking-widest font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Open Official Full Document</span>
+                        <span>📄</span>
+                      </a>
+                    </div>
                   </div>
                 )}
 

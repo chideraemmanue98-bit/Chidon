@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { auth } from '../firebase';
 import { 
   FileText, UserCircle, BarChart3, ChevronRight, 
   Copy, Check, Download, Send, AlertCircle, RefreshCcw, 
@@ -26,15 +27,13 @@ interface CategoryTemplates {
 interface TemplateLibraryProps {
   onBack: () => void;
   onSaveDraft?: (featureId: string, content: string, title: string) => Promise<void>;
-  credits?: number | null;
-  onDeductCredits?: (amount: number) => Promise<boolean>;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ 
   onBack, 
   onSaveDraft,
-  credits,
-  onDeductCredits
+  checkAndDeductCredits
 }) => {
   const { t, i18n } = useTranslation();
   
@@ -178,7 +177,16 @@ export const TemplateLibrary: React.FC<TemplateLibraryProps> = ({
 
   // Build the generation prompt dynamically
   const handleGenerateTemplate = async () => {
+    if (isLoading) return;
     setIsLoading(true);
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(3, `Template Engine: ${activeTemplate.label}`);
+      if (!allowed) {
+        setIsLoading(false);
+        return;
+      }
+    }
     setErrorStatus(null);
     setGeneratedOutput('');
     setIsCopied(false);
@@ -232,18 +240,19 @@ ${paramsSummary}
 6. Do NOT include any introductory chit-chat, notes, or concluding pleasantries. Begin generating the populated template content immediately.
 `;
 
-    if (onDeductCredits) {
-      const canProceed = await onDeductCredits(1);
-      if (!canProceed) return;
-    }
-
     try {
       const res = await fetch("/api/gemini/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: finalPrompt, language: i18n.language }),
+        body: JSON.stringify({ 
+          prompt: finalPrompt, 
+          language: i18n.language,
+          userId: auth.currentUser?.uid,
+          feature: "Template Library",
+          creditsDeductedByClient: true
+        }),
       });
 
       if (!res.ok) {

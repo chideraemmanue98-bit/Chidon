@@ -90,7 +90,7 @@ export const Welcome: React.FC<WelcomeProps> = ({ onNext, onSkip }) => {
               <Zap size={12} className="text-purple-600 dark:text-purple-400" /> 10x Velocity
             </span>
             <p className="text-[10px] text-gray-600 dark:text-slate-400 leading-normal">
-              Instantly draft briefings and reviews with our fully integrated Gemini AI models.
+              Instantly draft briefings and reviews with our fully integrated Chidon AI models.
             </p>
           </div>
         </div>

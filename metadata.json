@@ -1,6 +1,6 @@
 {
-  "name": "Chidon Iq",
-  "description": "Chidon IQ - AI tools for professional social media growth, policy-focused shadowban diagnostics, content generation, and strategic intelligence.",
+  "name": "ChidonIQ",
+  "description": "ChidonIQ is the all-in-one platform for social media. Analyze Instagram, TikTok, Twitter analytics AND hire professional social media managers, influencers & creators worldwide.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

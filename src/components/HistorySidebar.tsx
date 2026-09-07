@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Trash2, 
-  Sparkles, 
   Clock, 
   Check, 
   Loader2, 
@@ -21,7 +20,6 @@ interface HistorySidebarProps {
   onSelect: (msg: ChatHistoryMessage) => void;
   onWrapUp: (msg: ChatHistoryMessage) => Promise<void>;
   onDelete: (msgId: string) => Promise<void>;
-  credits: number | null;
 }
 
 export default function HistorySidebar({
@@ -31,8 +29,7 @@ export default function HistorySidebar({
   loading,
   onSelect,
   onWrapUp,
-  onDelete,
-  credits
+  onDelete
 }: HistorySidebarProps) {
   const [wrappingIds, setWrappingIds] = useState<string[]>([]);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
@@ -205,7 +202,7 @@ export default function HistorySidebar({
                               {isWrapping ? (
                                 <Loader2 size={12} className="animate-spin" />
                               ) : (
-                                <Sparkles size={11} />
+                                <Zap size={11} />
                               )}
                               <span>Wrap Up</span>
                             </button>

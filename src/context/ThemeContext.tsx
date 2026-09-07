@@ -12,8 +12,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-    // Fallback: Match user system prefers-color-scheme
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Default fallback to elegant light mode to match color arrangement
+    return false;
   });
 
   useEffect(() => {

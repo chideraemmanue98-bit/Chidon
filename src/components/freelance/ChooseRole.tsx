@@ -92,7 +92,7 @@ export const ChooseRole: React.FC<ChooseRoleProps> = ({ onSelectRole, onBack }) 
                   I’m a Seller
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
-                  Sell your specialized social media skills, showcase your portfolio, and earn credits and secure payment rewards.
+                  Sell your specialized social media skills, showcase your portfolio, and earn revenue and secure payment rewards.
                 </p>
               </div>
             </div>

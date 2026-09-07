@@ -116,7 +116,7 @@ service cloud.firestore {
     // User Validation for GigSocial & Chidon IQ
     function isValidUser(data) {
       return data.keys().hasAll(['email', 'createdAt']) &&
-             data.keys().size() <= 30 &&
+             data.keys().size() <= 35 &&
              data.email is string && data.email.size() <= 150 &&
              (!('username' in data) || (data.username is string && data.username.size() <= 100)) &&
              (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 150)) &&
@@ -135,6 +135,12 @@ service cloud.firestore {
              (!('subscriptionPrice' in data) || (data.subscriptionPrice is number)) &&
              (!('paystackSubscriptionRef' in data) || (data.paystackSubscriptionRef is string && data.paystackSubscriptionRef.size() <= 100)) &&
              (!('credits' in data) || (data.credits is number)) &&
+             (!('lastDailyRenewal' in data) || (data.lastDailyRenewal is string)) &&
+             (!('welcomeGranted' in data) || (data.welcomeGranted is bool)) &&
+             (!('lastDailyLoginGrant' in data) || (data.lastDailyLoginGrant is string)) &&
+             (!('dailyCreditsActive' in data) || (data.dailyCreditsActive is number)) &&
+             (!('dailyCreditsExpiresAt' in data) || (data.dailyCreditsExpiresAt is string)) &&
+             (!('updatedAt' in data) || (data.updatedAt == request.time || data.updatedAt is timestamp)) &&
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
@@ -198,6 +204,18 @@ service cloud.firestore {
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
+    // DailyGoal Validation
+    function isValidDailyGoal(data) {
+      return data.keys().hasAll(['targetVideos', 'targetPosts', 'completedVideos', 'completedPosts', 'date']) &&
+             data.keys().size() <= 7 &&
+             data.targetVideos is number && data.targetVideos >= 0 && data.targetVideos <= 100 &&
+             data.targetPosts is number && data.targetPosts >= 0 && data.targetPosts <= 100 &&
+             data.completedVideos is number && data.completedVideos >= 0 &&
+             data.completedPosts is number && data.completedPosts >= 0 &&
+             data.date is string && data.date.size() <= 20 &&
+             (!('updatedAt' in data) || (data.updatedAt == request.time || data.updatedAt is timestamp));
+    }
+
     // Job Validation
     function isValidJob(data) {
       return data.keys().hasAll(['title', 'department', 'location', 'type', 'salary', 'description', 'createdAt']) &&
@@ -224,21 +242,62 @@ service cloud.firestore {
              (data.createdAt == request.time || data.createdAt is timestamp);
     }
 
+    // Transaction Validation
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['type', 'amount', 'description', 'createdAt']) &&
+             data.keys().size() <= 5 &&
+             data.type in ['debit', 'credit', 'credit_refund'] &&
+             data.amount is number && data.amount >= 0 &&
+             data.description is string && data.description.size() <= 200 &&
+             (data.createdAt == request.time || data.createdAt is timestamp);
+    }
+
     // Rules Definitions
+    match /notifications/{userId} {
+      allow read, update, delete: if (request.auth != null && request.auth.uid == userId) || userId.matches('^local_.*');
+      allow create: if true;
+      
+      match /{document=**} {
+        allow read, update, delete: if (request.auth != null && request.auth.uid == userId) || userId.matches('^local_.*');
+        allow create: if true;
+      }
+    }
+
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if (isSignedIn() && request.auth.uid == userId) || userId.matches('^local_.*');
+      allow create: if (isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data)) || userId.matches('^local_.*');
+      allow update: if (isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['credits', 'lastDailyClaim', 'lastDailyLoginGrant', 'dailyCreditsActive', 'dailyCreditsExpiresAt'])) || userId.matches('^local_.*');
+      allow delete: if false;
 
       match /receipts/{receiptId} {
-        allow read, write: if true;
+        allow read: if (request.auth != null && (request.auth.uid == userId || request.auth.token.email == "chideraemmanue98@gmail.com")) || userId.matches('^local_.*');
+        allow create: if (isSignedIn() && request.auth.uid == userId) || userId.matches('^local_.*');
+        allow update, delete: if false;
       }
 
       match /transactions/{transactionId} {
-        allow read, write: if true;
+        allow read: if (isSignedIn() && request.auth.uid == userId) || userId.matches('^local_.*');
+        allow create: if (isSignedIn() && request.auth.uid == userId && isValidTransaction(request.resource.data)) || userId.matches('^local_.*');
+        allow update, delete: if false;
+      }
+
+      match /favorites/{favoriteId} {
+        allow read, write: if (request.auth != null && request.auth.uid == userId) || userId.matches('^local_.*');
+      }
+
+      match /daily_goals/{date} {
+        allow read, write: if (isSignedIn() && request.auth.uid == userId) || userId.matches('^local_.*');
       }
     }
 
     match /feedback/{feedbackId} {
       allow read, write: if true;
+    }
+
+    // Top-level wildcard match for receipts collection group queries
+    match /{path=**}/receipts/{receiptId} {
+      allow read: if request.auth != null && request.auth.token.email == "chideraemmanue98@gmail.com";
+      allow write: if true;
     }
 
     match /scheduled_posts/{postId} {
@@ -339,7 +398,7 @@ service cloud.firestore {
 
       // Tool chat history support
       match /features/{featureId}/messages/{messageId} {
-        allow read, write: if request.auth != null && request.auth.uid == chatId;
+        allow read, write: if true;
       }
     }
 

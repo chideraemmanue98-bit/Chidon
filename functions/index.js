@@ -8,7 +8,7 @@
  * firebase deploy --only functions
  */
 
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 
@@ -97,4 +97,72 @@ exports.paystackWebhook = onRequest({ cors: true }, async (req, res) => {
   // Acknowledge receipt of other event types (e.g., charge.pending, transfer.success)
   console.log(`[Paystack Webhook] Event '${event}' received and acknowledged.`);
   return res.status(200).send(`Event '${event}' received and ignored.`);
+});
+
+exports.claimDailyCredits = onCall(async (request) => {
+  // 1. Get userId from authenticated context
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
+  }
+  
+  const userId = request.auth.uid;
+  const db = admin.firestore();
+  
+  // 2. Get today's date in "YYYY-MM-DD" format in Africa/Lagos timezone (UTC+1)
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const todayStr = formatter.format(now); // "YYYY-MM-DD"
+  
+  const userRef = db.collection("users").doc(userId);
+  
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) {
+        throw new HttpsError("not-found", "User profile does not exist.");
+      }
+      
+      const userData = userDoc.data();
+      const lastDailyClaim = userData.lastDailyClaim || "";
+      
+      if (lastDailyClaim === todayStr) {
+        return { success: false, message: "Already claimed today" };
+      }
+      
+      const currentCredits = Number(userData.credits || 0);
+      const newCredits = currentCredits + 2;
+      
+      // Update users doc
+      transaction.update(userRef, {
+        credits: newCredits,
+        lastDailyClaim: todayStr,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Create transaction doc
+      const txRef = db.collection("credit_transactions").doc();
+      transaction.set(txRef, {
+        userId: userId,
+        amount: 2,
+        type: "daily",
+        reason: "Daily Login Bonus",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      const userTxRef = db.collection("users").doc(userId).collection("transactions").doc(txRef.id);
+      transaction.set(userTxRef, {
+        amount: 2,
+        type: "credit",
+        reason: "Daily Login Bonus",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      return { success: true, message: "Claimed successfully", newBalance: newCredits };
+    });
+    
+    return result;
+  } catch (err) {
+    console.error("claimDailyCredits transaction failure:", err);
+    throw new HttpsError("internal", err.message || "Daily claim transaction failed.");
+  }
 });

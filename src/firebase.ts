@@ -1,14 +1,38 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  doc, 
+  getDocFromServer, 
+  setLogLevel,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  memoryLocalCache
+} from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false,
-} as any, firebaseConfig.firestoreDatabaseId);
+setLogLevel('silent');
+
+export const app = initializeApp(firebaseConfig);
+
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    }),
+    experimentalAutoDetectLongPolling: true,
+  } as any, (firebaseConfig as any).firestoreDatabaseId);
+} catch (cacheErr) {
+  console.warn("Firestore persistent local cache failed to initialize (usually due to iframe/private browsing sandbox storage restrictions). Falling back to memory cache:", cacheErr);
+  firestoreInstance = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
+    experimentalAutoDetectLongPolling: true,
+  } as any, (firebaseConfig as any).firestoreDatabaseId);
+}
+
+export const db = firestoreInstance;
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 

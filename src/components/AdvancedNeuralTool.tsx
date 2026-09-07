@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
 import { 
   MessageSquare, 
   BookOpen, 
@@ -25,7 +26,6 @@ import {
   Check,
   History as HistoryIcon,
   Trash2,
-  Sparkles,
   Clock,
   Loader2
 } from 'lucide-react';
@@ -51,7 +51,8 @@ import {
   TrendMomentumTickerWidget, 
   AudienceDossierWidget, 
   RepurposePipelineWidget,
-  GoogleBrowserEngineWidget
+  ChidonIQCrawlerWidget,
+  TrendHeatmapWidget
 } from './SpecializedWidgets';
 
 // --- FORMATTING PROTOCOL ---
@@ -573,6 +574,368 @@ const KeywordTrendGraph = ({ difficulty }: { difficulty: number }) => {
   );
 };
 
+// --- FEATURE DIFFERENTIATOR BANNER (Every Features Page Looks Different) ---
+export function FeatureDifferentiatorBanner({ featureId, themeColor, label, description, persona, icon: Icon }: any) {
+  const design = useMemo(() => {
+    // Extract base color name from the feature's themeColor class
+    let baseColor = "indigo";
+    const cl = themeColor || "";
+    if (cl.includes("cyan")) baseColor = "cyan";
+    else if (cl.includes("purple")) baseColor = "purple";
+    else if (cl.includes("emerald")) baseColor = "emerald";
+    else if (cl.includes("pink")) baseColor = "pink";
+    else if (cl.includes("amber") || cl.includes("yellow")) baseColor = "amber";
+    else if (cl.includes("blue")) baseColor = "blue";
+    else if (cl.includes("orange")) baseColor = "orange";
+    else if (cl.includes("red")) baseColor = "red";
+
+    const colorMap: Record<string, {
+      bgGradient: string;
+      border: string;
+      badge: string;
+      accentText: string;
+      glow: string;
+      dot: string;
+    }> = {
+      cyan: {
+        bgGradient: "from-cyan-500/15 via-slate-50 to-emerald-500/10 dark:from-cyan-950/40 dark:via-slate-950/80 dark:to-emerald-950/30",
+        border: "border-2 border-cyan-500/60 dark:border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.15)]",
+        badge: "bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-500/30",
+        accentText: "text-cyan-700 dark:text-cyan-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-cyan-500"
+      },
+      purple: {
+        bgGradient: "from-purple-500/15 via-slate-50 to-indigo-500/10 dark:from-purple-950/40 dark:via-slate-950/80 dark:to-indigo-950/30",
+        border: "border-2 border-purple-500/60 dark:border-purple-400/60 shadow-[0_0_20px_rgba(139,92,246,0.15)]",
+        badge: "bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-400 border border-purple-300 dark:border-purple-500/30",
+        accentText: "text-purple-700 dark:text-purple-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-purple-500"
+      },
+      emerald: {
+        bgGradient: "from-emerald-500/15 via-slate-50 to-teal-500/10 dark:from-emerald-950/40 dark:via-slate-950/80 dark:to-teal-950/30",
+        border: "border-2 border-emerald-500/60 dark:border-emerald-400/60 shadow-[0_0_20px_rgba(16,185,129,0.15)]",
+        badge: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30",
+        accentText: "text-emerald-700 dark:text-emerald-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-emerald-500"
+      },
+      pink: {
+        bgGradient: "from-pink-500/15 via-slate-50 to-rose-500/10 dark:from-pink-950/40 dark:via-slate-950/80 dark:to-rose-950/30",
+        border: "border-2 border-pink-500/60 dark:border-pink-400/60 shadow-[0_0_20px_rgba(236,72,153,0.15)]",
+        badge: "bg-pink-100 dark:bg-pink-950/80 text-pink-800 dark:text-pink-400 border border-pink-300 dark:border-pink-500/30",
+        accentText: "text-pink-700 dark:text-pink-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-pink-500"
+      },
+      amber: {
+        bgGradient: "from-amber-500/15 via-slate-50 to-orange-500/10 dark:from-amber-950/40 dark:via-slate-950/80 dark:to-orange-950/30",
+        border: "border-2 border-amber-500/60 dark:border-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.15)]",
+        badge: "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30",
+        accentText: "text-amber-700 dark:text-amber-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-amber-500"
+      },
+      blue: {
+        bgGradient: "from-blue-500/15 via-slate-50 to-cyan-500/10 dark:from-blue-950/40 dark:via-slate-950/80 dark:to-cyan-950/30",
+        border: "border-2 border-blue-500/60 dark:border-blue-400/60 shadow-[0_0_20px_rgba(59,130,246,0.15)]",
+        badge: "bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-400 border border-blue-300 dark:border-blue-500/30",
+        accentText: "text-blue-700 dark:text-blue-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-blue-500"
+      },
+      orange: {
+        bgGradient: "from-orange-500/15 via-slate-50 to-red-500/10 dark:from-orange-950/40 dark:via-slate-950/80 dark:to-red-950/30",
+        border: "border-2 border-orange-500/60 dark:border-orange-400/60 shadow-[0_0_20px_rgba(249,115,22,0.15)]",
+        badge: "bg-orange-100 dark:bg-orange-950/80 text-orange-800 dark:text-orange-400 border border-orange-300 dark:border-orange-500/30",
+        accentText: "text-orange-700 dark:text-orange-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-orange-500"
+      },
+      yellow: {
+        bgGradient: "from-yellow-500/15 via-slate-50 to-amber-500/10 dark:from-yellow-950/40 dark:via-slate-950/80 dark:to-amber-950/30",
+        border: "border-2 border-yellow-500/60 dark:border-yellow-400/60 shadow-[0_0_20px_rgba(234,179,8,0.15)]",
+        badge: "bg-yellow-100 dark:bg-yellow-950/80 text-yellow-800 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-500/30",
+        accentText: "text-yellow-700 dark:text-yellow-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-yellow-500"
+      },
+      red: {
+        bgGradient: "from-red-500/15 via-slate-50 to-orange-500/10 dark:from-red-950/40 dark:via-slate-950/80 dark:to-orange-950/30",
+        border: "border-2 border-red-500/60 dark:border-red-400/60 shadow-[0_0_20px_rgba(239,68,68,0.15)]",
+        badge: "bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-400 border border-red-300 dark:border-red-500/30",
+        accentText: "text-red-700 dark:text-red-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-red-500"
+      },
+      indigo: {
+        bgGradient: "from-indigo-500/15 via-slate-50 to-purple-500/10 dark:from-indigo-950/40 dark:via-slate-950/80 dark:to-purple-950/30",
+        border: "border-2 border-indigo-500/60 dark:border-indigo-400/60 shadow-[0_0_20px_rgba(99,102,241,0.15)]",
+        badge: "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-500/30",
+        accentText: "text-indigo-700 dark:text-indigo-400 font-extrabold",
+        glow: "shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]",
+        dot: "bg-indigo-500"
+      }
+    };
+
+    const palette = colorMap[baseColor] || colorMap.indigo;
+
+    const defaultDesign = {
+      gradient: palette.bgGradient,
+      borderGlow: palette.border,
+      accentText: palette.accentText,
+      badge: palette.badge,
+      glow: palette.glow,
+      dot: palette.dot,
+      statusLabel: "CO-PILOT ACTIVE",
+      metric1: { name: "COGNITIVE STRENGTH", value: "98.7%" },
+      metric2: { name: "SEMANTIC ALIGNMENT", value: "HIGH" },
+      techBullets: ["Direct semantic synthesis", "Full markdown layouts", "Zero hallucination constraints"],
+      searchBadge: "Search Grounded"
+    };
+
+    const config: Record<string, Partial<typeof defaultDesign>> = {
+      'content-ideas': {
+        statusLabel: "VIRAL PRODUCTION MATRIX",
+        metric1: { name: "VIRAL VELOCITY INDEX", value: "99.4%" },
+        metric2: { name: "FORMAT COMPATIBILITY", value: "MAX" },
+        techBullets: ["Breakout pattern-matching algorithm", "Optimized hook overlays", "Chidon AI live trends analysis"],
+        searchBadge: "Trending Grounded"
+      },
+      'hashtags': {
+        statusLabel: "HASHTAG FREQUENCY RADAR",
+        metric1: { name: "INDEXED DOMAINS", value: "14.8M" },
+        metric2: { name: "DENSE CLUSTERS", value: "ACTIVE" },
+        techBullets: ["Three-tier reach optimization", "Spike trajectory alignment", "Real-time search-supported tags"],
+        searchBadge: "Tag Scrawl Live"
+      },
+      'scripts': {
+        statusLabel: "NARRATIVE SYNTHESIZER ENGINE",
+        metric1: { name: "RETENTION SCORE", value: "97.2%" },
+        metric2: { name: "PACING COEFFICIENT", value: "1.24x" },
+        techBullets: ["Three-part high-engagement curve", "Teleprompter compatible outputs", "Platform variance presets"],
+        searchBadge: "Creative Grounded"
+      },
+      'bio': {
+        statusLabel: "IDENTITY OPTIMIZATION CORE",
+        metric1: { name: "CLICK-THROUGH RATE", value: "+312%" },
+        metric2: { name: "BIO PRESETS", value: "3 VARIANTS" },
+        techBullets: ["Target character caps constraint", "Call-to-action visibility multiplier", "Professional bio styling layouts"],
+        searchBadge: "Persona Tuned"
+      },
+      'thumbnails': {
+        statusLabel: "VISUAL COGNITION WIREFRAME",
+        metric1: { name: "HEATMAP CONGRUENCE", value: "HIGH" },
+        metric2: { name: "PSYCH TRIGGERS", value: "OPTIMAL" },
+        techBullets: ["Fibonacci spiral balance mapping", "Neon high-contrast palette pairing", "Click-retention wireframe layouts"],
+        searchBadge: "Aesthetics Grounded"
+      },
+      'competitor-analysis': {
+        statusLabel: "COMPETITIVE INTEL LAB",
+        metric1: { name: "GAP SCANS DETECTED", value: "14 ACTIVE" },
+        metric2: { name: "OUTRANK PROBABILITY", value: "88.5%" },
+        techBullets: ["Strength & Vulnerability assessment matrix", "Counter-strike blueprint layout", "Chidon AI outranking scans"],
+        searchBadge: "Intel Active"
+      },
+      'posting-schedule': {
+        statusLabel: "TEMPORAL TIME OPTIMIZER",
+        metric1: { name: "TRAFFIC SPIKES MAP", value: "STABLE" },
+        metric2: { name: "ENGAGEMENT BOOST", value: "+28.4%" },
+        techBullets: ["TimeZone synchronicity solver", "Target audience peak activity maps", "Dynamic grid-schedule layouts"],
+        searchBadge: "Temporal Live"
+      },
+      'engagement-calc': {
+        statusLabel: "GROWTH METRICS SOLVER",
+        metric1: { name: "FORMULA PRECISION", value: "99.9%" },
+        metric2: { name: "BENCHMARK DEVIATION", value: "-0.4%" },
+        techBullets: ["Authentic interaction analytics rates", "30-day algorithmic booster protocols", "Confidence limits solver"],
+        searchBadge: "Math Solver Active"
+      },
+      'trending': {
+        statusLabel: "MOMENTUM VELOCITY TICKER",
+        metric1: { name: "BREAKOUT VECTORS", value: "24 TODAY" },
+        metric2: { name: "VELOCITY METRIC", value: "BREAKOUT" },
+        techBullets: ["Chidon AI real-time trends fetch", "Pulsing momentum score indices", "High-Fidelity social platform trends"],
+        searchBadge: "Real-Time Trends Live"
+      },
+      'personas': {
+        statusLabel: "AUDIENCE PSYCHOGRAPH ARCHITECT",
+        metric1: { name: "EMPATHY MATCHING", value: "96.5%" },
+        metric2: { name: "TRIGGERS SCAN", value: "DEEP" },
+        techBullets: ["Demographic profiles synthesis", "Targeted pain point mappings", "Fictional persona behavioral metrics"],
+        searchBadge: "Demographics Tuned"
+      },
+      'headlines': {
+        statusLabel: "MAGNETIC CLICK HOOK ADVISOR",
+        metric1: { name: "CTR VALUE TIER", value: "MAX" },
+        metric2: { name: "OPEN-LOOP POWER", value: "OPTIMAL" },
+        techBullets: ["Curiosity loop multiplier formulas", "Intense threat/warning psychological flags", "CTR prediction scoring metrics"],
+        searchBadge: "CTR Tuned"
+      },
+      'repurposing': {
+        statusLabel: "OMNI-CHANNEL REPURPOSE CONVERTER",
+        metric1: { name: "RECONVERSION INDEX", value: "94.2%" },
+        metric2: { name: "PIPELINE CHANNELS", value: "4 CHANNELS" },
+        techBullets: ["Multi-platform conversion layout", "Format adaptivity compression", "High-CTR strategic re-hooks"],
+        searchBadge: "Pipeline Loaded"
+      },
+      'youtube-seo': {
+        statusLabel: "YOUTUBE SEO DECODER CORE",
+        metric1: { name: "KEYWORD DENSITY", value: "OPTIMAL" },
+        metric2: { name: "ALGORITHMIC INDEX", value: "100%" },
+        techBullets: ["SEO play titles with high-CTR formulas", "Semantic meta description synthesis", "Timelines & Chapter layout templates"],
+        searchBadge: "VSEO Active"
+      },
+      'seo-scorecard': {
+        statusLabel: "METADATA RECURSIVE AUDITOR",
+        metric1: { name: "LSI SCORECARD", value: "STRICT" },
+        metric2: { name: "DENSITY COEFFICIENT", value: "PASS" },
+        techBullets: ["High-impact fix blueprint layout", "Keyword resonance matrix index", "Search entity matching"],
+        searchBadge: "Auditor Active"
+      },
+      'keyword-research': {
+        statusLabel: "SEMANTIC KEYWORD DECODER",
+        metric1: { name: "SEARCH INTENT MATRIX", value: "HIGH" },
+        metric2: { name: "LSI EMBEDDINGS", value: "50k+" },
+        techBullets: ["Volume vs. Difficulty scaling metric", "Semantic keyword expansion list", "Competitor keyword outrank maps"],
+        searchBadge: "KWD Intel Live"
+      },
+      'post-optimizer': {
+        statusLabel: "SOCIAL POST ALGORITHM TUNER",
+        metric1: { name: "READABILITY RATIO", value: "1.65" },
+        metric2: { name: "HOOK STRENGTH", value: "MAX" },
+        techBullets: ["Hook power multipliers", "LinkedIn & Twitter algorithm tuning", "Formatting & space optimization metrics"],
+        searchBadge: "Post Tuner Active"
+      },
+      'shadowban-solutions': {
+        statusLabel: "DIAGNOSTIC ALGORITHM SANITIZER",
+        metric1: { name: "DIAGNOSTIC PROBES", value: "STRICT" },
+        metric2: { name: "RECOVERY TIMELINE", value: "14 DAYS" },
+        techBullets: ["Shadowban recovery diagnostics reports", "Platform compliance policy index", "14-day reset strategies templates"],
+        searchBadge: "Diagnostics Active"
+      }
+    };
+
+    const specific = config[featureId] || {};
+    return {
+      ...defaultDesign,
+      ...specific,
+    };
+  }, [featureId, themeColor]);
+
+  const getCost = (id: string): number => {
+    switch (id) {
+      case 'ai-script-outline':
+      case 'shadowban-solutions':
+        return 5;
+      case 'scripts':
+      case 'competitor-analysis':
+      case 'trending':
+      case 'trending-topics':
+      case 'content-ideas':
+      case 'thumbnails':
+      case 'youtube-seo':
+      case 'seo-scorecard':
+      case 'keyword-research':
+      case 'vseo-title-desc':
+      case 'vseo-scorecard':
+      case 'vseo-keywords':
+      case 'template-library':
+      case 'repurposing':
+      case 'personas':
+        return 3;
+      default:
+        return 2;
+    }
+  };
+
+  const cost = getCost(featureId);
+
+  return (
+    <div className={cn(
+      "p-6 bg-gradient-to-br border-4 rounded-3xl relative overflow-hidden text-left transition-all duration-500 hover:shadow-2xl shadow-lg",
+      design.gradient,
+      design.borderGlow,
+      design.glow,
+      "bg-slate-50/95 dark:bg-slate-950/95"
+    )}>
+      {/* Absolute Geometric Backdrop decoration */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 dark:bg-white/5 rounded-full blur-3xl transform translate-x-12 -translate-y-12 pointer-events-none" />
+      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-brand/10 rounded-full blur-2xl pointer-events-none" />
+      
+      {/* Top Banner Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+        
+        {/* Left Side: Title & Description */}
+        <div className="space-y-4 max-w-xl">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className={cn("text-[10px] font-mono uppercase font-black tracking-widest px-3 py-1 rounded-md bg-white/95 dark:bg-black/80 border border-indigo-200/50 dark:border-white/10 shadow-sm", design.accentText)}>
+              {design.statusLabel}
+            </span>
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-black uppercase bg-emerald-500/10 dark:bg-emerald-400/10 px-3 py-1 rounded-md border border-emerald-500/40 dark:border-emerald-400/20 flex items-center gap-1.5 shadow-md">
+              <span className={cn("w-2.5 h-2.5 rounded-full animate-ping", design.dot)} />
+              Chidon AI Grounded
+            </span>
+            <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-black uppercase bg-amber-500/10 dark:bg-amber-400/10 px-3 py-1 rounded-md border border-amber-500/40 dark:border-amber-400/20 flex items-center gap-1.5 shadow-md">
+              <span>{cost} Credits</span>
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {Icon && (
+              <div className={cn("p-2.5 rounded-2xl bg-white/95 dark:bg-black/60 border-2 shadow-md shrink-0", design.borderGlow, design.accentText)}>
+                <Icon size={26} className="animate-pulse text-brand" />
+              </div>
+            )}
+            <h1 className="text-3xl font-black bg-gradient-to-r from-brand via-indigo-400 to-cyan-400 bg-clip-text text-transparent uppercase tracking-tight font-sans drop-shadow-sm">
+              {label} Core
+            </h1>
+          </div>
+          
+          <p className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-sans max-w-lg font-bold">
+            <span className="text-brand dark:text-cyan-400 uppercase font-black block text-[11px] tracking-wider mb-1">
+              CHIDON IQ SPECIALIZED COGNITIVE PROTOCOL
+            </span>
+            {description} Powered by <span className="bg-gradient-to-r from-cyan-500 to-brand bg-clip-text text-transparent font-black">Chidon AI live index decoding</span> to retrieve the most up-to-date and viral breakout concepts in real-time.
+          </p>
+        </div>
+ 
+        {/* Right Side: Smart Metrics HUD */}
+        <div className="grid grid-cols-2 gap-3 shrink-0 w-full md:w-auto">
+          <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-col justify-between font-mono shadow-md min-w-[130px]">
+            <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider">{design.metric1.name}</span>
+            <span className={cn("text-xl font-black tracking-tight mt-1", design.accentText)}>{design.metric1.value}</span>
+          </div>
+          <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-col justify-between font-mono shadow-md min-w-[130px]">
+            <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider">{design.metric2.name}</span>
+            <span className="text-xl font-black text-white mt-1">{design.metric2.value}</span>
+          </div>
+        </div>
+ 
+      </div>
+ 
+      {/* Tech Specifications and Bullet Checklist */}
+      <div className="mt-6 pt-5 border-t-2 border-dashed border-indigo-200 dark:border-white/10 relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span className="text-[10px] font-mono text-slate-600 dark:text-slate-400 uppercase font-black tracking-wider shrink-0">TECH SPECS:</span>
+          {design.techBullets.map((bullet, index) => (
+            <div key={index} className="flex items-center gap-1.5 text-xs text-slate-800 dark:text-slate-100 font-sans font-extrabold px-3 py-1 bg-brand/5 border border-brand/15 rounded-lg shadow-sm">
+              <span className={cn("w-2 h-2 rounded-full animate-ping", design.dot)} />
+              <span>{bullet}</span>
+            </div>
+          ))}
+        </div>
+        
+        <span className="text-[10px] font-mono text-indigo-400 dark:text-slate-300 uppercase font-black tracking-widest bg-indigo-950/60 border border-indigo-800/40 px-3 py-1.5 rounded shadow-sm">
+          MODEL: {persona}
+        </span>
+      </div>
+ 
+    </div>
+  );
+}
+
 // --- MAIN UNIFIED COMPONENT ---
 export default function AdvancedNeuralTool({
   feature,
@@ -583,14 +946,14 @@ export default function AdvancedNeuralTool({
   onGenerateFeedback,
   onSaveDraft,
   onBack,
-  credits = null,
   activeDocId = null,
   chatMessages = [],
   loadingHistory = false,
   onLoadHistoryItem,
   onWrapUpMessage,
   onDeleteMessage,
-  onNewChat
+  onNewChat,
+  checkAndDeductCredits
 }: any) {
   const { t } = useTranslation();
   const bookContext = useContext(BookContext);
@@ -640,7 +1003,7 @@ export default function AdvancedNeuralTool({
     setTimeout(() => setShowDeductionAnim(false), 2000);
 
     try {
-      await onWrapUpMessage(feature.id, activeDocId, lastResponse.content, credits);
+      await onWrapUpMessage(feature.id, activeDocId, lastResponse.content);
     } catch (err) {
       console.error(err);
     } finally {
@@ -707,6 +1070,36 @@ ${FORMATTING_PROTOCOL}`;
   );
 
   const lastResponse = messages && messages.slice().reverse().find((m: any) => m.role === 'assistant');
+
+  // Instant Notepad States
+  const [isSavedNotepad, setIsSavedNotepad] = useState(false);
+  const [isSavingNotepad, setIsSavingNotepad] = useState(false);
+
+  useEffect(() => {
+    setIsSavedNotepad(false);
+    setIsSavingNotepad(false);
+  }, [lastResponse?.content]);
+
+  const handleSaveToNotepad = async () => {
+    if (!lastResponse?.content || isSavingNotepad) return;
+    setIsSavingNotepad(true);
+    try {
+      const title = `${feature.label}: ${input1.slice(0, 20) || 'Neural Strategy'}`;
+      await onSaveDraft(feature.id, lastResponse.content, title, true);
+      const isAlreadySaved = isSavedNotepad;
+      setIsSavedNotepad(true);
+      if (isAlreadySaved) {
+        toast.success("Saved an additional copy to your Notepad Vault!");
+      } else {
+        toast.success("Successfully saved to Notepad! Access it anytime in your Vault.");
+      }
+    } catch (err) {
+      console.error("Save to notepad failed:", err);
+      toast.error("Failed to save to Notepad. Please try again.");
+    } finally {
+      setIsSavingNotepad(false);
+    }
+  };
 
   // Hashtag specific parser helper
   const tagsList = useMemo(() => {
@@ -791,7 +1184,22 @@ ${FORMATTING_PROTOCOL}`;
         </div>
       </div>
 
-      {feature.id === 'trending' && <GoogleBrowserEngineWidget />}
+      {/* Feature Differentiator Banner - unique layout & live metrics styling per feature page */}
+      <FeatureDifferentiatorBanner 
+        featureId={feature.id}
+        themeColor={feature.themeColor}
+        label={feature.label}
+        description={feature.description}
+        persona={feature.persona || 'ChidonIQ Agent'}
+        icon={feature.icon}
+      />
+
+      {feature.id === 'trending' && <ChidonIQCrawlerWidget />}
+      {feature.id === 'trending' && (
+        <div className="mb-6">
+          <TrendHeatmapWidget />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         
@@ -897,19 +1305,8 @@ ${FORMATTING_PROTOCOL}`;
               </div>
             )}
 
-            <div className="flex items-center justify-between px-1 text-[11px] font-mono uppercase font-bold text-slate-400 dark:text-slate-500">
-              <span>Required Energy</span>
-              <span className="text-brand dark:text-cyan-400">
-                Cost: {
-                  feature.id === 'ai-script-outline' ? 5 :
-                  feature.id === 'shadowban-solutions' ? 4 :
-                  ['scripts', 'competitor-analysis', 'trending', 'trending-topics', 'trend-alerts'].includes(feature.id) ? 3 :
-                  ['content-ideas', 'thumbnails', 'daily-ideas'].includes(feature.id) ? 2 : 1
-                } Credits
-              </span>
-            </div>
-
             <button 
+              id="advanced-neural-execute-btn"
               onClick={handleAction} 
               disabled={loading || !input1.trim()}
               className={cn(
@@ -928,16 +1325,16 @@ ${FORMATTING_PROTOCOL}`;
 
         {/* RESULTS PANEL */}
         <div className="md:col-span-2 space-y-6 text-left">
-          {loading && (
+          {loading && !lastResponse && (
             <div className="flex flex-col items-center justify-center py-20 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl space-y-4 animate-pulse shadow-sm">
-              <LoaderCircleIcon className={cn("w-10 h-10 animate-spin", feature.themeColor)} />
+              <Loader2 className={cn("w-10 h-10 animate-spin", feature.themeColor)} />
               <p className="text-xs font-mono uppercase tracking-[0.25em] text-[var(--text-secondary)] font-bold">Processing Neural Pipeline...</p>
             </div>
           )}
 
           {!loading && !lastResponse && (
             <div className="flex flex-col items-center justify-center py-24 bg-[var(--bg-card)] border border-dashed border-[var(--border-base)] rounded-3xl text-center p-6 shadow-sm">
-              <ZapIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4 animate-pulse" />
+              <Zap className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4 animate-pulse" />
               <h4 className="text-[var(--text-primary)] font-bold text-sm mb-1 uppercase tracking-wide">Aether-Core Ready</h4>
               <p className="text-[var(--text-secondary)] text-xs max-w-sm leading-relaxed">
                 Provide directive specifications in the left controller console and select execute to trigger neural analysis stream.
@@ -955,13 +1352,19 @@ ${FORMATTING_PROTOCOL}`;
             </div>
           )}
 
-          {lastResponse && !loading && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {lastResponse && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              {loading && (
+                <div className="flex items-center gap-3 p-4 bg-brand/5 border border-brand/15 rounded-2xl animate-pulse">
+                  <Loader2 size={16} className={cn("animate-spin", feature.themeColor)} />
+                  <p className="text-xs font-mono uppercase tracking-wider text-[var(--text-primary)] font-bold">Synthesizing updated analysis...</p>
+                </div>
+              )}
               
               {/* Specialized Widgets Integration */}
               {feature.id === 'scripts' && <ScriptPrompterWidget content={lastResponse.content} />}
-              {feature.id === 'bio' && <ProfilePreviewWidget content={lastResponse.content} />}
-              {feature.id === 'thumbnails' && <ThumbnailCanvasWidget content={lastResponse.content} />}
+              {feature.id === 'bio' && <ProfilePreviewWidget content={lastResponse.content} checkAndDeductCredits={checkAndDeductCredits} />}
+              {feature.id === 'thumbnails' && <ThumbnailCanvasWidget content={lastResponse.content} checkAndDeductCredits={checkAndDeductCredits} />}
               {feature.id === 'engagement-calc' && <GrowthMathWidget content={lastResponse.content} />}
               {feature.id === 'trending' && <TrendMomentumTickerWidget content={lastResponse.content} />}
               {feature.id === 'personas' && <AudienceDossierWidget content={lastResponse.content} />}
@@ -1030,74 +1433,25 @@ ${FORMATTING_PROTOCOL}`;
                   </div>
                   
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Wrap Up Button */}
-                    {activeDocId && (
-                      <div className="relative">
-                        <button
-                          onClick={handleWrapUpAction}
-                          disabled={isWrapping || !!currentMessageFromHistory?.wrappedUp}
-                          className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-bold border cursor-pointer transition-all disabled:opacity-50",
-                            currentMessageFromHistory?.wrappedUp
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                              : "bg-brand/10 text-brand border-brand/20 hover:bg-brand/20"
-                          )}
-                        >
-                          {isWrapping ? (
-                            <Loader2 size={12} className="animate-spin" />
-                          ) : currentMessageFromHistory?.wrappedUp ? (
-                            <Check size={12} />
-                          ) : (
-                            <Sparkles size={11} />
-                          )}
-                          <span>{currentMessageFromHistory?.wrappedUp ? 'Wrapped Up' : 'Wrap Up (0.5c)'}</span>
-                        </button>
-
-                        <AnimatePresence>
-                          {showDeductionAnim && (
-                            <motion.span
-                              initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                              animate={{ opacity: 1, y: -25, scale: 1.1 }}
-                              exit={{ opacity: 0 }}
-                              className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-[9px] font-black text-red-500 font-mono tracking-wider pointer-events-none whitespace-nowrap bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded"
-                            >
-                              -0.5 CREDITS
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )}
-
-                    {/* Copy Button */}
                     <button
-                      onClick={handleCopyAction}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-[var(--border-base)] rounded-lg text-[10px] uppercase tracking-wider font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                      onClick={handleSaveToNotepad}
+                      disabled={isSavingNotepad}
+                      className={cn(
+                        "flex items-center gap-2 px-5 py-2.5 rounded-xl font-mono text-[11px] uppercase tracking-wider font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-75 disabled:pointer-events-none",
+                        isSavedNotepad 
+                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-none hover:bg-emerald-500/15"
+                          : "bg-brand hover:bg-brand/90 text-white shadow-brand/10"
+                      )}
                     >
-                      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                      <span>{copied ? 'Copied ✓' : 'Copy'}</span>
+                      {isSavingNotepad ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : isSavedNotepad ? (
+                        <Check size={13} />
+                      ) : (
+                        <BookOpen size={13} />
+                      )}
+                      <span>{isSavedNotepad ? 'Save copy to Notepad' : 'Save to Notepad'}</span>
                     </button>
-
-                    {/* New Chat Button */}
-                    <button
-                      onClick={onNewChat}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-[var(--border-base)] rounded-lg text-[10px] uppercase tracking-wider font-bold text-red-500 hover:bg-red-500/10 border-red-500/10 hover:border-red-500/20 transition-all cursor-pointer"
-                    >
-                      <Trash2 size={12} />
-                      <span>New Chat</span>
-                    </button>
-
-                    {/* Original Actions */}
-                    {actions(lastResponse)}
-
-                    {bookContext?.onSendToBook && (
-                      <button 
-                        onClick={() => bookContext.onSendToBook?.(lastResponse.content, `${feature.label}: ${input1.slice(0, 15)}`)}
-                        className="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-[var(--border-base)] rounded-lg text-[var(--text-secondary)] hover:text-brand transition-all cursor-pointer"
-                        title="Send to Ruled Book"
-                      >
-                        <BookOpen size={14} />
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -1105,7 +1459,7 @@ ${FORMATTING_PROTOCOL}`;
                 {currentMessageFromHistory?.wrappedUp && (
                   <div className="p-5 mb-6 bg-brand/5 border border-brand/10 rounded-2xl shadow-sm text-left relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="absolute top-0 right-0 p-3">
-                      <Sparkles size={16} className="text-brand animate-pulse" />
+                      <Zap size={16} className="text-brand animate-pulse" />
                     </div>
                     <h4 className="text-xs font-mono font-bold text-brand uppercase tracking-[0.2em] mb-2.5">✓ 3-Bullet Strategic Wrap-Up</h4>
                     <ul className="space-y-2.5 font-sans text-xs text-[var(--text-secondary)]">
@@ -1215,6 +1569,7 @@ ${FORMATTING_PROTOCOL}`;
                 <div className="space-y-1">
                   <div className="flex gap-2">
                     <textarea
+                      id="advanced-neural-prompt-input"
                       placeholder={`Instruct ${feature.persona || 'AI'} to refine or customize...`}
                       rows={1}
                       className="flex-1 bg-slate-50 dark:bg-slate-900/40 border border-[var(--border-base)] rounded-xl px-4 py-3 outline-none focus:border-brand focus:ring-1 focus:ring-brand/15 transition-all text-xs font-sans text-[var(--text-primary)] placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
@@ -1228,24 +1583,17 @@ ${FORMATTING_PROTOCOL}`;
                       }}
                     />
                     <button
+                      id="advanced-neural-send-btn"
                       onClick={() => handleFollowUpSend()}
                       disabled={loading || !followUpInput.trim()}
                       className={cn(
-                        "px-4 rounded-xl text-white font-bold text-xs uppercase transition-all shadow-sm flex items-center justify-center shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer gap-1.5",
+                        "px-4 rounded-xl text-white font-bold text-xs uppercase transition-all shadow-sm flex items-center justify-center shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer gap-1.5 hover:shadow-md hover:brightness-110 active:scale-95",
                         feature.themeColor.replace('text-', 'bg-')
                       )}
                     >
                       <MessageSquare size={14} />
                       <span>Send</span>
                     </button>
-                  </div>
-                  <div className="text-[9px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase text-right tracking-wider pr-1">
-                    Dialogue Run Cost: {
-                      feature.id === 'ai-script-outline' ? 5 :
-                      feature.id === 'shadowban-solutions' ? 4 :
-                      ['scripts', 'competitor-analysis', 'trending', 'trending-topics', 'trend-alerts'].includes(feature.id) ? 3 :
-                      ['content-ideas', 'thumbnails', 'daily-ideas'].includes(feature.id) ? 2 : 1
-                    } Credits
                   </div>
                 </div>
               </div>
@@ -1264,9 +1612,8 @@ ${FORMATTING_PROTOCOL}`;
         messages={chatMessages}
         loading={loadingHistory}
         onSelect={onLoadHistoryItem}
-        onWrapUp={(msg: any) => onWrapUpMessage(feature.id, msg.id, msg.result, credits)}
+        onWrapUp={(msg: any) => onWrapUpMessage(feature.id, msg.id, msg.result)}
         onDelete={onDeleteMessage}
-        credits={credits}
       />
 
     </div>

@@ -35,6 +35,7 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportToTXT } from '../lib/exportUtils';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { getStorageKey } from '../lib/userStorage';
 import emptyVaultImg from '../assets/images/empty_vault_1781319190599.jpg';
 
 interface SavedDraft {
@@ -101,8 +102,20 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
       `Are you sure you want to permanently discard all ${selectedIds.length} selected blueprints from your CHIDON Vault? This operation is irreversible.`,
       async () => {
         try {
-          const promises = selectedIds.map(id => deleteDoc(doc(db, 'drafts', id)));
-          await Promise.all(promises);
+          const savedSandbox = localStorage.getItem("chidon_sandbox_session");
+          if (!auth.currentUser || savedSandbox) {
+            const localKey = getStorageKey('guest_chidon_vault_drafts');
+            const local = localStorage.getItem(localKey);
+            if (local) {
+              const list = JSON.parse(local);
+              const filtered = list.filter((item: any) => !selectedIds.includes(item.id));
+              localStorage.setItem(localKey, JSON.stringify(filtered));
+              setDrafts(filtered);
+            }
+          } else {
+            const promises = selectedIds.map(id => deleteDoc(doc(db, 'drafts', id)));
+            await Promise.all(promises);
+          }
           if (selectedDraft && selectedIds.includes(selectedDraft.id)) {
             setSelectedDraft(null);
           }
@@ -118,7 +131,21 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
     // We bind to real-time snapshot
     let unsubscribe = () => {};
 
-    if (auth.currentUser) {
+    // Check if we have a sandbox session or are using local auth
+    const savedSandbox = localStorage.getItem("chidon_sandbox_session");
+    let isSandbox = false;
+    if (savedSandbox) {
+      try {
+        const parsed = JSON.parse(savedSandbox);
+        if (parsed && parsed.uid) {
+          isSandbox = true;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (auth.currentUser && !isSandbox) {
       const q = query(
         collection(db, 'drafts'),
         where('userId', '==', auth.currentUser.uid),
@@ -147,7 +174,20 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
         setLoading(false);
       });
     } else {
-      setLoading(true);
+      // Local storage fallback for sandbox / guest operator
+      const localKey = getStorageKey('guest_chidon_vault_drafts');
+      const local = localStorage.getItem(localKey);
+      if (local) {
+        try {
+          const list = JSON.parse(local);
+          setDrafts(list);
+        } catch (e) {
+          console.error("Failed to parse local drafts:", e);
+        }
+      } else {
+        setDrafts([]);
+      }
+      setLoading(false);
     }
 
     return () => unsubscribe();
@@ -163,10 +203,22 @@ export const ChidonVault: React.FC<ChidonVaultProps> = ({ onBack, onSignIn }) =>
     if (e) e.stopPropagation();
     triggerConfirm(
       "DISCARD BLUEPRINT",
-      "Are you sure you want to permanently discard this blueprint from your CHIDON Vault? This blueprint will be deleted from the database.",
+      "Are you sure you want to permanently discard this blueprint from your CHIDON Vault?",
       async () => {
         try {
-          await deleteDoc(doc(db, 'drafts', id));
+          const savedSandbox = localStorage.getItem("chidon_sandbox_session");
+          if (!auth.currentUser || savedSandbox) {
+            const localKey = getStorageKey('guest_chidon_vault_drafts');
+            const local = localStorage.getItem(localKey);
+            if (local) {
+              const list = JSON.parse(local);
+              const filtered = list.filter((item: any) => item.id !== id);
+              localStorage.setItem(localKey, JSON.stringify(filtered));
+              setDrafts(filtered);
+            }
+          } else {
+            await deleteDoc(doc(db, 'drafts', id));
+          }
           if (selectedDraft?.id === id) {
             setSelectedDraft(null);
           }

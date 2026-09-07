@@ -8,6 +8,8 @@ import {
   ExternalLink, ChevronRight, Check, AlertTriangle, MessageSquare, Info
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { getStorageKey } from '../lib/userStorage';
+import { ShadowbanMitigationModal } from './ShadowbanMitigationModal';
 
 interface ShadowbanSolutionsProps {
   onGenerate: (prompt: string, displayPrompt?: string) => Promise<any>;
@@ -63,7 +65,7 @@ const CHANNEL_PRESETS = [
         description: "Unproven health claims violating medical suppression parameters. High spam flags."
       },
       {
-        title: "Earn $400 every hour copy-pasting Google Translator files (Easy student method)",
+        title: "Earn $400 every hour copy-pasting Online Translator files (Easy student method)",
         thumbnail: "A student holding thick cash blocks. Text 'INSTANT PAYOUT'",
         description: "High density of keyword triggers about passive income. Low-quality reuse guide."
       },
@@ -235,6 +237,7 @@ export const ShadowbanSolutions = ({
   const [activePresetIndex, setActivePresetIndex] = useState(-1);
   const [isEditingCustom, setIsEditingCustom] = useState(false);
   const [activeTab, setActiveTab] = useState<'diagnosis' | 'audit' | 'timeline' | 'myths' | 'dossier'>('diagnosis');
+  const [isMitigationModalOpen, setIsMitigationModalOpen] = useState(false);
   
   // Last 10 videos state
   const [videosList, setVideosList] = useState<any[]>(
@@ -251,7 +254,7 @@ export const ShadowbanSolutions = ({
   // Interactive Checklist states (Saved in localstorage for continuity!)
   const [checklist, setChecklist] = useState<Record<string, boolean>>(() => {
     try {
-      const saved = localStorage.getItem('chidon_shadowban_checklist');
+      const saved = localStorage.getItem(getStorageKey('chidon_shadowban_checklist'));
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
@@ -259,7 +262,7 @@ export const ShadowbanSolutions = ({
   });
 
   useEffect(() => {
-    localStorage.setItem('chidon_shadowban_checklist', JSON.stringify(checklist));
+    localStorage.setItem(getStorageKey('chidon_shadowban_checklist'), JSON.stringify(checklist));
   }, [checklist]);
 
   // Handle Preset selection
@@ -524,16 +527,27 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
           </div>
         </div>
         
-        {lastResponse && (
+        <div className="flex flex-wrap items-center gap-2">
           <button 
-            id="shb_re_audit_btn"
-            onClick={resetForm}
-            className="px-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-red-500/30 text-xs font-mono font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 text-slate-700 dark:text-slate-300"
+            id="shb_mitigate_btn"
+            onClick={() => setIsMitigationModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-red-500 to-amber-500 hover:from-red-600 hover:to-amber-600 text-white text-xs font-mono font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-red-550/10 hover:shadow-red-550/20 active:scale-95"
           >
-            <RefreshCcw size={13} />
-            <span>Audit Another Channel</span>
+            <Shield size={13} />
+            <span>Mitigation Protocol</span>
           </button>
-        )}
+
+          {lastResponse && (
+            <button 
+              id="shb_re_audit_btn"
+              onClick={resetForm}
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-red-500/30 text-xs font-mono font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-2 text-slate-700 dark:text-slate-300"
+            >
+              <RefreshCcw size={13} />
+              <span>Audit Another Channel</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {!lastResponse ? (
@@ -801,9 +815,6 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
               </span>
 
               <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                <span className="text-[11px] font-mono font-bold text-red-500 dark:text-red-400 uppercase tracking-wider">
-                  Cost: 4 Credits
-                </span>
                 <button
                   id="shb_trigger_audit_btn"
                   onClick={triggerAudit}
@@ -1281,6 +1292,11 @@ List 3 common creator myths about shadowbans (with explanations of why they do n
           </div>
         </div>
       )}
+
+      <ShadowbanMitigationModal 
+        isOpen={isMitigationModalOpen} 
+        onClose={() => setIsMitigationModalOpen(false)} 
+      />
     </div>
   );
 };

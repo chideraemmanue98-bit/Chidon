@@ -7,20 +7,62 @@ import {
   Shield, 
   RefreshCw, 
   CheckCircle, 
-  ExternalLink,
   HelpCircle,
   Cpu,
   X,
   AlertTriangle,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Wallet,
+  History,
+  Coins,
+  Lightbulb,
+  Hash,
+  PenTool,
+  UserCircle,
+  ImageIcon,
+  BarChart3,
+  Calendar,
+  Calculator,
+  TrendingUp,
+  Users,
+  BookOpen,
+  Book,
+  Clock,
+  Trophy,
+  Activity,
+  Microscope,
+  Video,
+  Tag,
+  Globe,
+  Bell,
+  FilePlus2,
+  AlertCircle,
+  Mail,
+  Printer
 } from 'lucide-react';
-import { doc, updateDoc, serverTimestamp, onSnapshot, Timestamp } from 'firebase/firestore';
+import { 
+  doc, 
+  updateDoc, 
+  setDoc,
+  getDoc,
+  serverTimestamp, 
+  onSnapshot, 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  limit, 
+  increment 
+} from 'firebase/firestore';
+import { triggerNotification } from '../hooks/useNotifications';
+import toast from 'react-hot-toast';
 
 export interface PricingPlan {
   id: string;
   name: string;
   price: number;
+  credits: number;
   description: string;
   icon: any;
   color: string;
@@ -35,255 +77,396 @@ interface ChidonPricingProps {
   db: any;
   showTrialEndedModal?: boolean;
   onCloseTrialEndedModal?: () => void;
+  onNavigate?: (view: any, feature?: any) => void;
 }
+
+const loadPaystackScript = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if ((window as any).PaystackPop) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://js.paystack.co/v1/inline.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export default function ChidonPricing({ 
   user, 
   onBack, 
   db,
   showTrialEndedModal = false,
-  onCloseTrialEndedModal
+  onCloseTrialEndedModal,
+  onNavigate
 }: ChidonPricingProps) {
   const [activePlan, setActivePlan] = useState<string>('Free Workspace Tier');
   const [subStatus, setSubStatus] = useState<string>('inactive');
   const [loading, setLoading] = useState<boolean>(false);
-  const [checkingConfig, setCheckingConfig] = useState<boolean>(true);
+  const [userCredits, setUserCredits] = useState<number>(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState<boolean>(true);
+  const [receipts, setReceipts] = useState<any[]>([]);
+  const [loadingReceipts, setLoadingReceipts] = useState<boolean>(true);
+  const [activeLedgerTab, setActiveLedgerTab] = useState<'usage' | 'invoices'>('usage');
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState<'all' | 'mini' | 'big' | 'pro'>('all');
+  const [featureSearchQuery, setFeatureSearchQuery] = useState('');
+  const [claimedFreeCredits, setClaimedFreeCredits] = useState<boolean>(false);
+  const [claimingFree, setClaimingFree] = useState<boolean>(false);
+
+  // Paystack transaction state definitions
   const [paystackConfigured, setPaystackConfigured] = useState<boolean>(false);
-  const [exchangeRate, setExchangeRate] = useState<number>(1500);
+  const [paystackCheckingConfig, setPaystackCheckingConfig] = useState<boolean>(true);
+  const [paystackLoading, setPaystackLoading] = useState<boolean>(false);
+  const [paystackCheckoutUrl, setPaystackCheckoutUrl] = useState<string>('');
+  const [paystackRef, setPaystackRef] = useState<string>('');
+  const [paystackVerifyError, setPaystackVerifyError] = useState<string>('');
+  const [paystackVerifying, setPaystackVerifying] = useState<boolean>(false);
+  const [paystackSuccess, setPaystackSuccess] = useState<boolean>(false);
+  const [showPaystackModal, setShowPaystackModal] = useState<PricingPlan | null>(null);
+  const [payerEmail, setPayerEmail] = useState<string>('');
+  const [exchangeRate, setExchangeRate] = useState<number>(1500); // default fallback
 
-  // Checkout & verification states
-  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
-  const [checkoutUrl, setCheckoutUrl] = useState<string>('');
-  const [payRef, setPayRef] = useState<string>('');
-  const [payerEmail, setPayerEmail] = useState<string>(user?.email || '');
-  const [verifying, setVerifying] = useState<boolean>(false);
-  const [verifyError, setVerifyError] = useState<string>('');
-  const [paySuccess, setPaySuccess] = useState<boolean>(false);
-  const [callbackSuccess, setCallbackSuccess] = useState<boolean>(false);
-  const [callbackPlanName, setCallbackPlanName] = useState<string>('');
-
+  // Set default email on user load
   useEffect(() => {
-    if (!user) return;
-    
-    const params = new URLSearchParams(window.location.search);
-    const reference = params.get('reference') || params.get('trxref');
-    
-    if (reference) {
-      const runUrlVerification = async () => {
-        setVerifying(true);
-        setVerifyError('');
-        try {
-          console.log('[Pricing Gateway] Capturing reference parameter from URL:', reference);
-          const response = await fetch('/api/paystack/verify', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ reference })
-          });
-
-          const resData = await response.json();
-          if (!response.ok || !resData.success) {
-            throw new Error(resData.message || 'Verification request failed.');
-          }
-
-          const txStatus = resData.data.status;
-          if (txStatus === 'success') {
-            const metadata = resData.data.metadata || {};
-            const planName = metadata.planName || 'Starter Creator Pack';
-            const price = metadata.originalAmountUsd || (resData.data.amount / 100);
-
-            const userRef = doc(db, 'users', user.uid);
-            const mappedPackage = planName === 'Enterprise Sovereign Pack' ? 'enterprise' : (planName === 'Pro Strategist Pack' ? 'pro' : 'basic');
-            const oneMonthLater = Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000);
-            await updateDoc(userRef, {
-              subscriptionPlan: planName,
-              subscriptionStatus: 'active',
-              subscriptionPrice: price,
-              paystackSubscriptionRef: reference,
-              updatedAt: serverTimestamp(),
-              subscription: {
-                status: 'active',
-                package: mappedPackage,
-                currentPeriodEnd: oneMonthLater
-              }
-            });
-
-            setPaySuccess(true);
-            setCallbackSuccess(true);
-            setCallbackPlanName(planName);
-            
-            // Clean up query parameters from URL safely without page reload
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } else {
-            throw new Error(`Transaction verification status is '${txStatus}'. Please complete payment before verifying.`);
-          }
-        } catch (err: any) {
-          console.error('[Pricing Gateway] Callback verification error:', err);
-          setVerifyError(err.message || 'Verification failed. Could not verify payment callback.');
-        } finally {
-          setVerifying(false);
-        }
-      };
-      
-      runUrlVerification();
+    if (user && user.email) {
+      setPayerEmail(user.email);
     }
-  }, [user, db]);
+  }, [user]);
 
+  // Check if Paystack is configured on backend
   useEffect(() => {
-    // Fetch Paystack configuration and live exchange rate
     fetch('/api/paystack/config')
-      .then(async res => {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          return res.json();
-        }
-        throw new Error(`Expected JSON response, but received content-type: ${contentType}`);
-      })
+      .then(res => res.json())
       .then(data => {
-        if (data && data.success) {
+        if (data.success) {
           setPaystackConfigured(data.configured);
           if (data.exchangeRate) {
             setExchangeRate(data.exchangeRate);
           }
         }
-        setCheckingConfig(false);
+        setPaystackCheckingConfig(false);
       })
       .catch(err => {
-        console.error('[Pricing Gateway] Config check error:', err);
-        setPaystackConfigured(false);
-        setCheckingConfig(false);
+        console.error('Error checking Paystack config:', err);
+        setPaystackCheckingConfig(false);
       });
   }, []);
 
+  // Claim Free Promo Credits Promo
+  const handleClaimFreeCredits = async () => {
+    if (!user) {
+      toast.error("Please authenticate to claim free credits.");
+      return;
+    }
+    setClaimingFree(true);
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        credits: increment(300),
+        claimedFreeCredits: true
+      });
+
+      await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+        type: 'credit',
+        amount: 300,
+        description: `Claimed Welcome Promo Credits (+300 credits)`,
+        createdAt: serverTimestamp()
+      });
+
+      // Automatic system notification dispatch
+      triggerNotification(user.uid, {
+        type: 'credit',
+        title: 'Claimed 300 Free Credits!',
+        body: 'Your Welcome Promo Credits (+300 credits) have been credited to your balance.',
+        link: '/pricing'
+      }).catch(err => console.error("Claim notification failed", err));
+
+      toast.success("Successfully claimed 300 free credits!");
+    } catch (err: any) {
+      console.error("Failed to claim free credits:", err);
+      toast.error("Error claiming credits: " + err.message);
+    } finally {
+      setClaimingFree(false);
+    }
+  };
+
+  // Real-time Credit Balance Sync
   useEffect(() => {
     if (!user) return;
+    if (user.isSandbox || user.isLocalGuest || user.uid.startsWith("local_")) {
+      setActivePlan('Enterprise Sovereign Pack');
+      setSubStatus('active');
+      const localCredits = localStorage.getItem("chidon_local_credits");
+      setUserCredits(localCredits !== null ? Number(localCredits) : 7);
+      setClaimedFreeCredits(true);
+      return;
+    }
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (data.subscriptionPlan) {
-          setActivePlan(data.subscriptionPlan);
-        } else {
-          setActivePlan('Free Workspace Tier');
-        }
-        if (data.subscriptionStatus) {
-          setSubStatus(data.subscriptionStatus);
-        } else {
-          setSubStatus('inactive');
-        }
+        setActivePlan(data.subscriptionPlan || 'Free Workspace Tier');
+        setSubStatus(data.subscriptionStatus || 'inactive');
+        setUserCredits(data.credits !== undefined ? data.credits : 0);
+        setClaimedFreeCredits(!!data.claimedFreeCredits);
       } else {
         setActivePlan('Free Workspace Tier');
         setSubStatus('inactive');
+        setUserCredits(0);
+        setClaimedFreeCredits(false);
       }
     }, (error) => {
-      console.error("Firestore user sub snapshot error:", error);
+      const errMsg = error?.message || String(error);
+      if (errMsg.includes('CANCELLED') || errMsg.includes('Disconnecting idle stream')) {
+        console.debug("Firestore user sub snapshot connection idle (self-healing).");
+      } else {
+        console.error("Firestore user sub snapshot error:", error);
+      }
     });
 
-    return () => {
-      unsubscribeUser();
-    };
+    return () => unsubscribeUser();
+  }, [user, db]);
+
+  // Real-time Transaction history log
+  useEffect(() => {
+    if (!user) return;
+    if (user.isSandbox || user.isLocalGuest || user.uid.startsWith("local_")) {
+      setTransactions([]);
+      setLoadingTransactions(false);
+      return;
+    }
+    const q = query(
+      collection(db, 'users', user.uid, 'transactions'),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items: any[] = [];
+      snapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() });
+      });
+      setTransactions(items);
+      setLoadingTransactions(false);
+    }, (error) => {
+      const errMsg = error?.message || String(error);
+      if (errMsg.includes('CANCELLED') || errMsg.includes('Disconnecting idle stream')) {
+        console.debug("Firestore transactions idle (self-healing).");
+      } else {
+        console.error("Failed to sync transactions history:", error);
+      }
+      setLoadingTransactions(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, db]);
+
+  // Real-time Receipts / Invoices list loader
+  useEffect(() => {
+    if (!user) return;
+    if (user.isSandbox || user.isLocalGuest || user.uid.startsWith("local_")) {
+      setReceipts([]);
+      setLoadingReceipts(false);
+      return;
+    }
+    const q = query(
+      collection(db, 'users', user.uid, 'receipts'),
+      orderBy('createdAt', 'desc'),
+      limit(20)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items: any[] = [];
+      snapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() });
+      });
+      setReceipts(items);
+      setLoadingReceipts(false);
+    }, (error) => {
+      const errMsg = error?.message || String(error);
+      if (errMsg.includes('CANCELLED') || errMsg.includes('Disconnecting idle stream')) {
+        console.debug("Firestore receipts idle (self-healing).");
+      } else {
+        console.error("Failed to sync receipts list:", error);
+      }
+      setLoadingReceipts(false);
+    });
+
+    return () => unsubscribe();
   }, [user, db]);
 
   const plans: PricingPlan[] = [
     {
       id: 'starter',
       name: 'Starter Creator Pack',
-      price: 12,
-      description: 'Unlock entry-level social engines to research video ideas, hashtags, bios, and script drafts.',
+      price: 5,
+      credits: 50,
+      description: 'Acquire 50 premium credits instantly to research content topics, run video tag optimizations, and draft social bios.',
       icon: Zap,
-      color: 'from-cyan-500/10 to-blue-500/5',
-      borderColor: 'border-cyan-500/20 hover:border-cyan-500/40 dark:border-cyan-500/10 dark:hover:border-cyan-500/30',
+      color: 'bg-cyan-500/5',
+      borderColor: 'border-cyan-500/20 hover:border-cyan-500/40',
       features: [
-        'Video Ideas & Hashtag Engines',
-        'Standard social media bio optimizer',
-        'Book with Lines & digital script workbook',
-        'Access to CHIDON IQ Template Library',
-        'Unlimited monthly generation allowance'
+        '50 high-fidelity credits fuel',
+        'Standard Mini Features (Free)',
+        'Weekly Calendars & Hashtag Engines',
+        'NOTEPAD SAVE & digital drafts',
+        'Save generations directly to Vault',
+        '24/7 client-side ledger synchronization'
       ]
     },
     {
       id: 'pro',
       name: 'Pro Strategist Pack',
-      price: 24,
-      description: 'High-velocity automation: advanced full-length scripts, thumbnail psychology, competitor labs, and organic SEO tools.',
-      icon: Zap,
-      color: 'from-purple-500/10 to-indigo-500/5',
-      borderColor: 'border-indigo-500/30 hover:border-indigo-500/60 dark:border-indigo-500/25 dark:hover:border-indigo-500/50',
+      price: 12,
+      credits: 150,
+      description: 'Unlock 150 premium credits. Access platform-specific Script builders, Competitor Analysis, and custom Post scheduling.',
+      icon: Crown,
+      color: 'bg-indigo-500/5',
+      borderColor: 'border-indigo-500/40 hover:border-indigo-500/70',
       badge: 'RECOMMENDED',
       features: [
-        'Everything in Starter included',
-        'Platform-specific Script Builder with custom length controls',
+        '150 premium credits fuel',
+        'Unlocks Big Features (Free)',
+        'Full-length Script builder runs',
         'Strategic Competitor Lab & Pillar Charts',
-        'Weekly Optimized Posting Calendar Grid',
-        'Organic Video Feed SEO Strategizer',
-        'Keyword Intel Volume Scans & SEO Scorecards',
-        'CHIDON Vault personal cloud archive'
+        'Organic Video Feed SEO analytics',
+        'Weekly Optimized Post calendars',
+        'CHIDON Vault personal cloud backups'
       ]
     },
     {
       id: 'enterprise',
       name: 'Enterprise Sovereign Pack',
-      price: 30,
-      description: 'Premium team suite for trending topics, audience building, hook simulation, and multi-channel repurposing.',
-      icon: Crown,
-      color: 'from-amber-500/10 to-rose-500/5',
-      borderColor: 'border-amber-500/20 hover:border-amber-500/50 dark:border-amber-500/10 dark:hover:border-amber-500/35',
+      price: 24,
+      credits: 320,
+      description: 'High-capacity bulk tier: 320 credits. Formulated for agency workflows, psychographic builds, and omni-channel campaigns.',
+      icon: Cpu,
+      color: 'bg-amber-500/5',
+      borderColor: 'border-amber-500/20 hover:border-amber-500/50',
       badge: 'CHIDON IQ MAX',
       features: [
-        'Everything in Pro included',
-        'Real-time Momentum Trend Tickers',
-        'Audience Psychographic Persona Builder',
-        'Headline Hook CTR simulator',
-        'Omni-channel Repurpose AI converter',
-        'Post Scheduler & Command Calendar queue',
-        'Instant CSV/Excel report downloads',
-        'VIP response support channel'
+        '320 high-capacity credits fuel',
+        'Unlocks Elite Pro Features (Free)',
+        'Advanced Script Blueprints',
+        'Shadowban & Policy Audit solutions',
+        'Audience Psychographic Persona builders',
+        'Omni-channel Repurpose AI converters',
+        'Priority VIP response support queue'
       ]
     }
   ];
 
-  const handleCheckoutInitiate = async (plan: PricingPlan) => {
-    if (!user) return;
-    setLoading(true);
-    setVerifyError('');
-    setPaySuccess(false);
+  const handleCheckoutInitiate = (plan: PricingPlan) => {
+    if (!user) {
+      toast.error("Please login to purchase credits.");
+      return;
+    }
+    setPaystackVerifyError('');
+    setPaystackCheckoutUrl('');
+    setPaystackRef('');
+    setPaystackSuccess(false);
+    setShowPaystackModal(plan);
+  };
+
+  const handleInitializePaystack = async () => {
+    if (!user || !showPaystackModal) {
+      toast.error("Invalid purchase context.");
+      return;
+    }
+    setPaystackLoading(true);
+    setPaystackVerifyError('');
+    setPaystackCheckoutUrl('');
+    setPaystackRef('');
+    setPaystackSuccess(false);
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const mappedPackage = plan.id === 'enterprise' ? 'enterprise' : (plan.id === 'pro' ? 'pro' : 'basic');
-      const foreverDate = Timestamp.fromMillis(Date.now() + 3650 * 24 * 60 * 60 * 1000); // 10 years free
-      
-      await updateDoc(userRef, {
-        subscriptionPlan: plan.name,
-        subscriptionStatus: 'active',
-        subscriptionPrice: 0,
-        paystackSubscriptionRef: 'FREE_UPGRADE_' + plan.id.toUpperCase(),
-        updatedAt: serverTimestamp(),
-        subscription: {
-          status: 'active',
-          package: mappedPackage,
-          currentPeriodEnd: foreverDate
-        }
+      // 1. Fetch public key configuration
+      const configRes = await fetch('/api/paystack/config');
+      const configData = await configRes.json();
+      const resolvedPublicKey = configData.publicKey || "";
+
+      // 2. Initialize checkout on backend
+      const response = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: payerEmail || user.email || 'customer@chidon.iq',
+          amount: showPaystackModal.price,
+          metadata: {
+            userId: user.uid,
+            planName: showPaystackModal.name,
+            creditsGranted: showPaystackModal.credits
+          }
+        })
       });
 
-      setPaySuccess(true);
-      setCallbackSuccess(true);
-      setCallbackPlanName(plan.name);
-      setActivePlan(plan.name);
-      setSubStatus('active');
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        throw new Error(resData.message || 'Initialization request failed.');
+      }
+
+      const { authorization_url, reference, access_code } = resData.data;
+      setPaystackCheckoutUrl(authorization_url);
+      setPaystackRef(reference);
+
+      // Try loading Paystack Pop Inline SDK for direct in-page iframe popups to avoid popup blockers!
+      const scriptLoaded = await loadPaystackScript();
+      if (scriptLoaded && (window as any).PaystackPop && resolvedPublicKey) {
+        console.log("[Paystack Engine] Script loaded successfully. Launching Inline Popup...");
+        try {
+          const handler = (window as any).PaystackPop.setup({
+            key: resolvedPublicKey,
+            email: payerEmail || user.email || 'customer@chidon.iq',
+            amount: Math.round(showPaystackModal.price * exchangeRate * 100),
+            currency: "NGN",
+            ref: reference,
+            access_code: access_code,
+            callback: async (response: any) => {
+              console.log("[Paystack Inline] Success callback response:", response);
+              toast.success("Transaction approved by Paystack! Verifying & allocating credits...");
+              await handleVerifyPaystack(reference);
+            },
+            onSuccess: async (response: any) => {
+              console.log("[Paystack Inline] Success onSuccess response:", response);
+              toast.success("Transaction approved by Paystack! Verifying & allocating credits...");
+              await handleVerifyPaystack(reference);
+            },
+            onClose: () => {
+              toast("Payment session closed.");
+            }
+          });
+          handler.openIframe();
+          toast.success("Paystack Popup Opened. Complete your payment inside the secure modal.");
+        } catch (popupErr: any) {
+          console.warn("[Paystack Inline] Popup launch failed, falling back to tab redirection:", popupErr);
+          window.open(authorization_url, '_blank', 'noopener,noreferrer');
+          toast.success("Paystack payment channel initialized! Complete checkout in the new tab.");
+        }
+      } else {
+        // Fallback: Open checkout link in a new tab safely
+        window.open(authorization_url, '_blank', 'noopener,noreferrer');
+        toast.success("Paystack payment channel initialized! Complete checkout in the new tab.");
+      }
+
     } catch (err: any) {
-      console.error('Plan free activation client error:', err);
-      setVerifyError(err.message || 'Failed to activate free plan.');
+      console.error('Paystack initialization client error:', err);
+      setPaystackVerifyError(err.message || 'Failed to initialize Paystack checkout.');
+      toast.error(err.message || 'Failed to initialize Paystack checkout.');
     } finally {
-      setLoading(false);
+      setPaystackLoading(false);
     }
   };
 
-  const handleVerifySubscription = async () => {
-    if (!payRef || !selectedPlan || !user) return;
-    setVerifying(true);
-    setVerifyError('');
+  const handleVerifyPaystack = async (forcedRef?: string) => {
+    const referenceToVerify = forcedRef || paystackRef;
+    if (!referenceToVerify || !showPaystackModal) return;
+    setPaystackVerifying(true);
+    setPaystackVerifyError('');
 
     try {
       const response = await fetch('/api/paystack/verify', {
@@ -292,7 +475,7 @@ export default function ChidonPricing({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          reference: payRef
+          reference: referenceToVerify
         })
       });
 
@@ -303,191 +486,356 @@ export default function ChidonPricing({
 
       const txStatus = resData.data.status;
       if (txStatus === 'success') {
-        const userRef = doc(db, 'users', user.uid);
-        const mappedPackage = selectedPlan.name === 'Enterprise Sovereign Pack' ? 'enterprise' : (selectedPlan.name === 'Pro Strategist Pack' ? 'pro' : 'basic');
-        const oneMonthLater = Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        await updateDoc(userRef, {
-          subscriptionPlan: selectedPlan.name,
-          subscriptionStatus: 'active',
-          subscriptionPrice: selectedPlan.price,
-          paystackSubscriptionRef: payRef,
-          updatedAt: serverTimestamp(),
-          subscription: {
-            status: 'active',
-            package: mappedPackage,
-            currentPeriodEnd: oneMonthLater
+        const creditsGranted = showPaystackModal.credits;
+
+        if (user.isSandbox || user.isLocalGuest || user.uid.startsWith("local_")) {
+          const currentCredits = Number(localStorage.getItem("chidon_local_credits") || "7");
+          const newCredits = currentCredits + creditsGranted;
+          localStorage.setItem("chidon_local_credits", String(newCredits));
+          setUserCredits(newCredits);
+          
+          // Log simulated purchase transaction locally for guest/sandbox users
+          const localTransactionsStr = localStorage.getItem("chidon_local_transactions") || "[]";
+          try {
+            const txs = JSON.parse(localTransactionsStr);
+            txs.unshift({
+              id: `tx_${referenceToVerify || Date.now()}`,
+              type: 'credit',
+              amount: creditsGranted,
+              description: `Purchased ${showPaystackModal.name}: +${creditsGranted} Credits`,
+              createdAt: new Date().toISOString()
+            });
+            localStorage.setItem("chidon_local_transactions", JSON.stringify(txs.slice(0, 50)));
+          } catch (e) {
+            console.error("Local purchase transaction log error:", e);
           }
+          
+          // Dispatch custom event to notify all application views to refresh their local credit state
+          window.dispatchEvent(new Event("chidon_local_credits_updated"));
+          
+          setPaystackSuccess(true);
+          toast.success(`💳 Balance Credited! Successfully allocated +${creditsGranted} cognitive credits. Your new balance is ${newCredits} credits.`);
+          
+          setTimeout(() => {
+            setShowPaystackModal(null);
+            setPaystackCheckoutUrl('');
+            setPaystackRef('');
+            setPaystackSuccess(false);
+          }, 1500);
+          return;
+        }
+
+        const userRef = doc(db, 'users', user.uid);
+        
+        // Anti-Double Spend Idempotency: Check if receipt already exists in Firestore (webhook may have handled it)
+        const receiptDocRef = doc(db, 'users', user.uid, 'receipts', referenceToVerify);
+        const receiptSnap = await getDoc(receiptDocRef);
+        
+        const newCount = (userCredits || 0) + creditsGranted;
+
+        if (receiptSnap.exists()) {
+          console.log('[Paystack Settle] Payment already processed via Webhook.');
+          setPaystackSuccess(true);
+          toast.success(`💳 Balance Credited! Successfully synchronized payment. Your current balance is ${userCredits} credits.`);
+          
+          setTimeout(() => {
+            setShowPaystackModal(null);
+            setPaystackCheckoutUrl('');
+            setPaystackRef('');
+            setPaystackSuccess(false);
+          }, 1500);
+          return;
+        }
+
+        // Settle state directly for instantaneous UX
+        await updateDoc(userRef, {
+          credits: increment(creditsGranted),
+          subscriptionPlan: showPaystackModal.name,
+          subscriptionStatus: 'active',
+          updatedAt: serverTimestamp()
         });
 
-        setPaySuccess(true);
-        setSelectedPlan(null);
-        setCheckoutUrl('');
-        setPayRef('');
+        // Log transaction
+        await addDoc(collection(db, 'users', user.uid, 'transactions'), {
+          type: 'credit',
+          amount: creditsGranted,
+          description: `Purchased ${showPaystackModal.name} (+${creditsGranted} credits)`,
+          createdAt: serverTimestamp()
+        });
+
+        // Trigger automatic system notification
+        triggerNotification(user.uid, {
+          type: 'credit',
+          title: `Acquired +${creditsGranted} Credits`,
+          body: `Successfully purchased ${showPaystackModal.name} package. Balance updated!`,
+          link: '/credits'
+        }).catch(err => console.error("Purchase notification failed", err));
+
+        // Add receipt
+        await setDoc(doc(db, 'users', user.uid, 'receipts', referenceToVerify), {
+          amountUsd: showPaystackModal.price,
+          amountNgn: showPaystackModal.price * exchangeRate,
+          reference: referenceToVerify,
+          payerEmail: payerEmail || user.email || "subscriber@chidon.iq",
+          bundleName: showPaystackModal.name,
+          status: "paid",
+          createdAt: serverTimestamp()
+        });
+
+        setPaystackSuccess(true);
+        toast.success(`💳 Balance Credited! Successfully allocated +${creditsGranted} cognitive credits. Your new balance is ${newCount} credits.`);
+        
+        setTimeout(() => {
+          setShowPaystackModal(null);
+          setPaystackCheckoutUrl('');
+          setPaystackRef('');
+          setPaystackSuccess(false);
+        }, 1500);
       } else {
-        throw new Error(`Transaction state is currently '${txStatus}'. Please complete payment on the checkout secure tab.`);
+        throw new Error(`Transaction status is currently '${txStatus}'. Complete the payment on the Paystack page first.`);
       }
 
     } catch (err: any) {
       console.error('Paystack verification error:', err);
-      setVerifyError(err.message || 'Verification failed. Make sure you completed the payment.');
+      setPaystackVerifyError(err.message || 'Verification failed. Please check that your payment has finished.');
+      toast.error(err.message || 'Verification failed.');
     } finally {
-      setVerifying(false);
+      setPaystackVerifying(false);
     }
   };
 
+  const cognitiveFeatures = [
+    { id: 'ai-script-outline', label: 'Script Blueprint', description: 'Full narrative architecture from seed keywords.', tier: 'Pro', cost: 5, icon: FilePlus2 },
+    { id: 'shadowban-solutions', label: 'Shadowban Solutions', description: 'Audit channel health, check sensitive policy risk indicators and trace view recovery action steps.', tier: 'Pro', cost: 5, icon: AlertCircle },
+    { id: 'content-ideas', label: 'Video Ideas', description: 'Viral video formats, hooks, and script protocols.', tier: 'Mini', cost: 2, icon: Lightbulb },
+    { id: 'scripts', label: 'Script Writer', description: 'Platform-specific scripts with length controls.', tier: 'Big', cost: 3, icon: PenTool },
+    { id: 'thumbnails', label: 'Thumbnail Designer', description: 'Visual concept briefs and psychology.', tier: 'Big', cost: 3, icon: ImageIcon },
+    { id: 'competitor-analysis', label: 'Competitor Lab', description: 'Strategic intelligence and pillar charts.', tier: 'Big', cost: 3, icon: BarChart3 },
+    { id: 'trending', label: 'Trend Detector', description: '20 momentum-scored trending topics.', tier: 'Big', cost: 3, icon: TrendingUp },
+    { id: 'personas', label: 'Audience Builder', description: 'Fictional audience profiles and psychological triggers.', tier: 'Big', cost: 3, icon: Users },
+    { id: 'repurposing', label: 'Repurpose AI', description: 'Tactical content conversion for multi-platform ops.', tier: 'Big', cost: 3, icon: Cpu },
+    { id: 'template-library', label: 'Template Library', description: 'Populate professional social posts, bios, and competitor maps.', tier: 'Big', cost: 3, icon: Zap },
+    { id: 'youtube-seo', label: 'Video Feed Strategizer', description: 'Viral metadata optimization and ranking strategy.', tier: 'Big', cost: 3, icon: Trophy },
+    { id: 'seo-scorecard', label: 'SEO Scorecard', description: 'Real-time neural content audit and score.', tier: 'Big', cost: 3, icon: Activity },
+    { id: 'hashtags', label: 'Hashtag Engine', description: 'Ranked hashtag research with reach tiers.', tier: 'Mini', cost: 2, icon: Hash },
+    { id: 'bio', label: 'Bio Optimizer', description: 'Three optimized bio versions with strategy.', tier: 'Mini', cost: 2, icon: UserCircle },
+    { id: 'posting-schedule', label: 'Schedule Lab', description: 'Styled weekly optimized calendar grid.', tier: 'Mini', cost: 2, icon: Calendar },
+    { id: 'engagement-calc', label: 'Engagement Advisor', description: 'Computing rates and 30-day growth plans.', tier: 'Mini', cost: 2, icon: Calculator },
+    { id: 'headlines', label: 'Headline Hook', description: '10 hook formulas with predicted CTR markers.', tier: 'Mini', cost: 2, icon: Zap },
+    { id: 'post-scheduler', label: 'Command Calendar', description: 'Tactical content scheduling and queue management.', tier: 'Mini', cost: 2, icon: Calendar },
+    { id: 'drafts', label: 'CHIDON Vault', description: 'Specialized index of saved scripts and reports.', tier: 'Mini', cost: 2, icon: BookOpen },
+    { id: 'ruled-book', label: 'NOTEPAD SAVE', description: 'Digital journal structured over authentic ruled sheets.', tier: 'Mini', cost: 2, icon: Book }
+  ];
+
+  const filteredFeatures = cognitiveFeatures.filter(f => {
+    const matchesTab = selectedCategoryTab === 'all' || f.tier.toLowerCase() === selectedCategoryTab;
+    const matchesSearch = f.label.toLowerCase().includes(featureSearchQuery.toLowerCase()) || f.description.toLowerCase().includes(featureSearchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 space-y-12 text-left bg-[var(--bg-app)] text-[var(--text-primary)] transition-colors duration-200">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12 text-left bg-[var(--bg-app)] text-[var(--text-primary)] transition-colors duration-200">
       
       {/* HEADER HERO AREA */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[var(--border-base)]/60">
-        <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] uppercase tracking-wider font-bold">
-            <Crown size={12} className="animate-pulse" />
-            <span>100% Free Lifetime Sovereign Active</span>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[var(--border-base)]/50">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-full text-brand text-[10px] uppercase tracking-wider font-bold">
+            <Crown size={12} className="animate-pulse text-brand" />
+            <span>Workspace Credit System</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-[var(--text-primary)] leading-none">
-            CHIDON IQ: Fully Unlocked & Free
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-[var(--text-primary)] leading-none">
+            Chidon Pricing Matrix
           </h1>
           <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-            Enjoy unrestricted, free access to all our premier cognitive social media and SEO engines. Select any premium package below to activate its professional workflows instantly.
+            Acquire credits to run cognitive social media engines. Manage your balance, track transaction logs, and fuel your daily posts instantly.
           </p>
         </div>
         
         {onBack && (
           <button 
             onClick={onBack}
-            className="px-4 py-2 bg-[var(--bg-card)] hover:bg-slate-100 dark:hover:bg-slate-850 text-xs font-mono font-bold border border-[var(--border-base)] rounded-xl shadow-sm transition-all"
+            className="px-4 py-2 bg-[var(--bg-card)] hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-mono font-bold border border-[var(--border-base)] rounded-xl shadow-sm transition-all cursor-pointer"
           >
             ← Back to Sector Terminal
           </button>
         )}
       </div>
 
-      {/* PAYSTACK CALLBACK VERIFICATION STATUS BANNER */}
-      {verifying && (
-        <div className="p-5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center gap-4 text-left shadow-sm">
-          <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-500">
-            <RefreshCw size={20} className="animate-spin" />
+      {/* TRANSACTION HISTORY LEDGER & BILLING PORTAL */}
+      <div className="grid grid-cols-1 gap-8">
+        <div className="flex flex-col p-6 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[var(--border-base)]/50 gap-4">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setActiveLedgerTab('usage')}
+                className={`flex items-center gap-2 pb-1 text-xs font-bold uppercase tracking-tight font-mono border-b-2 transition-all cursor-pointer ${
+                  activeLedgerTab === 'usage' 
+                    ? 'border-brand text-brand' 
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <History size={14} />
+                Usage History
+              </button>
+              <button 
+                onClick={() => setActiveLedgerTab('invoices')}
+                className={`flex items-center gap-2 pb-1 text-xs font-bold uppercase tracking-tight font-mono border-b-2 transition-all cursor-pointer ${
+                  activeLedgerTab === 'invoices' 
+                    ? 'border-brand text-brand' 
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Mail size={14} />
+                Invoices & Receipts
+              </button>
+            </div>
+            <span className="text-[10px] font-mono text-[var(--text-secondary)]">
+              {activeLedgerTab === 'usage' ? 'Recent 10 operations' : 'Recent purchases & subscriptions'}
+            </span>
           </div>
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-tight text-[var(--text-primary)]">Verifying Payment Transaction...</h3>
-            <p className="text-xs text-[var(--text-secondary)] leading-normal mt-0.5">
-              Confirming transaction logs with Paystack and synchronizing active workspace privileges. Please do not close this window.
-            </p>
+
+          <div className="flex-1 mt-4 overflow-y-auto max-h-[220px] pr-2 space-y-2 custom-scrollbar">
+            {activeLedgerTab === 'usage' ? (
+              loadingTransactions ? (
+                <div className="flex flex-col items-center justify-center h-full py-12 space-y-2">
+                  <RefreshCw size={16} className="animate-spin text-brand" />
+                  <span className="text-[10px] font-mono text-[var(--text-secondary)]">Syncing ledger records...</span>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                  <div className="p-2.5 bg-[var(--bg-app)] rounded-full text-[var(--text-secondary)] mb-2">
+                    <Coins size={16} />
+                  </div>
+                  <h4 className="text-xs font-bold uppercase tracking-tight text-[var(--text-primary)]">Ledger Empty</h4>
+                  <p className="text-[10px] text-[var(--text-secondary)] max-w-xs mt-1">
+                    Once you purchase credits or generate templates, your transaction history will sync here.
+                  </p>
+                </div>
+              ) : (
+                transactions.map((tx) => {
+                  const isDebit = tx.type === 'debit';
+                  const date = tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
+                  return (
+                    <div key={tx.id} className="flex items-center justify-between p-2.5 bg-[var(--bg-app)] border border-[var(--border-base)]/50 rounded-xl">
+                      <div className="space-y-0.5 animate-fade-in">
+                        <span className="text-xs font-bold text-[var(--text-primary)] block leading-tight">
+                          {tx.description}
+                        </span>
+                        <span className="text-[9px] font-mono text-[var(--text-secondary)]">
+                          {date}
+                        </span>
+                      </div>
+                      <span className={`text-xs font-mono font-black ${isDebit ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {isDebit ? '-' : '+'}{tx.amount} cr
+                      </span>
+                    </div>
+                  );
+                })
+              )
+            ) : (
+              loadingReceipts ? (
+                <div className="flex flex-col items-center justify-center h-full py-12 space-y-2">
+                  <RefreshCw size={16} className="animate-spin text-brand" />
+                  <span className="text-[10px] font-mono text-[var(--text-secondary)]">Loading dynamic invoice repository...</span>
+                </div>
+              ) : receipts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                  <div className="p-2.5 bg-[var(--bg-app)] rounded-full text-[var(--text-secondary)] mb-2">
+                    <Mail size={16} />
+                  </div>
+                  <h4 className="text-xs font-bold uppercase tracking-tight text-[var(--text-primary)]">No Invoices Found</h4>
+                  <p className="text-[10px] text-[var(--text-secondary)] max-w-xs mt-1">
+                    Complete a payment on Paystack to generate real-time printable tax receipts.
+                  </p>
+                </div>
+              ) : (
+                receipts.map((rcpt) => {
+                  const date = rcpt.createdAt?.toDate ? rcpt.createdAt.toDate().toLocaleDateString() : new Date().toLocaleDateString();
+                  return (
+                    <div 
+                      key={rcpt.id} 
+                      onClick={() => setSelectedReceipt(rcpt)}
+                      className="flex items-center justify-between p-3 bg-[var(--bg-app)] hover:bg-slate-50 dark:hover:bg-slate-800 border border-[var(--border-base)]/50 rounded-xl cursor-pointer transition-all hover:scale-[1.01]"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)]">
+                            {rcpt.bundleName || 'Credit Top-Up'}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-mono bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full font-bold">
+                            PAID
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[9px] font-mono text-[var(--text-secondary)]">
+                          <span>Ref: {rcpt.reference}</span>
+                          <span>•</span>
+                          <span>{date}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-bold font-mono text-emerald-500 block leading-none">
+                          {rcpt.amountNgn ? `₦${rcpt.amountNgn.toLocaleString()}` : `$${rcpt.amountUsd?.toFixed(2) || '0.00'}`}
+                        </span>
+                        <span className="text-[8px] font-mono text-[var(--text-secondary)] underline hover:text-brand">
+                          View Invoice
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {callbackSuccess && (
-        <div className="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between gap-4 text-left shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-500">
-              <CheckCircle size={20} className="animate-bounce" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-tight text-emerald-500">Payment Successfully Verified!</h3>
-              <p className="text-xs text-[var(--text-secondary)] leading-normal mt-0.5">
-                Thank you for subscribing to the <strong className="text-[var(--text-primary)]">{callbackPlanName}</strong>. All premium sector engines have been activated for your user workspace!
-              </p>
-            </div>
+      {/* CREDIT RECHARGE PLANS */}
+      <div className="space-y-6 pt-4 border-t border-[var(--border-base)]/40">
+        <div className="text-left space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand/10 border border-brand/20 rounded-full text-brand text-[9px] font-mono font-black uppercase tracking-wider">
+            Packages
           </div>
-          <button 
-            onClick={() => setCallbackSuccess(false)}
-            className="p-1.5 hover:bg-emerald-500/20 rounded-full transition-colors text-emerald-500 cursor-pointer"
-            title="Dismiss"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
-      {verifyError && (
-        <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-between gap-4 text-left shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-rose-500/20 rounded-xl text-rose-500">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-tight text-rose-500">Verification Error Detected</h3>
-              <p className="text-xs text-[var(--text-secondary)] leading-normal mt-0.5">
-                {verifyError}
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setVerifyError('')}
-            className="p-1.5 hover:bg-rose-500/20 rounded-full transition-colors text-rose-500 cursor-pointer"
-            title="Dismiss"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
-      {/* PLANS GRID */}
-      <div className="space-y-6">
-        <div className="text-center md:text-left space-y-1">
-          <h2 className="text-xl font-bold uppercase tracking-tight text-[var(--text-primary)]">
-            Choose Monthly Subscription Pack
+          <h2 className="text-lg font-bold uppercase tracking-tight text-[var(--text-primary)]">
+            Acquire Credit Fuel Packages
           </h2>
           <p className="text-xs text-[var(--text-secondary)]">
-            Activate premium nodes for your workspace instantly. Subscriptions renew monthly.
+            Select a pricing plan below to allocate credits directly to your workspace.
           </p>
         </div>
   
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const PlanIcon = plan.icon;
             const isSelectedPlan = activePlan === plan.name && subStatus === 'active';
-            const priceInNgn = plan.price * exchangeRate;
             const isPro = plan.id === 'pro';
-            const isEnterprise = plan.id === 'enterprise';
 
             return (
-              <motion.div
+              <div
                 key={plan.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ 
-                  y: -10, 
-                  scale: 1.02,
-                  boxShadow: isPro 
-                    ? "0 25px 50px -12px rgba(99, 102, 241, 0.4), 0 0 40px rgba(99, 102, 241, 0.25)" 
-                    : "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-                }}
-                className={`flex flex-col bg-[var(--bg-card)] border rounded-3xl p-6 relative overflow-hidden transition-all duration-300 shadow-md ${
+                className={`flex flex-col bg-[var(--bg-card)] border rounded-2xl p-6 relative overflow-hidden transition-all duration-300 shadow-sm ${
                   isSelectedPlan 
                     ? 'border-emerald-500 ring-2 ring-emerald-500/20' 
                     : isPro 
-                    ? 'border-indigo-500/50 ring-2 ring-indigo-500/20 shadow-[0_10px_35px_-5px_rgba(99,102,241,0.2)]' 
+                    ? 'border-indigo-500/50 shadow-md' 
                     : plan.borderColor
                 }`}
               >
                 {plan.badge && (
-                  <div className="absolute top-4 right-4 bg-gradient-to-r from-brand to-cyan-500 text-white text-[9px] font-black font-mono px-3 py-1 rounded-full uppercase tracking-wider animate-pulse shadow-sm shadow-brand/40">
-                    🔥 {plan.badge}
+                  <div className="absolute top-4 right-4 bg-indigo-600 text-white text-[8px] font-black font-mono px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    {plan.badge}
                   </div>
                 )}
  
-                <div className={`absolute -inset-px bg-gradient-to-br ${plan.color} opacity-45 -z-10`} />
+                <div className={`absolute -inset-px bg-gradient-to-br ${plan.color} opacity-30 -z-10`} />
                 
-                {/* Plan Icon and Name */}
-                <div className="space-y-4">
-                  <div className={`p-3.5 border rounded-2xl w-fit ${
-                    isPro 
-                      ? 'bg-gradient-to-tr from-brand to-indigo-500 text-white border-brand/20 shadow-md shadow-brand/20' 
-                      : 'bg-slate-50 dark:bg-slate-900 border-[var(--border-base)] text-brand'
-                  }`}>
-                    <PlanIcon size={24} className={isPro ? "text-white" : "text-brand"} />
+                {/* Plan Header */}
+                <div className="space-y-3">
+                  <div className="p-2.5 border rounded-xl w-fit bg-[var(--bg-app)] text-brand border-[var(--border-base)]/50">
+                    <PlanIcon size={20} className="text-brand" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold uppercase tracking-tight text-[var(--text-primary)] flex items-center gap-2">
+                    <h3 className="text-base font-bold uppercase tracking-tight text-[var(--text-primary)] flex items-center gap-2">
                       {plan.name}
-                      {isSelectedPlan && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[9px] rounded-full font-mono font-bold uppercase">
-                          Active
-                        </span>
-                      )}
                     </h3>
                     <p className="text-xs text-[var(--text-secondary)] mt-1 min-h-[40px] leading-relaxed">
                       {plan.description}
@@ -496,35 +844,28 @@ export default function ChidonPricing({
                 </div>
  
                 {/* Pricing indicators */}
-                <div className="py-6 border-y border-[var(--border-base)]/40 my-6 space-y-1 text-left">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black tracking-tight text-emerald-500 font-mono">
-                      FREE
+                <div className="py-4 border-y border-[var(--border-base)]/30 my-4 space-y-1 text-left">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-3xl font-black tracking-tight text-[var(--text-primary)] font-mono">
+                      ${plan.price}
                     </span>
-                    <span className="text-xs text-[var(--text-secondary)] font-mono uppercase font-bold">
-                      COGNITIVE LIFETIME PLAN
+                    <span className="text-[10px] text-brand font-mono uppercase font-black tracking-wider px-2 py-0.5 bg-brand/5 border border-brand/20 rounded-md">
+                      {plan.credits} CREDITS
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-brand font-extrabold font-mono">
-                    <Cpu size={14} className="text-brand animate-pulse" />
-                    <span className="bg-gradient-to-r from-brand to-cyan-500 bg-clip-text text-transparent uppercase tracking-wider">Unlimited Social Engine Runs</span>
-                  </div>
-                  <div className="mt-2.5 p-2 bg-indigo-50/40 dark:bg-slate-900/60 border border-[var(--border-base)]/40 rounded-xl inline-flex items-center gap-1.5 w-full">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping shrink-0" />
-                    <span className="text-[10px] font-mono text-[var(--text-secondary)] font-bold truncate">
-                      Secure Instant Provisioning Active
-                    </span>
+                  <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] font-extrabold font-mono">
+                    <Cpu size={12} className="text-brand" />
+                    <span className="uppercase tracking-wider">Instant Allocation Active</span>
                   </div>
                 </div>
  
                 {/* Features listing */}
                 <div className="flex-1">
-                  <h4 className="text-[9px] font-mono uppercase tracking-wider text-[var(--text-secondary)] font-bold mb-3 border-b border-[var(--border-base)]/30 pb-1">Included Engines</h4>
-                  <ul className="space-y-3.5 text-left text-xs mb-8">
+                  <ul className="space-y-2.5 text-left text-xs mb-6">
                     {plan.features.map((feat, idx) => (
-                      <li key={idx} className="flex gap-2.5 items-start text-[var(--text-secondary)] font-semibold leading-relaxed">
-                        <div className="p-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 dark:text-emerald-400 rounded-md shrink-0 mt-0.5">
-                          <Check size={11} className="stroke-[3]" />
+                      <li key={idx} className="flex gap-2 items-start text-[var(--text-secondary)] font-medium">
+                        <div className="p-0.5 text-emerald-500 shrink-0 mt-0.5">
+                          <Check size={12} className="stroke-[3]" />
                         </div>
                         <span className="leading-tight">{feat}</span>
                       </li>
@@ -535,206 +876,178 @@ export default function ChidonPricing({
                 {/* Checkout Trigger Action */}
                 <button
                   onClick={() => handleCheckoutInitiate(plan)}
-                  disabled={isSelectedPlan}
-                  className={`w-full py-4 rounded-xl font-mono text-xs uppercase tracking-wider font-extrabold transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer text-center ${
-                    isSelectedPlan
-                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 cursor-not-allowed'
-                      : isPro
-                      ? 'bg-gradient-to-r from-brand via-indigo-600 to-brand text-white hover:brightness-110 shadow-[0_6px_20px_rgba(99,102,241,0.35)]'
-                      : 'bg-slate-50 dark:bg-slate-800/80 border border-[var(--border-base)] hover:bg-slate-100 dark:hover:bg-slate-700 text-[var(--text-primary)]'
-                  }`}
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-extrabold transition-all cursor-pointer text-center bg-brand hover:brightness-110 active:scale-[0.98] text-white disabled:opacity-50"
                 >
-                  {isSelectedPlan ? 'Active Plan' : 'Activate Plan for Free'}
+                  {loading ? 'Processing...' : 'Purchase Credits Now'}
                 </button>
-              </motion.div>
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* SECURE CHECKOUT MODAL */}
-      <AnimatePresence>
-        {selectedPlan && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl p-6 relative overflow-hidden text-left shadow-2xl"
-            >
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand via-cyan-500 to-brand" />
-              
-              <div className="flex justify-between items-center mb-5">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-brand/10 text-brand rounded-lg">
-                    <Shield size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-mono uppercase text-[var(--text-secondary)] font-bold">Secure Gateway Console</h3>
-                    <p className="text-[10px] text-[var(--text-secondary)] font-medium">Verify transaction logs</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setSelectedPlan(null)}
-                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-[var(--text-secondary)] rounded-full transition-colors cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+      {/* COGNITIVE DIRECTORY & FEATURE COST COMPASS */}
+      <div className="pt-10 border-t border-[var(--border-base)]/40 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="text-left space-y-1 flex-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 text-[9px] font-mono font-bold uppercase rounded-full">
+              <Cpu size={10} className="animate-pulse" />
+              Sizing Engine Powered by Chidon AI
+            </div>
+            <h3 className="text-lg font-bold uppercase tracking-tight text-[var(--text-primary)]">
+              AI Cognitive Directory & Feature Costs
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-2xl">
+              Every system operation is sized based on processing complexity. Mini features consume 2 credits, Big features consume 3 credits, and Pro features consume 5 credits.
+            </p>
+          </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-[var(--border-base)]/40 rounded-2xl space-y-2.5 font-mono text-[11px] mb-5">
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">ORDERED ITEM:</span>
-                  <span className="text-[var(--text-primary)] font-bold">{selectedPlan.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">ACCESS TYPE:</span>
-                  <span className="text-brand font-bold">Monthly Plan Subscription</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">VALUATION IN USD:</span>
-                  <span className="text-[var(--text-primary)] font-bold">${selectedPlan.price} USD / month</span>
-                </div>
-                <div className="flex justify-between border-t border-[var(--border-base)]/40 pt-2 text-xs font-bold text-[var(--text-primary)]">
-                  <span>TOTAL PRICE:</span>
-                  <span>${selectedPlan.price} USD</span>
-                </div>
-              </div>
+          {/* Tab switches */}
+          <div className="flex flex-wrap items-center justify-start gap-1 bg-slate-100 dark:bg-slate-900/60 p-1 rounded-xl border border-[var(--border-base)]/40 w-fit">
+            {(['all', 'mini', 'big', 'pro'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSelectedCategoryTab(tab)}
+                className={`px-3 py-1 rounded-lg font-mono text-[10px] font-extrabold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                  selectedCategoryTab === tab
+                    ? 'bg-brand text-white'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {tab === 'all' ? 'All' : `${tab} (${tab === 'mini' ? '2 cr' : tab === 'big' ? '3 cr' : '5 cr'})`}
+              </button>
+            ))}
+          </div>
+        </div>
 
-              {checkingConfig ? (
-                <div className="flex items-center justify-center gap-2 text-xs font-mono py-4 text-[var(--text-secondary)]">
-                  <RefreshCw size={12} className="animate-spin" />
-                  Checking workspace gateway config...
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {!paystackConfigured && (
-                    <div className="p-3.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl space-y-1.5 text-xs text-yellow-600 dark:text-yellow-400 font-sans leading-relaxed">
-                      <div className="flex gap-2 items-center font-bold">
-                        <AlertTriangle size={15} />
-                        <span>Development Sandbox Mode</span>
-                      </div>
-                      <p className="text-[11px]">
-                        Please ensure <code className="bg-black/40 text-yellow-400 px-1 py-0.5 rounded font-mono text-[10px]">PAYSTACK_SECRET_KEY</code> is correctly set in your Google AI Studio Secret tab to unlock real payment processing.
-                      </p>
+        {/* Search bar and counts */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full sm:max-w-xs">
+            <input
+              type="text"
+              placeholder="Search cognitive tools..."
+              value={featureSearchQuery}
+              onChange={(e) => setFeatureSearchQuery(e.target.value)}
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl pl-3 pr-8 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-brand transition-colors font-mono"
+            />
+            {featureSearchQuery && (
+              <button
+                onClick={() => setFeatureSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          
+          <div className="text-[10px] font-mono font-bold text-[var(--text-secondary)] bg-slate-100 dark:bg-slate-900/60 px-2.5 py-1 rounded-lg border border-[var(--border-base)]/30">
+            SHOWING {filteredFeatures.length} ENGINES
+          </div>
+        </div>
+
+        {/* Features list grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredFeatures.map((feature) => {
+            const FeatureIcon = feature.icon || Cpu;
+            const isMini = feature.tier === 'Mini';
+            const isPro = feature.tier === 'Pro';
+            
+            return (
+              <div
+                key={feature.id}
+                className="p-4 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl flex flex-col justify-between gap-4 transition-all hover:shadow shadow-sm"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <div className={`p-2 rounded-xl shrink-0 ${
+                      isPro 
+                        ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' 
+                        : isMini 
+                        ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' 
+                        : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                    }`}>
+                      <FeatureIcon size={16} />
                     </div>
-                  )}
 
-                  <div className="space-y-1.5 text-left">
-                    <label className="text-[9px] font-mono uppercase text-[var(--text-secondary)] block font-bold">Payer Email Profile</label>
-                    <input 
-                      type="email"
-                      value={payerEmail}
-                      onChange={(e) => setPayerEmail(e.target.value)}
-                      placeholder="e.g., recipient@domain.com"
-                      className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl px-3 py-2.5 text-xs text-[var(--text-primary)] font-mono focus:border-brand outline-none transition-colors"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-mono font-black px-2 py-0.5 rounded uppercase ${
+                        isPro 
+                          ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' 
+                          : isMini 
+                          ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' 
+                          : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                      }`}>
+                        {feature.tier}
+                      </span>
+                      <span className="text-[10px] font-mono font-extrabold text-brand bg-brand/5 border border-brand/20 px-2 py-0.5 rounded">
+                        {feature.cost} cr
+                      </span>
+                    </div>
                   </div>
 
-                  {checkoutUrl && (
-                    <div className="space-y-3.5 bg-emerald-500/5 border border-emerald-500/15 p-4 rounded-2xl">
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium leading-relaxed">
-                        🚀 Secure payment tab initiated! If it was blocked, click the link button below to complete the transaction:
-                      </p>
-                      
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <a 
-                          href={checkoutUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110 font-bold text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          <ExternalLink size={12} />
-                          Open Checkout Page
-                        </a>
-                        <button
-                          onClick={handleVerifySubscription}
-                          disabled={verifying}
-                          className="flex-1 py-2.5 bg-brand hover:bg-brand/90 text-white font-bold text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          {verifying ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
-                          <span>Verify Payment Status</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {verifyError && (
-                    <p className="text-[10px] font-mono text-red-500 bg-rose-500/10 border border-rose-500/20 px-3 py-2.5 rounded-lg">
-                      ⚠️ Verification Log Error: {verifyError}
+                  <div className="text-left space-y-1">
+                    <h4 className="text-xs font-bold text-[var(--text-primary)] leading-tight">
+                      {feature.label}
+                    </h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed font-semibold min-h-[30px]">
+                      {feature.description}
                     </p>
-                  )}
-
-                  {!checkoutUrl && (
-                    <button
-                      onClick={() => handleCheckoutInitiate(selectedPlan)}
-                      disabled={loading}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {loading ? <RefreshCw size={12} className="animate-spin" /> : <span>Initialize Secure Paystack Payment</span>}
-                    </button>
-                  )}
+                  </div>
                 </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+                {onNavigate && (
+                  <button
+                    onClick={() => {
+                      if (feature.id === 'blog') {
+                        onNavigate('blog');
+                      } else if (feature.id === 'earn') {
+                        onNavigate('earn');
+                      } else {
+                        onNavigate('tools', feature.id);
+                      }
+                    }}
+                    className="w-full py-1.5 bg-slate-50 dark:bg-slate-800 border border-[var(--border-base)]/60 hover:border-brand/40 hover:bg-brand hover:text-white rounded-xl text-[10px] font-mono font-black uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span>Launch Engine</span>
+                    <ArrowRight size={10} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* FAQ ACCORDION */}
-      <div className="pt-10 border-t border-[var(--border-base)]/50 space-y-6">
-        <div className="text-center md:text-left space-y-2">
-          <h3 className="text-xl font-bold uppercase tracking-tight text-[var(--text-primary)]">
+      <div className="pt-8 border-t border-[var(--border-base)]/40 space-y-6">
+        <div className="text-left space-y-2">
+          <h3 className="text-lg font-bold uppercase tracking-tight text-[var(--text-primary)]">
             Billing FAQ & System Parameters
           </h3>
           <p className="text-xs text-[var(--text-secondary)]">
-            Answers to common questions about Chidon pricing packages, billing infrastructure, and secure operations.
+            Answers to common questions about Chidon pricing packages and secure operations.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-          <div className="p-5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl space-y-2">
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono flex items-center gap-2 font-black">
-              <HelpCircle size={14} className="text-brand" />
-              What payment options does Paystack support?
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl text-left">
+          <div className="p-4 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl space-y-1">
+            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono flex items-center gap-2">
+              <HelpCircle size={14} className="text-indigo-500" />
+              What are cognitive credits?
             </h4>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
-              Paystack supports real credit/debit cards, bank transfers, mobile wallets, and QR codes across Nigeria, Ghana, Kenya, South Africa, and more. All currency updates are synced in real-time.
+            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              Credits fuel every automated text and analytics task. High-fidelity runs consume up to 5 credits, while smaller checks consume only 2 credits.
             </p>
           </div>
 
-          <div className="p-5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl space-y-2">
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono flex items-center gap-2 font-black">
-              <HelpCircle size={14} className="text-brand" />
-              Can I change or cancel my plan at any time?
+          <div className="p-4 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl space-y-1">
+            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono flex items-center gap-2">
+              <HelpCircle size={14} className="text-indigo-500" />
+              Do my credits expire?
             </h4>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
-              Yes, you can upgrade, downgrade, or cancel your active plan at any point inside your cohort cockpit without any penalty. All feature access matches your upgraded tier instantly.
-            </p>
-          </div>
-
-          <div className="p-5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl space-y-2">
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono flex items-center gap-2 font-black">
-              <HelpCircle size={14} className="text-brand" />
-              Is there any refund or money-back guarantee?
-            </h4>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
-              We offer a complete 14-day zero-risk money-back guarantee on all our pricing tiers. If you are not satisfied, write to our Priority support team for a full refund.
-            </p>
-          </div>
-
-          <div className="p-5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl space-y-2">
-            <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono flex items-center gap-2 font-black">
-              <HelpCircle size={14} className="text-brand" />
-              Is Paystack secure for transactions?
-            </h4>
-            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
-              Paystack is fully PCIDSS Level 1 compliant. Your transaction details are fully encrypted, protected on both client and server layers, and directly processed on official Paystack secure endpoints.
+            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              No. Credits remain securely logged inside your wallet balance and never expire. You can consume them at your own pace.
             </p>
           </div>
         </div>
@@ -744,70 +1057,389 @@ export default function ChidonPricing({
       <AnimatePresence>
         {showTrialEndedModal && (
           <div 
-            className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/90 backdrop-blur-[6px]"
+            className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
             onClick={onCloseTrialEndedModal}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="w-full max-w-md bg-[#0F172A] border border-red-500/20 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.2)] overflow-hidden relative"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-[#0F172A] border border-red-500/20 rounded-2xl overflow-hidden relative shadow-2xl text-left"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-orange-500 to-red-600 animate-pulse" />
+              <div className="h-1 w-full bg-red-500" />
 
               {onCloseTrialEndedModal && (
                 <button
                   onClick={onCloseTrialEndedModal}
-                  className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none"
-                  aria-label="Close dialog"
+                  className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all outline-none cursor-pointer"
                 >
                   <X size={16} />
                 </button>
               )}
 
-              <div className="p-6 md:p-8 space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl shrink-0">
-                    <ShieldAlert size={24} className="animate-bounce" />
+              <div className="p-6 space-y-6">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl shrink-0">
+                    <ShieldAlert size={20} className="animate-bounce" />
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-red-500 uppercase leading-none">
+                    <span className="text-[9px] font-mono font-bold tracking-widest text-red-500 uppercase leading-none">
                       TRIAL HAS EXPIRED
                     </span>
-                    <h3 className="text-lg font-black text-white tracking-tight pt-1 leading-tight uppercase font-sans">
+                    <h3 className="text-base font-black text-white tracking-tight uppercase">
                       Subscription Required
                     </h3>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                    Your 24-hour free trial has ended. Choose a package to continue. Upgrade to unlock the full cognitive suite of Chidon IQ including:
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Your 24-hour free trial has ended. Select a package above to continue enjoying full access to the absolute best cognitive marketing engines in your workspace.
                   </p>
-                  <ul className="space-y-2 text-[11px] text-slate-400 font-mono font-bold">
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-500">✓</span> FULL CHIDON IQ AI ENGINES
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-500">✓</span> UNRESTRICTED IDEAS & SCRIPTS GENERATION
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-500">✓</span> ADVANCED MARKETING & FREELANCE PORTS
-                    </li>
-                  </ul>
                 </div>
 
-                <div className="flex flex-col items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onCloseTrialEndedModal}
+                  className="w-full py-3 px-4 bg-indigo-600 hover:brightness-110 active:scale-[0.98] text-white rounded-xl text-xs font-black tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>View Pricing Packages</span>
+                  <ArrowRight size={12} />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showPaystackModal && (
+          <div 
+            className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => {
+              if (!paystackLoading && !paystackVerifying) {
+                setShowPaystackModal(null);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-base)] rounded-3xl overflow-hidden relative shadow-2xl text-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-1.5 w-full bg-emerald-500" />
+
+              <button
+                onClick={() => setShowPaystackModal(null)}
+                disabled={paystackLoading || paystackVerifying}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-base)]/10 transition-all outline-none cursor-pointer disabled:opacity-50"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="p-6 md:p-8 space-y-6">
+                {/* Header */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl shrink-0">
+                    <Wallet size={20} className={paystackLoading ? "animate-pulse" : ""} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] font-mono font-black tracking-widest text-emerald-500 uppercase leading-none block">
+                      Paystack Escrow Gateway
+                    </span>
+                    <h3 className="text-base font-black tracking-tight text-[var(--text-primary)] uppercase">
+                      Authorize Workspace Credits
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Plan Invoice Summary */}
+                <div className="p-4 bg-[var(--bg-app)] border border-[var(--border-base)]/50 rounded-2xl space-y-3">
+                  <div className="flex justify-between items-center pb-2.5 border-b border-[var(--border-base)]/30">
+                    <span className="text-xs font-bold text-[var(--text-primary)]">Selected Package</span>
+                    <span className="text-xs font-mono font-black text-brand uppercase">{showPaystackModal.name}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center pb-2.5 border-b border-[var(--border-base)]/30">
+                    <span className="text-xs font-bold text-[var(--text-primary)]">Fuel Allocated</span>
+                    <span className="text-xs font-mono font-black text-emerald-500">+{showPaystackModal.credits} CREDITS</span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-[var(--text-primary)] block">Subtotal</span>
+                      <span className="text-[10px] text-[var(--text-secondary)] font-mono">Rate: ₦{exchangeRate.toLocaleString()}/$</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-mono font-black text-[var(--text-primary)] block">${showPaystackModal.price}.00 USD</span>
+                      <span className="text-xs font-mono font-bold text-slate-400">≈ ₦{(showPaystackModal.price * exchangeRate).toLocaleString()} NGN</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Config warning check */}
+                {paystackCheckingConfig ? (
+                  <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] justify-center font-mono py-2">
+                    <RefreshCw size={12} className="animate-spin" />
+                    <span>Checking terminal configurations...</span>
+                  </div>
+                ) : !paystackConfigured ? (
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono font-black uppercase tracking-wider leading-none">
+                      <AlertTriangle size={12} />
+                      Terminal Secret Missing
+                    </div>
+                    <p className="text-[10px] leading-relaxed">
+                      You have not yet configured <code className="bg-black/20 px-1 py-0.5 rounded font-mono font-bold text-amber-500">PAYSTACK_SECRET_KEY</code> in AI Studio's Secrets. The transaction will run in demo allocation.
+                    </p>
+                  </div>
+                ) : null}
+
+                {/* Email Billing input */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1">
+                    <Mail size={10} />
+                    Billing Notification Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={payerEmail}
+                    onChange={(e) => setPayerEmail(e.target.value)}
+                    placeholder="operator@chidon.iq"
+                    disabled={paystackLoading || paystackVerifying || paystackSuccess}
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-emerald-500 transition-colors font-mono disabled:opacity-50"
+                  />
+                </div>
+
+                {/* Checkout Trigger Actions */}
+                <div className="space-y-3 pt-2">
+                  {!paystackCheckoutUrl ? (
+                    <button
+                      type="button"
+                      onClick={handleInitializePaystack}
+                      disabled={paystackLoading || paystackVerifying || paystackSuccess || !payerEmail.trim()}
+                      className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 text-white rounded-xl text-xs font-mono font-black tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      {paystackLoading ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin" />
+                          <span>CONNECTING TO PAYSTACK GATEWAY...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>INITIALIZE PAYSTACK CHECKOUT</span>
+                          <ArrowRight size={12} />
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Active reference display */}
+                      <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-center justify-between text-[10px] font-mono text-[var(--text-secondary)]">
+                        <span>REFERENCE KEY:</span>
+                        <span className="font-bold text-emerald-500">{paystackRef}</span>
+                      </div>
+
+                      {/* Manual checkout link */}
+                      <a
+                        href={paystackCheckoutUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[var(--text-primary)] border border-[var(--border-base)] rounded-xl text-[10px] font-mono font-black tracking-wider uppercase transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>OPEN SECURE PAYSTACK TAB</span>
+                        <Cpu size={11} className="text-yellow-400" />
+                      </a>
+
+                      {/* Verify button */}
+                      <button
+                        type="button"
+                        onClick={() => handleVerifyPaystack()}
+                        disabled={paystackVerifying || paystackSuccess}
+                        className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50 text-white rounded-xl text-xs font-mono font-black tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {paystackVerifying ? (
+                          <>
+                            <RefreshCw size={12} className="animate-spin" />
+                            <span>VERIFYING WITH PAYSTACK...</span>
+                          </>
+                        ) : paystackSuccess ? (
+                          <>
+                            <CheckCircle size={12} className="text-emerald-400 animate-bounce" />
+                            <span>VERIFIED & CREDITED SUCCESSFULLY!</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>VERIFY PAYMENT STATUS</span>
+                            <CheckCircle size={12} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {paystackVerifyError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl flex items-start gap-2 text-[10px] leading-relaxed font-semibold">
+                      <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                      <span>{paystackVerifyError}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* INVOICE DETAIL VIEW MODAL */}
+      <AnimatePresence>
+        {selectedReceipt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-lg bg-[var(--bg-card)] border border-[var(--border-base)] rounded-2xl shadow-xl overflow-hidden text-left"
+            >
+              {/* Receipt Header */}
+              <div className="p-6 pb-4 border-b border-[var(--border-base)]/50 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-500">
+                    <CheckCircle size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-tight font-mono text-[var(--text-primary)]">CHIDON IQ Official Invoice</h3>
+                    <p className="text-[10px] font-mono text-[var(--text-secondary)]">Sovereign Billing Platform</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedReceipt(null)}
+                  className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-[var(--text-secondary)] cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Receipt Body */}
+              <div className="p-6 space-y-6 font-mono text-xs">
+                {/* Visual Seal */}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-[10px] uppercase font-black text-[var(--text-secondary)] tracking-wider">Payer Address</div>
+                    <div className="text-xs font-bold text-[var(--text-primary)] mt-1">{selectedReceipt.payerEmail || 'subscriber@chidon.iq'}</div>
+                  </div>
+                  <div className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 rounded-xl font-bold uppercase text-[9px] tracking-wider">
+                    PAID IN FULL
+                  </div>
+                </div>
+
+                {/* Billing Summary Table */}
+                <div className="border border-[var(--border-base)]/50 rounded-xl overflow-hidden">
+                  <div className="grid grid-cols-3 bg-slate-50 dark:bg-slate-800/30 px-3 py-2 border-b border-[var(--border-base)]/40 text-[9px] uppercase font-black text-[var(--text-secondary)]">
+                    <span>Description</span>
+                    <span className="text-center">Rate</span>
+                    <span className="text-right">Total</span>
+                  </div>
+                  <div className="grid grid-cols-3 px-3 py-2.5 text-[11px] font-bold text-[var(--text-primary)] border-b border-[var(--border-base)]/30">
+                    <span>{selectedReceipt.bundleName || 'Chidon Credit Fill'}</span>
+                    <span className="text-center">1x</span>
+                    <span className="text-right">
+                      {selectedReceipt.amountNgn ? `₦${selectedReceipt.amountNgn.toLocaleString()}` : `$${selectedReceipt.amountUsd?.toFixed(2) || '0.00'}`}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 px-3 py-2 bg-slate-50/50 dark:bg-slate-800/20 text-[10px] text-[var(--text-secondary)]">
+                    <span className="col-span-2 font-semibold">Exchange Rate Applied:</span>
+                    <span className="text-right">
+                      {selectedReceipt.amountNgn && selectedReceipt.amountUsd 
+                        ? `₦${(selectedReceipt.amountNgn / selectedReceipt.amountUsd).toFixed(0)}/USD`
+                        : `₦${exchangeRate.toLocaleString()}/USD`
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                {/* System Specs List */}
+                <div className="space-y-2 pt-2 border-t border-[var(--border-base)]/40 text-[10px] text-[var(--text-secondary)]">
+                  <div className="flex justify-between">
+                    <span>TRANSACTION KEY:</span>
+                    <span className="font-bold text-[var(--text-primary)]">{selectedReceipt.reference}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>PAYMENT GATEWAY:</span>
+                    <span className="font-bold text-[var(--text-primary)]">PAYSTACK SYSTEM</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>DATE AUTHORIZED:</span>
+                    <span className="font-bold text-[var(--text-primary)]">
+                      {selectedReceipt.createdAt?.toDate 
+                        ? selectedReceipt.createdAt.toDate().toLocaleString() 
+                        : new Date().toLocaleString()
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>STATUS RECORD:</span>
+                    <span className="font-bold text-emerald-500 uppercase">SETTLED IN CLOUD</span>
+                  </div>
+                </div>
+
+                {/* Printable Action Footer */}
+                <div className="pt-4 border-t border-[var(--border-base)]/40 flex items-center justify-between gap-4">
                   <button
-                    type="button"
-                    onClick={onCloseTrialEndedModal}
-                    className="w-full py-3.5 px-4 bg-gradient-to-r from-brand via-indigo-600 to-purple-600 hover:from-brand/90 hover:to-purple-600/90 active:scale-[0.98] text-white rounded-xl text-xs font-black tracking-wider uppercase transition-all shadow-lg shadow-brand/20 flex items-center justify-center gap-1.5"
+                    onClick={() => {
+                      const printContents = document.getElementById('chidon-printable-invoice')?.innerHTML;
+                      const originalContents = document.body.innerHTML;
+                      if (printContents) {
+                        const style = document.createElement('style');
+                        style.innerHTML = `@media print { body { background: white; color: black; font-family: monospace; } .no-print { display: none; } }`;
+                        document.head.appendChild(style);
+                        window.print();
+                        style.remove();
+                      }
+                    }}
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl text-[10px] font-black tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <span>View Pricing Packages</span>
-                    <ArrowRight size={12} />
+                    <Printer size={12} />
+                    <span>PRINT / DOWNLOAD PDF</span>
                   </button>
+                  <button
+                    onClick={() => setSelectedReceipt(null)}
+                    className="flex-1 py-2 px-3 bg-[var(--bg-app)] hover:bg-slate-100 dark:hover:bg-slate-800 text-[var(--text-secondary)] border border-[var(--border-base)] rounded-xl text-[10px] font-black tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>CLOSE RECEIPT</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Hidden printable layout strictly formatted */}
+              <div id="chidon-printable-invoice" className="hidden">
+                <div style={{ padding: '40px', fontFamily: 'monospace', color: '#000', backgroundColor: '#fff', fontSize: '12px', lineHeight: '1.5' }}>
+                  <h1 style={{ textTransform: 'uppercase', fontSize: '20px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>CHIDON IQ INVOICE RECEIPT</h1>
+                  <p><strong>TRANSACTION KEY:</strong> {selectedReceipt.reference}</p>
+                  <p><strong>DATE:</strong> {selectedReceipt.createdAt?.toDate ? selectedReceipt.createdAt.toDate().toLocaleString() : new Date().toLocaleString()}</p>
+                  <p><strong>PAYER EMAIL:</strong> {selectedReceipt.payerEmail || 'subscriber@chidon.iq'}</p>
+                  <p><strong>STATUS:</strong> PAID / SETTLED SUCCESSFUL</p>
+                  <hr style={{ border: 'none', borderTop: '1px dashed #000', margin: '20px 0' }} />
+                  <table style={{ width: '100%', textAlign: 'left' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ borderBottom: '1px solid #000' }}>Item Description</th>
+                        <th style={{ borderBottom: '1px solid #000', textAlign: 'right' }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{selectedReceipt.bundleName || 'Chidon Credit Fill'}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          {selectedReceipt.amountNgn ? `₦${selectedReceipt.amountNgn.toLocaleString()}` : `$${selectedReceipt.amountUsd?.toFixed(2) || '0.00'}`}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <hr style={{ border: 'none', borderTop: '1px dashed #000', margin: '20px 0' }} />
+                  <p style={{ textAlign: 'center', fontSize: '10px', marginTop: '40px' }}>Thank you for subscribing to Chidon IQ - Neural Operating System</p>
                 </div>
               </div>
             </motion.div>

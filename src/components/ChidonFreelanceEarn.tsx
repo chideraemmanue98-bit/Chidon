@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
 import { 
   Briefcase, DollarSign, ChevronRight, Coins, Shield, User, Star, 
   Cpu, LogOut, CheckCircle, Flame, MessageCircle, RefreshCw, Layers,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 import { auth } from '../firebase';
 import { getSupabaseClient } from '../lib/supabase';
+import { triggerNotification } from '../hooks/useNotifications';
 
 import { useChat } from '../hooks/useChat';
 import { MarketplacePage } from './marketplace/MarketplacePage';
@@ -23,6 +25,10 @@ import { JoinSeller } from './freelance/JoinSeller';
 import { SetupProfile } from './freelance/SetupProfile';
 import { BuyerDashboard } from './freelance/BuyerDashboard';
 import { SellerDashboard } from './freelance/SellerDashboard';
+import { SmartToolsSuite } from './freelance/SmartToolsSuite';
+import { FeatureGuidePage } from './freelance/FeatureGuidePage';
+import { AdminSettingsDisputeSuite } from './freelance/AdminSettingsDisputeSuite';
+import { AdminPlatformDesk } from './freelance/AdminPlatformDesk';
 import { UserProfile, FreelanceGig, JobPost, Order, ChatMessage } from './freelance/types';
 
 interface ChidonFreelanceEarnProps {
@@ -31,6 +37,8 @@ interface ChidonFreelanceEarnProps {
   onSignIn?: () => void;
   isDarkMode?: boolean;
   setIsDarkMode?: (dark: boolean) => void;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
+  onSendToNotepad?: (title: string, content: string) => void;
 }
 
 export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({ 
@@ -38,17 +46,46 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
   user, 
   onSignIn, 
   isDarkMode = true, 
-  setIsDarkMode 
+  setIsDarkMode,
+  checkAndDeductCredits,
+  onSendToNotepad
 }) => {
   // Navigation states: 'welcome' | 'role_selection' | 'join_buyer' | 'join_seller' | 'profile_setup' | 'portal'
   const [step, setStep] = useState<'welcome' | 'role_selection' | 'join_buyer' | 'join_seller' | 'profile_setup' | 'portal'>('welcome');
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>('buyer');
-  const [portalTab, setPortalTab] = useState<'home' | 'dashboard' | 'profile' | 'menu' | 'welcome' | 'marketplace' | 'post' | 'messages'>('home');
+  const [portalTab, setPortalTab] = useState<'home' | 'dashboard' | 'profile' | 'menu' | 'welcome' | 'marketplace' | 'post' | 'messages' | 'tools' | 'settings' | 'escrow' | 'switch_profile' | 'guide' | 'admin'>('home');
 
   // Integrated Marketplace states
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const chatTools = useChat();
+
+  const getTabsForActiveRole = () => {
+    if (selectedRole === 'buyer') {
+      return [
+        { id: 'home', label: 'Talent Market', icon: Globe },
+        { id: 'dashboard', label: 'Active Escrows', icon: Briefcase },
+        { id: 'messages', label: 'Deal Chats', icon: MessageSquare },
+        { id: 'escrow', label: 'Paystack Escrow', icon: Shield },
+        { id: 'settings', label: 'Trust & Safety', icon: Settings },
+        { id: 'switch_profile', label: 'Switch Portal ⇄', icon: RefreshCw },
+        { id: 'admin', label: 'Admin Desk ⚙️', icon: Shield },
+        { id: 'guide', label: 'Platform Map', icon: BookOpen }
+      ];
+    } else {
+      return [
+        { id: 'dashboard', label: 'Creator Desk', icon: Briefcase },
+        { id: 'profile', label: 'Showcase Portfolio', icon: User },
+        { id: 'tools', label: 'Smart AI Suite', icon: Cpu },
+        { id: 'messages', label: 'Deal Chats', icon: MessageSquare },
+        { id: 'escrow', label: 'Earnings Ledger', icon: DollarSign },
+        { id: 'settings', label: 'Trust & Safety', icon: Settings },
+        { id: 'switch_profile', label: 'Switch Portal ⇄', icon: RefreshCw },
+        { id: 'admin', label: 'Admin Desk ⚙️', icon: Shield },
+        { id: 'guide', label: 'Platform Map', icon: BookOpen }
+      ];
+    }
+  };
 
   const handleStartChat = async (
     otherUserId: string,
@@ -89,6 +126,14 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
   const [surveyAnswer1, setSurveyAnswer1] = useState('');
   const [surveyAnswer2, setSurveyAnswer2] = useState('');
   const [surveyAnswer3, setSurveyAnswer3] = useState('');
+
+  // Inline Switcher Page States (Full Strict separation questionnaire)
+  const [inlineSwitchTarget, setInlineSwitchTarget] = useState<'buyer' | 'seller' | null>(null);
+  const [inlineStep, setInlineStep] = useState<number>(1);
+  const [inlineQ1, setInlineQ1] = useState<string>('');
+  const [inlineQ2, setInlineQ2] = useState<string>('');
+  const [inlineQ3, setInlineQ3] = useState<string>('');
+  const [isProcessingShift, setIsProcessingShift] = useState<boolean>(false);
 
   // Profile Edit states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -170,7 +215,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         platforms: p.platforms || [],
         isVerified: p.is_verified || false,
         rating: Number(p.rating) || 5.0,
-        credits: p.credits || 250,
+        credits: p.credits || 5,
         createdAt: p.created_at
       }));
       setProfiles(formattedProfiles);
@@ -304,7 +349,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         platforms: profileData.platforms || [],
         is_verified: profileData.isVerified || false,
         rating: profileData.rating || 5.0,
-        credits: profileData.credits || 250
+        credits: profileData.credits || 5
       };
 
       const { error } = await supabase
@@ -348,6 +393,14 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
       setSelectedRole(payload.role);
       setStep('portal');
 
+      // Trigger automatic real-time system notification
+      triggerNotification(user.uid, {
+        type: 'system',
+        title: 'Freelance Profile Live',
+        body: `Congratulations! Your professional ${payload.role} profile is now configured and active on Chidon IQ.`,
+        link: '/earn'
+      }).catch(err => console.error("Profile setup notification failed", err));
+
       await fetchData();
     } catch (err) {
       console.error("Error creating user node: ", err);
@@ -365,7 +418,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         role: selectedRole,
         avatar_url: `https://api.dicebear.com/7.x/identicon/svg?seed=${user.uid}`,
         rating: 5.0,
-        credits: 500
+        credits: 5
       };
       const { error } = await supabase
         .from('profiles')
@@ -413,6 +466,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           proposals_count: 0
         }]);
       if (error) throw error;
+      
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'system',
+        title: 'Chidon Freelance: Job Posted',
+        body: `Your job listing "${jobData.title}" was published successfully with a budget of $${jobData.budget}.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -437,6 +499,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           delivery_date: gig.deliveryTime
         }]);
       if (error) throw error;
+
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'credit',
+        title: 'Chidon Freelance: Gig Purchase & Escrow Initialized',
+        body: `Successfully placed order for "${gig.title}" for $${gig.price}. Funds are secured in escrow.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -464,6 +535,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           reviews_count: 0
         }]);
       if (error) throw error;
+
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'system',
+        title: 'Chidon Freelance: Gig Created',
+        body: `Your growth service gig "${gigData.title}" is now live in the Marketplace at $${gigData.price}.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -495,6 +575,17 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         })
         .eq('id', orderId);
       if (error) throw error;
+
+      // Real-time notification trigger
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'ai_result',
+          title: 'Chidon Freelance: Assets Delivered',
+          body: `You have successfully submitted deliverables for Order ID: ${orderId}.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -520,6 +611,16 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         }]);
       if (revErr) throw revErr;
 
+      // Real-time notification trigger
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'credit',
+          title: 'Chidon Freelance: Order Completed',
+          body: `Order ID: ${orderId} has been successfully completed and reviewed! Escrow funds cleared.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -534,9 +635,53 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         .update({ status: 'cancelled' })
         .eq('id', orderId);
       if (error) throw error;
+
+      // Real-time notification trigger
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'system',
+          title: 'Chidon Freelance: Order Cancelled',
+          body: `Order ID: ${orderId} was cancelled. Any pending escrow holds have been released.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
       await fetchData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (
+    orderId: string,
+    newStatus: 'pending' | 'in_escrow' | 'delivered' | 'completed' | 'cancelled' | 'revision_requested' | 'disputed',
+    deliverableText?: string
+  ) => {
+    if (!supabase) return;
+    try {
+      const updatePayload: any = { status: newStatus };
+      if (deliverableText !== undefined) {
+        updatePayload.deliverable_text = deliverableText;
+      }
+      const { error } = await supabase
+        .from('orders')
+        .update(updatePayload)
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      if (user) {
+        triggerNotification(user.uid, {
+          type: 'system',
+          title: `Chidon Freelance: Status Updated`,
+          body: `Order ID: ${orderId.slice(0, 8)} status was updated to ${newStatus.replace('_', ' ')}.`,
+          link: '/earn'
+        }).catch(err => console.error("Notification dispatch failed", err));
+      }
+
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to update order status", err);
     }
   };
 
@@ -564,6 +709,14 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
         
       if (error) throw error;
       
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'credit',
+        title: 'Chidon Freelance: Quick Escrow Started',
+        body: `Secure checkout for "${gig.title}" completed. $${gig.price} holds active in escrow.`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       setHomePaystackSuccess(true);
       await new Promise(resolve => setTimeout(resolve, 1200));
       setHomeCheckoutGig(null);
@@ -589,6 +742,15 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
           text
         }]);
       if (error) throw error;
+
+      // Real-time notification trigger
+      triggerNotification(user.uid, {
+        type: 'message',
+        title: 'Chidon Freelance: Message Dispatched',
+        body: `You sent a message inside Order ${orderId}: "${text.slice(0, 45)}..."`,
+        link: '/earn'
+      }).catch(err => console.error("Notification dispatch failed", err));
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -709,6 +871,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
               onCompleteProfile={handleCompleteProfile}
               onSkip={handleSkipOnboarding}
               onBack={() => setStep(selectedRole === 'buyer' ? 'join_buyer' : 'join_seller')}
+              checkAndDeductCredits={checkAndDeductCredits}
             />
           </motion.div>
         )}
@@ -720,6 +883,31 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
             animate={{ opacity: 1, y: 0 }}
             className="max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6"
           >
+            {/* STICKY HIGH-CONTRAST WORKSPACE IDENTITY BANNER */}
+            <div className={`w-full p-4 rounded-3xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left shadow-lg ${
+              selectedRole === 'buyer'
+                ? 'bg-gradient-to-r from-cyan-950/60 via-slate-950 to-slate-950 border-cyan-500/30'
+                : 'bg-gradient-to-r from-purple-950/60 via-slate-950 to-slate-950 border-purple-500/30'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  selectedRole === 'buyer' ? 'bg-cyan-400 animate-pulse' : 'bg-purple-400 animate-pulse'
+                }`} />
+                <div className="space-y-0.5">
+                  <span className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest leading-none block">ACTIVE ENVIRONMENT STATE</span>
+                  <span className="text-xs font-mono font-black uppercase text-white leading-none block">
+                    {selectedRole === 'buyer' ? '🛠️ CLIENT BUYER TERMINAL (Acquisitions & Escrows)' : '🚀 CREATOR SELLER WORKSPACE (Gigs, Delivery & Smart Tools)'}
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPortalTab('switch_profile')}
+                className="px-3.5 py-2 rounded-2xl border border-slate-800 hover:bg-slate-900 text-[10px] font-mono font-black uppercase text-slate-300 hover:text-white transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+              >
+                Switch Terminals ⇄
+              </button>
+            </div>
+
             {/* Top Navigation & Brand Header */}
             <div className="bg-slate-950/90 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               
@@ -754,16 +942,8 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
               </div>
 
               {/* Middle Desktop Tabs */}
-              <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 border border-slate-800/80 p-1.5 rounded-2xl">
-                {[
-                  { id: 'home', label: 'Home Hub', icon: Globe },
-                  { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
-                  { id: 'messages', label: 'Deal Chats', icon: MessageSquare },
-                  { id: 'dashboard', label: 'Dashboard', icon: Briefcase },
-                  { id: 'profile', label: 'My Profile', icon: User },
-                  { id: 'welcome', label: 'Walkthrough', icon: BookOpen },
-                  { id: 'menu', label: 'Command Menu', icon: Menu }
-                ].map((tab) => {
+              <div className="hidden md:flex flex-wrap items-center justify-center gap-1 bg-slate-900/60 border border-slate-800/80 p-1.5 rounded-2xl max-w-2xl">
+                {getTabsForActiveRole().map((tab) => {
                   const IconComp = tab.icon;
                   const isActive = portalTab === tab.id || (tab.id === 'marketplace' && portalTab === 'post');
                   const totalUnread = tab.id === 'messages' && user 
@@ -774,13 +954,13 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     <button
                       key={tab.id}
                       onClick={() => setPortalTab(tab.id as any)}
-                      className={`px-3 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer relative ${
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer relative ${
                         isActive 
                           ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/10' 
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                       }`}
                     >
-                      <IconComp size={12} />
+                      <IconComp size={11} />
                       <span>{tab.label}</span>
                       {totalUnread > 0 && (
                         <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] font-mono font-black rounded-full flex items-center justify-center">
@@ -794,29 +974,48 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
 
               {/* Right Profile Widget & Switcher */}
               <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-800">
-                {/* Mobile Tab Indicator */}
-                <div className="md:hidden">
-                  <button
-                    onClick={() => setPortalTab('menu')}
-                    className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs font-mono flex items-center gap-1.5"
-                  >
-                    <Menu size={12} />
-                    <span>Pages Menu</span>
-                  </button>
+                {/* Mobile Horizontal Scrollable Tab Bar */}
+                <div className="md:hidden flex items-center gap-1.5 overflow-x-auto py-1 px-1 max-w-full scrollbar-none">
+                  {getTabsForActiveRole().map((tab) => {
+                    const IconComp = tab.icon;
+                    const isActive = portalTab === tab.id || (tab.id === 'marketplace' && portalTab === 'post');
+                    const totalUnread = tab.id === 'messages' && user 
+                      ? chatTools.chats.reduce((acc, c) => acc + (c.unreadCounts?.[user?.uid] || 0), 0) 
+                      : 0;
+
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setPortalTab(tab.id as any)}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-mono font-bold transition-all flex items-center gap-1 shrink-0 relative ${
+                          isActive 
+                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg' 
+                            : 'bg-slate-900 text-slate-400 border border-slate-800'
+                        }`}
+                      >
+                        <IconComp size={10} />
+                        <span>{tab.label}</span>
+                        {totalUnread > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-mono font-black rounded-full flex items-center justify-center">
+                            {totalUnread}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Credits Widget */}
-                <button 
-                  onClick={() => setPortalTab('profile')}
-                  className="flex items-center gap-2 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 px-3 py-2 rounded-2xl cursor-pointer transition-all"
-                  title="Go to profile to add credits"
+                {/* Sovereign Account Status Widget (Zero simulated mock wallet tools) */}
+                <div 
+                  className="flex items-center gap-2 bg-gradient-to-br from-indigo-950/40 to-slate-950 border border-indigo-500/30 px-3.5 py-1.5 rounded-2xl transition-all select-none shadow-md shadow-indigo-500/5"
+                  title="Verified Professional Client Node"
                 >
-                  <Coins size={14} className="text-cyan-400" />
-                  <div className="text-left">
-                    <span className="text-[8px] block font-mono text-slate-500 uppercase font-black tracking-wider leading-none">Wallet balance</span>
-                    <span className="text-xs font-bold text-cyan-400 leading-none">${myProfile?.credits || 0} credits</span>
+                  <Shield size={13} className="text-emerald-400 animate-pulse" />
+                  <div className="text-left font-mono">
+                    <span className="text-[7px] block text-slate-500 uppercase font-black tracking-widest leading-none">NODE STATUS</span>
+                    <span className="text-[10px] font-extrabold text-emerald-400 leading-none">ACTIVE VETTED ✓</span>
                   </div>
-                </button>
+                </div>
 
                 {/* Active Perspective Toggle */}
                 <div 
@@ -843,69 +1042,8 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     </div>
                   </div>
                 </div>
-
-                {/* Developer Board button */}
-                <button
-                  onClick={() => setShowAdminPanel(!showAdminPanel)}
-                  className="p-2 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-400 hover:text-purple-400 cursor-pointer transition-all"
-                  title="Toggle admin board"
-                >
-                  <Cpu size={14} className={showAdminPanel ? 'text-purple-400 animate-spin' : ''} />
-                </button>
               </div>
             </div>
-
-            {/* Admin Panel Panel */}
-            <AnimatePresence>
-              {showAdminPanel && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="p-6 bg-slate-950/90 border border-purple-500/30 rounded-3xl text-left space-y-4 shadow-xl overflow-hidden"
-                >
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                    <span className="text-xs font-mono font-black text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full tracking-widest uppercase flex items-center gap-2">
-                      <Cpu size={12} /> Verification Board (Developer Admin Sandbox)
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-500">Live Profiles: {profiles.length} detected</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {profiles.map(profile => (
-                      <div key={profile.id} className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 flex flex-col justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <img src={profile.avatarURL} alt="" className="w-6 h-6 rounded-full border border-slate-800" />
-                            <span className="text-xs font-bold text-white">@{profile.fullName}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-mono">Role: {profile.role} | Credits: ${profile.credits}</p>
-                          <p className="text-[10px] text-slate-500 italic max-w-xs truncate">"{profile.bio || 'No bio written'}"</p>
-                        </div>
-
-                        <button
-                          onClick={async () => {
-                            if (!supabase) return;
-                            await supabase
-                              .from('profiles')
-                              .update({ is_verified: !profile.isVerified })
-                              .eq('id', profile.id);
-                            await fetchData();
-                          }}
-                          className={`w-full py-1.5 rounded-lg font-mono text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                            profile.isVerified
-                              ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                          }`}
-                        >
-                          {profile.isVerified ? 'Revoke seller badge' : 'Verify seller profile'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* MAIN PORTAL PAGES SECTION */}
             <AnimatePresence mode="wait">
@@ -1306,6 +1444,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                       onSendMessage={handleSendMessage}
                       onCompleteOrder={handleCompleteOrder}
                       onCancelOrder={handleCancelOrder}
+                      onUpdateOrderStatus={handleUpdateOrderStatus}
                       chatMessages={messages}
                       allProfiles={profiles}
                     />
@@ -1318,9 +1457,41 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                       onDeleteGig={handleDeleteGig}
                       onDeliverWork={handleDeliverWork}
                       onSendMessage={handleSendMessage}
+                      onUpdateOrderStatus={handleUpdateOrderStatus}
                       chatMessages={messages}
                     />
                   )}
+                </motion.div>
+              )}
+
+              {/* PAGE 10: ADMIN PANEL PLATFORM DESK */}
+              {portalTab === 'admin' && (
+                <motion.div
+                  key="admin_page"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6 text-left"
+                >
+                  <AdminPlatformDesk
+                    allGigs={gigs}
+                    myOrders={orders}
+                    onFlagGig={async (gigId, flagState) => {
+                      if (!supabase) return;
+                      try {
+                        const originalGig = gigs.find(g => g.id === gigId);
+                        if (originalGig) {
+                          const updatedDesc = flagState 
+                            ? '[FLAGGED SPAM/SCAM] ' + originalGig.description 
+                            : originalGig.description.replace('[FLAGGED SPAM/SCAM] ', '');
+                          await supabase.from('gigs').update({ description: updatedDesc }).eq('id', gigId);
+                          await fetchData();
+                        }
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                  />
                 </motion.div>
               )}
 
@@ -1391,44 +1562,25 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         </div>
                       </div>
 
-                      {/* Wallet credits instant Top-up node */}
-                      <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1.5">
-                            <Coins size={14} className="text-cyan-400" />
-                            <span className="text-xs font-bold text-white font-mono">My Wallet Balance</span>
-                          </div>
-                          <span className="text-sm font-bold text-cyan-400 font-mono">${myProfile?.credits || 0}</span>
+                      {/* Sovereign Escrow Guidelines Widget */}
+                      <div className="p-4 bg-gradient-to-br from-indigo-950/30 to-slate-950 border border-slate-850 rounded-2xl space-y-3 shadow-md">
+                        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-900">
+                          <Shield size={14} className="text-emerald-400" />
+                          <span className="text-xs font-black text-white font-mono uppercase tracking-wider">Escrow Safety Guard</span>
                         </div>
                         
-                        <p className="text-[9px] text-slate-500 leading-normal">
-                          Need more test credits to lock escrow or order gigs? Simulate a mock fund reload instantly.
+                        <p className="text-[10px] text-slate-400 leading-relaxed font-mono">
+                          All project contracts run under real **Sovereign Escrow Protection**. Payouts remain locked inside secure transaction vaults and are released directly to developers only upon delivery verification.
                         </p>
 
-                        <button
-                          onClick={async () => {
-                            if (!user || !supabase || !myProfile || refillingState) return;
-                            setRefillingState(true);
-                            try {
-                              const nextCreds = (myProfile.credits || 0) + 500;
-                              const { error: updErr } = await supabase
-                                .from('profiles')
-                                .update({ credits: nextCreds })
-                                .eq('id', user.uid);
-                              if (updErr) throw updErr;
-                              await fetchData();
-                            } catch (e) {
-                              console.error(e);
-                            } finally {
-                              setRefillingState(false);
-                            }
-                          }}
-                          disabled={refillingState}
-                          className="w-full py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/20 text-cyan-400 font-mono text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1"
-                        >
-                          {refillingState ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
-                          <span>Simulate refill (+$500)</span>
-                        </button>
+                        <div className="pt-1.5 space-y-2">
+                          <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-400 font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> No direct off-platform payments.
+                          </div>
+                          <div className="flex items-center gap-2 text-[9px] font-mono text-indigo-400 font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Verified milestones workflow.
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -1631,7 +1783,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                       <div className="p-5 bg-slate-900 border border-slate-850 rounded-2xl space-y-2">
                         <span className="text-xs font-mono font-bold text-indigo-400">1. Node Escrow Lock</span>
                         <p className="text-[11px] text-slate-400 leading-normal">
-                          Buyers select custom growth packages or post job briefs. When hiring is initiated, funds are immediately frozen in paystack simulated smart escrow wallets.
+                          Buyers select custom growth packages or post job briefs. When hiring is initiated, funds are immediately secured in protected transaction escrow accounts.
                         </p>
                       </div>
                       <div className="p-5 bg-slate-900 border border-slate-850 rounded-2xl space-y-2">
@@ -1688,7 +1840,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     </span>
                     <h2 className="text-2xl font-display font-black tracking-tight text-white uppercase">Platform Navigation Directory</h2>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      Navigate between sovereign nodes, active escrow tracking gates, profile setups, and admin sandbox configurations instantly.
+                      Navigate between sovereign nodes, active escrow tracking gates, and seller profile setups instantly.
                     </p>
                   </div>
 
@@ -1704,7 +1856,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         <Globe size={18} />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">1. Marketplace Hub</h4>
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">1. Homepage / Hub</h4>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                           Browse all vetted social media gigs, search for skills, and view active client requests on the job board.
                         </p>
@@ -1720,9 +1872,57 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         <Briefcase size={18} />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">2. Escrow Dashboard</h4>
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">2. Dashboard Page</h4>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
                           Monitor ongoing orders, chat with sellers or buyers, submit tasks, and release frozen funds.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Escrow Page */}
+                    <div 
+                      onClick={() => setPortalTab('escrow')}
+                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <Shield size={18} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">3. Escrow Protection</h4>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Track locked milestone budgets, manage delivery confirmations, and handle professional dispute resolution.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Switch Account Profile Page */}
+                    <div 
+                      onClick={() => setPortalTab('switch_profile')}
+                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                        <RefreshCw size={18} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">4. Switch Account</h4>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Toggle your profile perspective between Creative Seller and Client Buyer instantly with dedicated stats.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card 5: Settings Page */}
+                    <div 
+                      onClick={() => setPortalTab('settings')}
+                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-pink-500/10 flex items-center justify-center text-pink-400">
+                        <Settings size={18} />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">5. Settings Page</h4>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Customize notification preferences, ledger regional configurations, and custom sovereign API key handshakes.
                         </p>
                       </div>
                     </div>
@@ -1748,7 +1948,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                       onClick={() => setPortalTab('messages')}
                       className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
                     >
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                      <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-400">
                         <MessageSquare size={18} />
                       </div>
                       <div className="space-y-1">
@@ -1759,7 +1959,7 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                       </div>
                     </div>
 
-                    {/* Card 3: Profile */}
+                    {/* Card 8: Profile */}
                     <div 
                       onClick={() => setPortalTab('profile')}
                       className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
@@ -1768,57 +1968,25 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                         <User size={18} />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">3. Sovereign Profile</h4>
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">Sovereign Profile</h4>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Edit biography info, declare verified skills, manage portfolio listings, and refill simulated wallet balances.
+                          Edit biography info, declare verified skills, and manage your custom service portfolio listings.
                         </p>
                       </div>
                     </div>
 
-                    {/* Card 4: Walkthrough */}
+                    {/* Card 9: Smart Tools Suite */}
                     <div 
-                      onClick={() => setPortalTab('welcome')}
+                      onClick={() => setPortalTab('tools')}
                       className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
                     >
-                      <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400">
-                        <BookOpen size={18} />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">4. Walkthrough Guide</h4>
-                        <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Review guidelines on secure platform operations, escrow milestones, and sovereign proof-of-skills rules.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Card 5: Switcher */}
-                    <div 
-                      onClick={toggleRole}
-                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
-                    >
-                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${selectedRole === 'buyer' ? 'bg-cyan-500/10 text-cyan-400' : 'bg-purple-500/10 text-purple-400'}`}>
-                        {selectedRole === 'buyer' ? <Flame size={18} /> : <Layers size={18} />}
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">5. Swap Mode perspective</h4>
-                        <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Toggle between Buyer Client mode to purchase or Seller Creator mode to fulfill social growth gigs.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Card 6: Admin panel */}
-                    <div 
-                      onClick={() => setShowAdminPanel(!showAdminPanel)}
-                      className="p-5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl cursor-pointer transition-all space-y-3 shadow-lg"
-                    >
-                      <div className="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                         <Cpu size={18} />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">6. Admin Sandbox Board</h4>
+                        <h4 className="text-xs font-mono font-black text-white uppercase tracking-wider">AI Smart Suite</h4>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Open developer board to grant verified badges to other sovereign node sellers or review live profiles logs.
+                          Unlock twenty-one highly specialized creator tools covering SLA agreements, pricing engines, and AI feedback.
                         </p>
                       </div>
                     </div>
@@ -1833,6 +2001,638 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     >
                       ← Back to main Chidon IQ terminal
                     </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* PAGE 6: SETTINGS PAGE */}
+              {portalTab === 'settings' && (
+                <motion.div
+                  key="settings_page"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6 text-left"
+                >
+                  <AdminSettingsDisputeSuite
+                    myProfile={myProfile}
+                    myOrders={orders}
+                    allGigs={gigs}
+                    checkAndDeductCredits={checkAndDeductCredits}
+                    onAddCredits={async (amount) => {
+                      if (!user || !supabase) return;
+                      try {
+                        const { data: profileData } = await supabase
+                          .from('profiles')
+                          .select('credits')
+                          .eq('id', user.uid)
+                          .single();
+                        const currentVal = Number(profileData?.credits || 0);
+                        const newVal = currentVal + amount;
+                        
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({ credits: newVal })
+                          .eq('id', user.uid);
+                        if (error) throw error;
+                        setMyProfile(prev => prev ? { ...prev, credits: newVal } : null);
+                        
+                        const stored = Number(localStorage.getItem("chidon_local_credits") || "5");
+                        localStorage.setItem("chidon_local_credits", String(stored + amount));
+                        window.dispatchEvent(new Event("chidon_local_credits_updated"));
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    onUpdateProfile={async (updatedFields) => {
+                      if (!user || !supabase) return;
+                      try {
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update(updatedFields)
+                          .eq('id', user.uid);
+                        if (error) throw error;
+                        setMyProfile(prev => prev ? { ...prev, ...updatedFields } : null);
+                      } catch (err) {
+                        console.error("Error updating profile in db:", err);
+                      }
+                    }}
+                    onUpdateOrderStatus={handleUpdateOrderStatus}
+                    role={selectedRole}
+                  />
+                </motion.div>
+              )}
+
+              {/* PAGE 7: ESCROW PAGE */}
+              {portalTab === 'escrow' && (
+                <motion.div
+                  key="escrow_page"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6 text-left"
+                >
+                  {/* Escrow overview ledger cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-mono text-slate-500 uppercase font-black tracking-wider">Locked in Escrow</span>
+                        <Shield className="text-cyan-400" size={16} />
+                      </div>
+                      <span className="text-2xl font-bold font-mono text-white mt-2 block">
+                        ${orders.filter(o => o.status === 'in_escrow' && (o.buyerId === user?.uid || o.sellerId === user?.uid)).reduce((sum, o) => sum + o.price, 0)}
+                      </span>
+                      <p className="text-[10px] text-slate-500 mt-1">Sovereign funds held inside secure smart portal contract.</p>
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-mono text-slate-500 uppercase font-black tracking-wider">Pending Releases</span>
+                        <Loader2 className="text-purple-400 animate-spin" size={16} />
+                      </div>
+                      <span className="text-2xl font-bold font-mono text-purple-400 mt-2 block">
+                        ${orders.filter(o => o.status === 'delivered' && (o.buyerId === user?.uid || o.sellerId === user?.uid)).reduce((sum, o) => sum + o.price, 0)}
+                      </span>
+                      <p className="text-[10px] text-slate-500 mt-1">Work submitted. Client confirmation or SLA timer active.</p>
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-mono text-slate-500 uppercase font-black tracking-wider">Cleared & Completed Volume</span>
+                        <CheckCircle2 className="text-emerald-400" size={16} />
+                      </div>
+                      <span className="text-2xl font-bold font-mono text-emerald-400 mt-2 block">
+                        ${orders.filter(o => o.status === 'completed' && (o.buyerId === user?.uid || o.sellerId === user?.uid)).reduce((sum, o) => sum + o.price, 0)}
+                      </span>
+                      <p className="text-[10px] text-slate-500 mt-1">Successfully finished client transactions inside ledger.</p>
+                    </div>
+                  </div>
+
+                  {/* Active Escrow list */}
+                  <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-850 pb-4">
+                      <div>
+                        <h2 className="text-lg font-display font-black text-white uppercase tracking-tight">Active Escrow Milestones</h2>
+                        <p className="text-[11px] text-slate-400">Track and authorize settlements for your professional engagements.</p>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-500">
+                        {orders.filter(o => o.buyerId === user?.uid || o.sellerId === user?.uid).length} Contract contracts found
+                      </span>
+                    </div>
+
+                    {orders.filter(o => o.buyerId === user?.uid || o.sellerId === user?.uid).length === 0 ? (
+                      <div className="p-12 text-center space-y-4">
+                        <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-850 flex items-center justify-center text-slate-500 mx-auto">
+                          <Shield size={20} />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-mono font-bold text-slate-400 uppercase">No active escrow milestones</h4>
+                          <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                            Fund your ledger node and purchase a growth gig or post a job listing to activate smart escrow protection.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setPortalTab('home')}
+                          className="px-4 py-2 bg-slate-900 border border-slate-850 hover:bg-slate-800 rounded-xl text-xs font-mono font-bold text-white transition-all cursor-pointer"
+                        >
+                          Explore Marketplace
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {orders
+                          .filter(o => o.buyerId === user?.uid || o.sellerId === user?.uid)
+                          .map(order => {
+                            const isBuyer = order.buyerId === user?.uid;
+                            const isSeller = order.sellerId === user?.uid;
+                            const steps = [
+                              { id: 1, label: 'Agreement', active: true, done: true },
+                              { id: 2, label: 'Locked', active: true, done: true },
+                              { id: 3, label: 'Delivered', active: order.status === 'delivered' || order.status === 'completed', done: order.status === 'delivered' || order.status === 'completed' },
+                              { id: 4, label: 'Cleared', active: order.status === 'completed', done: order.status === 'completed' }
+                            ];
+
+                            return (
+                              <div key={order.id} className="bg-slate-900/40 border border-slate-850 hover:border-slate-800 p-5 rounded-2xl space-y-4 transition-all">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                  <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-xs font-bold text-white">{order.gigTitle}</span>
+                                      <span className="text-[8px] font-mono bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-full text-slate-400">
+                                        ID: {order.id.slice(0, 8)}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500">
+                                      {isBuyer ? `Fulfilling Creator: @${order.sellerName}` : `Hiring Client: @${order.buyerName}`} • Budget: <strong className="text-emerald-400">${order.price}</strong>
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <span className={`text-[9px] font-mono font-black uppercase px-2.5 py-1 rounded-full border ${
+                                      order.status === 'completed' 
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                                        : order.status === 'delivered' 
+                                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 animate-pulse' 
+                                        : order.status === 'cancelled' 
+                                        ? 'bg-red-500/10 border-red-500/20 text-red-400' 
+                                        : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
+                                    }`}>
+                                      {order.status === 'in_escrow' ? 'Funds in Escrow 🔒' : order.status}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Step timeline */}
+                                <div className="grid grid-cols-4 gap-2 pt-2">
+                                  {steps.map(step => (
+                                    <div key={step.id} className="space-y-1">
+                                      <div className={`h-1.5 rounded-full transition-all duration-300 ${
+                                        step.done 
+                                          ? 'bg-emerald-500' 
+                                          : step.active 
+                                          ? 'bg-indigo-500 animate-pulse' 
+                                          : 'bg-slate-800'
+                                      }`} />
+                                      <span className={`text-[8px] font-mono uppercase font-black block text-center ${
+                                        step.done ? 'text-emerald-400' : step.active ? 'text-indigo-400' : 'text-slate-650'
+                                      }`}>
+                                        {step.label}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Submission proof text if delivered */}
+                                {order.deliverableText && (
+                                  <div className="p-3 bg-slate-950/80 border border-slate-850 rounded-xl space-y-1.5">
+                                    <span className="text-[8px] font-mono text-slate-550 uppercase tracking-widest block font-bold">Creator Proof-of-Delivery:</span>
+                                    <p className="text-[11px] text-slate-400 leading-normal">{order.deliverableText}</p>
+                                  </div>
+                                )}
+
+                                {/* Real Interactive Controls */}
+                                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-850/50">
+                                  {isBuyer && order.status === 'in_escrow' && (
+                                    <p className="text-[9px] font-mono text-slate-500 mr-auto">
+                                      Waiting for seller to submit files & details...
+                                    </p>
+                                  )}
+                                  
+                                  {isSeller && order.status === 'in_escrow' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const proof = prompt("Please input your deliverable assets URL or proof-of-work text:");
+                                        if (proof) {
+                                          handleDeliverWork(order.id, proof);
+                                        }
+                                      }}
+                                      className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-mono font-black text-[10px] uppercase tracking-widest rounded-xl hover:shadow-lg transition-all cursor-pointer"
+                                    >
+                                      ✓ Submit Deliverables
+                                    </button>
+                                  )}
+
+                                  {isBuyer && order.status === 'delivered' && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to approve this delivery and instantly release escrow funds to the creator?")) {
+                                            handleCompleteOrder(order.id, 5, "Amazing premium service delivered securely.");
+                                          }
+                                        }}
+                                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-mono font-black text-[10px] uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-500/10"
+                                      >
+                                        ✓ Approve & Complete release
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          alert("Revision request dispatched to creator node.");
+                                        }}
+                                        className="px-4 py-2 bg-slate-950 border border-slate-850 text-slate-400 font-mono font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                                      >
+                                        Request Revision
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {order.status !== 'completed' && order.status !== 'cancelled' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (confirm("File formal dispute on contract holding? Chidon node mediation staff will verify transactions within 24 hours.")) {
+                                          handleCancelOrder(order.id);
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 hover:bg-red-500/10 text-red-500 font-mono font-bold text-[10px] uppercase rounded-xl border border-red-500/15 transition-all cursor-pointer"
+                                    >
+                                      Dispute
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* PAGE 8: SWITCH PROFILE PAGE */}
+              {portalTab === 'switch_profile' && (
+                <motion.div
+                  key="switch_profile_page"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6 text-left animate-fade-in"
+                >
+                  <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6 relative overflow-hidden shadow-2xl">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="flex items-center justify-between pb-4 border-b border-slate-850 flex-wrap gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400">
+                          <RefreshCw size={20} className={isProcessingShift ? "animate-spin" : ""} style={{ animationDuration: '3s' }} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-display font-black text-white uppercase tracking-tight">Terminal Router Gateway</h2>
+                          <p className="text-[11px] text-slate-400">Secure routing engine to swap between Client Buyer and Creative Seller nodes.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="px-4 py-2 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] font-mono uppercase font-bold text-slate-400">
+                          Active State: <strong className="text-white">{selectedRole === 'buyer' ? 'BUYER / CLIENT' : 'CREATOR / SELLER'}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {!inlineSwitchTarget ? (
+                      <>
+                        {/* Double perspective cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                          
+                          {/* Perspective A: Buyer Client */}
+                          <div 
+                            onClick={() => {
+                              if (selectedRole !== 'buyer') {
+                                setInlineSwitchTarget('buyer');
+                                setInlineStep(1);
+                                setInlineQ1('');
+                                setInlineQ2('');
+                                setInlineQ3('');
+                              } else {
+                                toast("You are already active inside the Client Buyer terminal!");
+                              }
+                            }}
+                            className={`p-6 rounded-3xl border transition-all text-left space-y-4 cursor-pointer relative overflow-hidden ${
+                              selectedRole === 'buyer'
+                                ? 'bg-gradient-to-br from-cyan-950/20 to-slate-950 border-cyan-500/40 opacity-70 cursor-not-allowed'
+                                : 'bg-slate-900/40 border-slate-850 hover:border-slate-700 hover:bg-slate-900/60'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400">
+                                <Briefcase size={20} />
+                              </div>
+                              {selectedRole === 'buyer' ? (
+                                <span className="text-[8px] font-mono font-black uppercase bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-2.5 py-0.5 rounded-full">
+                                  CURRENT STATE
+                                </span>
+                              ) : (
+                                <span className="text-[8px] font-mono font-black uppercase bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">
+                                  SWAP AVAILABLE
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <h3 className="text-sm font-bold text-white uppercase tracking-wide">Client / Buyer Node</h3>
+                              <p className="text-xs text-slate-400 leading-relaxed">
+                                Acquire high-performance social packages, lock budgets securely in escrow, and recruit creators on the job boards.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-slate-850 text-[11px] font-mono text-slate-500">
+                              <div className="flex justify-between">
+                                <span>Committed Budget Volume</span>
+                                <span className="text-white">${orders.filter(o => o.buyerId === user?.uid).reduce((sum, o) => sum + o.price, 0)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Active Jobs Published</span>
+                                <span className="text-white">{jobs.filter(j => j.buyerId === user?.uid).length} Posts</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Perspective B: Creative Seller */}
+                          <div 
+                            onClick={() => {
+                              if (selectedRole !== 'seller') {
+                                setInlineSwitchTarget('seller');
+                                setInlineStep(1);
+                                setInlineQ1('');
+                                setInlineQ2('');
+                                setInlineQ3('');
+                              } else {
+                                toast("You are already active inside the Creative Seller terminal!");
+                              }
+                            }}
+                            className={`p-6 rounded-3xl border transition-all text-left space-y-4 cursor-pointer relative overflow-hidden ${
+                              selectedRole === 'seller'
+                                ? 'bg-gradient-to-br from-purple-950/20 to-slate-950 border-purple-500/40 opacity-70 cursor-not-allowed'
+                                : 'bg-slate-900/40 border-slate-850 hover:border-slate-700 hover:bg-slate-900/60'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
+                                <Cpu size={20} />
+                              </div>
+                              {selectedRole === 'seller' ? (
+                                <span className="text-[8px] font-mono font-black uppercase bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2.5 py-0.5 rounded-full">
+                                  CURRENT STATE
+                                </span>
+                              ) : (
+                                <span className="text-[8px] font-mono font-black uppercase bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">
+                                  SWAP AVAILABLE
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <h3 className="text-sm font-bold text-white uppercase tracking-wide">Social Creator / Seller Node</h3>
+                              <p className="text-xs text-slate-400 leading-relaxed">
+                                Publish growth service gigs, complete milestones, submit proof-of-deliveries, and clear secure escrow funds.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-slate-850 text-[11px] font-mono text-slate-500">
+                              <div className="flex justify-between">
+                                <span>Active Listed Gigs</span>
+                                <span className="text-white">{gigs.filter(g => g.sellerId === user?.uid).length} Gigs</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Settle Clearances</span>
+                                <span className="text-white">${orders.filter(o => o.sellerId === user?.uid && o.status === 'completed').reduce((sum, o) => sum + o.price, 0)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* Immersive details and explanation */}
+                        <div className="p-4 bg-slate-900/50 border border-slate-850 rounded-2xl space-y-2 text-xs text-slate-400 font-mono">
+                          <div className="flex items-center gap-1.5 text-white font-bold">
+                            <Info size={12} className="text-indigo-400" />
+                            <span>About Dynamic Sovereign Perspectives</span>
+                          </div>
+                          <p className="leading-relaxed text-[11px]">
+                            At Chidon Freelance, you possess a single consolidated unified account node. You do not need secondary accounts to swap roles. Simply select the target mode to change active terminals. The gateway will interview you to re-route your session metrics.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      /* ACTIVE ROUTING QUESTIONNAIRE FLOW */
+                      <div className="max-w-2xl mx-auto py-4 space-y-6">
+                        {isProcessingShift ? (
+                          <div className="text-center py-12 space-y-4">
+                            <Loader2 className="animate-spin text-indigo-400 mx-auto" size={40} />
+                            <h3 className="text-md font-mono font-bold text-white uppercase tracking-wider">Re-routing Account Node Stream...</h3>
+                            <p className="text-[11px] text-slate-500 font-mono">Synchronizing Paystack escrow buffers and publishing profiles.</p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Header details */}
+                            <div className="flex items-center justify-between border-b border-slate-850 pb-3">
+                              <div className="space-y-1">
+                                <span className="text-[9px] font-mono text-indigo-400 font-black tracking-widest uppercase bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full">
+                                  ROUTING STAGE {inlineStep} OF 3
+                                </span>
+                                <h3 className="text-md font-bold text-white uppercase tracking-wide">
+                                  Confirming Pivot to {inlineSwitchTarget === 'buyer' ? "Client/Buyer Terminal" : "Creative/Seller Workspace"}
+                                </h3>
+                              </div>
+                              
+                              <button 
+                                onClick={() => setInlineSwitchTarget(null)}
+                                className="text-xs font-mono font-bold text-slate-400 hover:text-white px-3 py-1.5 rounded-xl border border-slate-800 hover:bg-slate-900 cursor-pointer"
+                              >
+                                Cancel Swap
+                              </button>
+                            </div>
+
+                            {/* Progress bar */}
+                            <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all duration-300"
+                                style={{ width: `${(inlineStep / 3) * 100}%` }}
+                              />
+                            </div>
+
+                            {/* Interview step content */}
+                            <div className="py-2">
+                              {inlineStep === 1 && (
+                                <div className="space-y-4">
+                                  <label className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-wider block">
+                                    1. What is your primary objective inside the {inlineSwitchTarget === 'buyer' ? "Buyer Node" : "Seller Workspace"}?
+                                  </label>
+                                  <div className="grid grid-cols-1 gap-2.5">
+                                    {(inlineSwitchTarget === 'buyer' ? [
+                                      "Hire elite social media content managers & advisors",
+                                      "Contract editors for high-engagement short-form videos",
+                                      "Outsource automated lead-generation & sales scriptwriting"
+                                    ] : [
+                                      "Offer high-retention short-form video content creation",
+                                      "Publish custom-crafted marketing graphics & thumbnail packages",
+                                      "Deliver growth analytics consultations and campaigns"
+                                    ]).map(opt => (
+                                      <button
+                                        key={opt}
+                                        onClick={() => {
+                                          setInlineQ1(opt);
+                                          setInlineStep(2);
+                                        }}
+                                        className={`p-4 rounded-2xl border text-left text-xs font-mono font-bold transition-all cursor-pointer ${
+                                          inlineQ1 === opt 
+                                            ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' 
+                                            : 'bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-700 hover:bg-slate-900/60'
+                                        }`}
+                                      >
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {inlineStep === 2 && (
+                                <div className="space-y-4">
+                                  <label className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-wider block">
+                                    2. Specify your expected project budget or milestone volume:
+                                  </label>
+                                  <div className="grid grid-cols-1 gap-2.5">
+                                    {[
+                                      "Micro-projects and quick campaigns (<$250)",
+                                      "Professional campaigns and standard deliverables ($250 - $1,500)",
+                                      "Enterprise contracts and large retainer partnerships (>$1,500)"
+                                    ].map(opt => (
+                                      <button
+                                        key={opt}
+                                        onClick={() => {
+                                          setInlineQ2(opt);
+                                          setInlineStep(3);
+                                        }}
+                                        className={`p-4 rounded-2xl border text-left text-xs font-mono font-bold transition-all cursor-pointer ${
+                                          inlineQ2 === opt 
+                                            ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' 
+                                            : 'bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-700 hover:bg-slate-900/60'
+                                        }`}
+                                      >
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <button 
+                                    onClick={() => setInlineStep(1)} 
+                                    className="text-[10px] font-mono text-slate-500 hover:text-slate-300 block"
+                                  >
+                                    ← Back to Step 1
+                                  </button>
+                                </div>
+                              )}
+
+                              {inlineStep === 3 && (
+                                <div className="space-y-4">
+                                  <label className="text-xs font-mono font-extrabold text-slate-300 uppercase tracking-wider block">
+                                    3. Commitment Check: Do you agree to process all contracts securely via Paystack Escrow?
+                                  </label>
+                                  <div className="grid grid-cols-1 gap-2.5">
+                                    {[
+                                      "Yes, I understand and agree to Escrow protection policies",
+                                      "No, cancel and return to active dashboard"
+                                    ].map(opt => (
+                                      <button
+                                        key={opt}
+                                        onClick={() => {
+                                          setInlineQ3(opt);
+                                        }}
+                                        className={`p-4 rounded-2xl border text-left text-xs font-mono font-bold transition-all cursor-pointer ${
+                                          inlineQ3 === opt 
+                                            ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' 
+                                            : 'bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-700 hover:bg-slate-900/60'
+                                        }`}
+                                      >
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  {inlineQ3.includes("No") && (
+                                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[11px] text-rose-400 font-mono">
+                                      Escrow compliance is mandatory to protect against scams. Declining will prevent account routing.
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center justify-between pt-2">
+                                    <button 
+                                      onClick={() => setInlineStep(2)} 
+                                      className="text-[10px] font-mono text-slate-500 hover:text-slate-300 cursor-pointer"
+                                    >
+                                      ← Back to Step 2
+                                    </button>
+
+                                    {inlineQ3.includes("Yes") && (
+                                      <button
+                                        onClick={async () => {
+                                          if (!user || !supabase) return;
+                                          setIsProcessingShift(true);
+                                          try {
+                                            const updatedBio = `${myProfile?.bio || 'Professional account'} [Focus: ${inlineQ1} | scale: ${inlineQ2}]`;
+                                            const { error } = await supabase
+                                              .from('profiles')
+                                              .update({ role: inlineSwitchTarget, bio: updatedBio })
+                                              .eq('id', user.uid);
+                                            
+                                            if (error) throw error;
+                                            
+                                            setTimeout(async () => {
+                                              setSelectedRole(inlineSwitchTarget);
+                                              setMyProfile(prev => prev ? { ...prev, role: inlineSwitchTarget, bio: updatedBio } : null);
+                                              setIsProcessingShift(false);
+                                              setInlineSwitchTarget(null);
+                                              
+                                              // Redirect to dashboard/home page of the new role
+                                              setPortalTab(inlineSwitchTarget === 'buyer' ? 'home' : 'dashboard');
+                                              toast.success(`🌞 Node Perspective routed to: ${inlineSwitchTarget === 'buyer' ? 'Client Buyer' : 'Creative Seller'}!`);
+                                              await fetchData();
+                                            }, 1500);
+                                          } catch (err) {
+                                            setIsProcessingShift(false);
+                                            console.error("Pivot error:", err);
+                                          }
+                                        }}
+                                        className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-xs font-mono font-black uppercase text-white shadow-lg cursor-pointer"
+                                      >
+                                        Initiate Quantum Portal Shift
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -1878,6 +2678,21 @@ export const ChidonFreelanceEarn: React.FC<ChidonFreelanceEarnProps> = ({
                     setPortalTab('post');
                   }}
                   chatTools={chatTools}
+                />
+              )}
+
+              {portalTab === 'tools' && (
+                <SmartToolsSuite
+                  myProfile={myProfile}
+                  checkAndDeductCredits={checkAndDeductCredits}
+                  onSendToNotepad={onSendToNotepad}
+                />
+              )}
+
+              {portalTab === 'guide' && (
+                <FeatureGuidePage
+                  onNavigate={(tabId) => setPortalTab(tabId)}
+                  role={selectedRole}
                 />
               )}
 

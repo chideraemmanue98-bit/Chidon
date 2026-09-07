@@ -31,7 +31,7 @@ export interface FreelanceGig {
   title: string;
   description: string;
   price: number;
-  category: 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter';
+  category: 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter' | 'Design' | 'Dev' | 'Video' | 'Marketing' | 'Writing' | 'AI';
   deliveryTime: string; // e.g., "3 days"
   mediaURL: string;
   tags: string[];
@@ -47,7 +47,7 @@ export interface JobPost {
   title: string;
   description: string;
   budget: number;
-  category: 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter';
+  category: 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter' | 'Design' | 'Dev' | 'Video' | 'Marketing' | 'Writing' | 'AI';
   deliveryTime: string;
   createdAt?: any;
   proposalsCount?: number;
@@ -61,9 +61,9 @@ export interface Order {
   sellerName: string;
   gigId: string;
   gigTitle: string;
-  gigCategory: 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter';
+  gigCategory: 'Instagram' | 'TikTok' | 'YouTube' | 'Twitter' | 'Design' | 'Dev' | 'Video' | 'Marketing' | 'Writing' | 'AI';
   price: number;
-  status: 'pending' | 'in_escrow' | 'delivered' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_escrow' | 'delivered' | 'completed' | 'cancelled' | 'revision_requested' | 'disputed';
   deliveryDate: string;
   deliverableText?: string;
   reviewId?: string;

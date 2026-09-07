@@ -64,16 +64,14 @@ export const PostScheduler = ({
   feature, 
   onBack, 
   user,
-  credits,
-  onDeductCredits
+  checkAndDeductCredits
 }: { 
   initialCaption?: string, 
   onClearPreFill?: () => void, 
   feature?: any, 
   onBack?: () => void, 
   user?: any,
-  credits?: number | null,
-  onDeductCredits?: (amount: number) => Promise<boolean>
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -105,14 +103,17 @@ export const PostScheduler = ({
   const [aiError, setAiError] = useState<string | null>(null);
 
   const handleGenerateAICaption = async () => {
-    if (!aiTopic) return;
+    if (!aiTopic || isGeneratingAI) return;
+    setIsGeneratingAI(true);
 
-    if (onDeductCredits) {
-      const canProceed = await onDeductCredits(1);
-      if (!canProceed) return;
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, `AI Caption for ${platform.toUpperCase()}: ${aiTopic}`);
+      if (!allowed) {
+        setIsGeneratingAI(false);
+        return;
+      }
     }
 
-    setIsGeneratingAI(true);
     setAiError(null);
 
     try {
@@ -134,7 +135,10 @@ export const PostScheduler = ({
         },
         body: JSON.stringify({
           prompt,
-          model: "gemini-3.5-flash"
+          model: "gemini-3.8-flash",
+          userId: auth.currentUser?.uid,
+          feature: "post-scheduler",
+          creditsDeductedByClient: true
         })
       });
 

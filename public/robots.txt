@@ -1,11 +1,4 @@
-# https://chidoniq.com.ng/ robots.txt
-# Generated for Google Search and other search engine crawlers
-
 User-agent: *
 Allow: /
 
-# Host
-Host: https://chidoniq.com.ng
-
-# Sitemaps
-Sitemap: https://chidoniq.com.ng/sitemap.xml
+Sitemap: https://chidoniq.com/sitemap.xml

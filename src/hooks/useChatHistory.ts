@@ -125,10 +125,14 @@ export function useChatHistory(userId: string | null) {
     featureId: string,
     messageId: string,
     resultText: string,
-    currentCredits?: any,
-    onOutOfCredits?: () => void
+    checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>
   ) => {
     if (!userId) return false;
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(1, "Chat History Wrap-up Summary");
+      if (!allowed) return false;
+    }
 
     try {
       // Generate summary using backend proxy
@@ -140,7 +144,13 @@ export function useChatHistory(userId: string | null) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: promptText, language: lang }),
+        body: JSON.stringify({ 
+          prompt: promptText, 
+          language: lang,
+          userId,
+          feature: "Chat History Wrap-up",
+          creditsDeductedByClient: true
+        }),
       });
 
       if (!res.ok) {

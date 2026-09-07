@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 import ReactMarkdown from 'react-markdown';
 import { 
   BookOpen, Wand2, ArrowLeft, Check, Loader2, 
@@ -13,6 +14,7 @@ import { getSupabaseClient } from '../lib/supabase';
 interface ChidonIqBlogProps {
   onSaveDraft?: (featureId: string, content: string, title: string) => Promise<void>;
   onBack?: () => void;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 interface BlogPost {
@@ -49,7 +51,7 @@ const CATEGORIES = [
   { name: 'Tech & AI Systems', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
 ];
 
-export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack }) => {
+export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack, checkAndDeductCredits }) => {
   const [activeTab, setActiveTab] = useState<'feed' | 'synthesizer'>('feed');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -314,8 +316,17 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
   };
 
   const triggerSynthesis = async () => {
-    if (!synthTopic.trim()) return;
+    if (!synthTopic.trim() || generating) return;
     setGenerating(true);
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(3, `AI Blog Post Synthesis: ${synthTopic}`);
+      if (!allowed) {
+        setGenerating(false);
+        return;
+      }
+    }
+
     setErrorStatus('');
     setGeneratedBlog('');
     setSavedToVault(false);
@@ -342,7 +353,12 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          userId: auth.currentUser?.uid,
+          feature: "Chidon IQ Blog",
+          creditsDeductedByClient: true
+        }),
       });
 
       if (!response.ok) {
@@ -427,8 +443,17 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
   };
 
   const executeConsultation = async (blogPostTitle: string) => {
-    if (!consultQuestion.trim()) return;
+    if (!consultQuestion.trim() || consultLoading) return;
     setConsultLoading(true);
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, `Blog Consult: "${consultQuestion.slice(0, 30)}..."`);
+      if (!allowed) {
+        setConsultLoading(false);
+        return;
+      }
+    }
+
     setConsultAnswer('');
     
     try {
@@ -442,7 +467,12 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          userId: auth.currentUser?.uid,
+          feature: "Chidon IQ Blog Consult",
+          creditsDeductedByClient: true
+        }),
       });
 
       if (response.ok) {
@@ -614,6 +644,15 @@ export const ChidonIqBlog: React.FC<ChidonIqBlogProps> = ({ onSaveDraft, onBack 
               
               {/* Blog Article Core Body */}
               <div className="lg:col-span-8 card-base p-6 md:p-8 border-2 border-[var(--border-base)] bg-[var(--bg-card)] rounded-2xl space-y-6 text-left relative overflow-hidden shadow-xl">
+                <Helmet>
+                  <title>{`${selectedPost.title} - ChidonIQ Blog`}</title>
+                  <meta name="description" content={selectedPost.excerpt} />
+                  <meta name="keywords" content={`social media, growth, ${selectedPost.category.toLowerCase()}, ${(selectedPost.tags || []).join(', ')}`} />
+                  <meta property="og:title" content={`${selectedPost.title} - ChidonIQ Blog`} />
+                  <meta property="og:description" content={selectedPost.excerpt} />
+                  <meta name="twitter:title" content={`${selectedPost.title} - ChidonIQ Blog`} />
+                  <meta name="twitter:description" content={selectedPost.excerpt} />
+                </Helmet>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
                 
                 {/* Meta details */}

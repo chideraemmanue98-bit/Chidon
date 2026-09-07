@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import { 
   MessageSquare, 
   Send, 
@@ -17,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
+import { auth } from '../firebase';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -57,13 +59,12 @@ You are the "CHIDON IQ Intelligence Guide," the supreme AI navigator for CHIDON 
 - If they ask about "Notepad", explain it's the supreme refinery where they can edit and download their work.
 `;
 
-export const ChidonIqGuide = ({ 
-  credits, 
-  onDeductCredits 
-}: { 
-  credits?: number | null; 
-  onDeductCredits?: (amount: number) => Promise<boolean>;
-}) => {
+interface ChidonIqGuideProps {
+  user?: any;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
+}
+
+export const ChidonIqGuide = ({ user, checkAndDeductCredits }: ChidonIqGuideProps) => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -95,30 +96,56 @@ export const ChidonIqGuide = ({
     }
   }, [messages, isLoading]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (overrideMessage?: string) => {
+    const messageToSubmit = (overrideMessage || input).trim();
+    if (!messageToSubmit || isLoading) return;
 
-    if (onDeductCredits) {
-      const canProceed = await onDeductCredits(1);
-      if (!canProceed) return;
-    }
-
-    const userMessage = input.trim();
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
+    const activeUid = user?.uid || auth.currentUser?.uid;
+
+    if (!activeUid) {
+      toast.error("Please sign in or register to get free starting credits and chat with Chidon IQ.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, `Intelligence Guide Query: "${messageToSubmit.slice(0, 30)}..."`);
+      if (!allowed) {
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      toast.error("Credit system is offline. Please try again.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!overrideMessage) {
+      setInput('');
+    }
+    setMessages(prev => [...prev, { role: 'user', content: messageToSubmit }]);
+
     try {
-      const chatContext = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
+      // Include the current state of messages PLUS the new user message we just sent
+      const historyCopy = [...messages, { role: 'user' as const, content: messageToSubmit }];
+      const chatContext = historyCopy.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
       const instructions = SYSTEM_INSTRUCTION;
-      const fullPrompt = `${instructions}\n\n[Chat History]\n${chatContext}\n\nUser: ${userMessage}\n\nAssistant:`;
+      const fullPrompt = `${instructions}\n\n[Chat History]\n${chatContext}\n\nUser: ${messageToSubmit}\n\nAssistant:`;
 
       const res = await fetch("/api/gemini/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: fullPrompt, language: i18n.language }),
+        body: JSON.stringify({ 
+          prompt: fullPrompt, 
+          language: i18n.language,
+          userId: activeUid || (window as any).__chidon_active_user_id || null,
+          feature: "Chidon IQ Guide",
+          creditsDeductedByClient: true
+        }),
       });
 
       if (!res.ok) {
@@ -130,7 +157,7 @@ export const ChidonIqGuide = ({
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
       console.error("CHIDON IQ Uplink Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Critical Error: Signal lost. Please check your connection or API key protocol." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "I am currently fine-tuning our neural sync engines for peak content optimization. Please try again in a moment, or continue exploring your dashboard analytics!" }]);
     } finally {
       setIsLoading(false);
     }
@@ -138,6 +165,7 @@ export const ChidonIqGuide = ({
 
   const handleQuickAction = (topic: string) => {
     setInput(topic);
+    handleSend(topic);
   };
 
   return (
@@ -270,17 +298,24 @@ export const ChidonIqGuide = ({
             <div className="p-5 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-[#090d16]/40 shrink-0">
               <div className="relative flex items-center">
                 <input 
+                  id="chidon-guide-input"
                   type="text" 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
                   placeholder="Ask a question or request guidance..."
                   className="w-full bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-white/10 rounded-xl py-3.5 pl-5 pr-14 text-xs sm:text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-brand/50 dark:focus:border-brand/40 transition-all font-sans"
                 />
                 <button 
-                  onClick={handleSend}
+                  id="chidon-guide-send-btn"
+                  onClick={() => handleSend()}
                   disabled={isLoading || !input.trim()}
-                  className="absolute right-2 p-2 bg-brand text-white rounded-lg hover:bg-brand/95 transition-all disabled:opacity-40 shadow-sm flex items-center justify-center cursor-pointer disabled:pointer-events-none"
+                  className="absolute right-2 p-2 bg-brand text-white rounded-lg hover:bg-brand/95 transition-all disabled:opacity-40 shadow-sm flex items-center justify-center cursor-pointer disabled:pointer-events-none active:scale-95"
                 >
                   <Send size={15} />
                 </button>

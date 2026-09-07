@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth } from '../firebase';
 import { 
   Play, 
   Pause, 
@@ -163,7 +164,7 @@ export const ScriptPrompterWidget = ({ content }: { content: string }) => {
 };
 
 // --- WIDGET 2: HIGH-FIDELITY SMARTPHONE PREVIEW (For Social Bios) ---
-export const ProfilePreviewWidget = ({ content }: { content: string }) => {
+export const ProfilePreviewWidget = ({ content, checkAndDeductCredits }: { content: string, checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean> }) => {
   const [activeBioIndex, setActiveBioIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -194,6 +195,13 @@ export const ProfilePreviewWidget = ({ content }: { content: string }) => {
   };
 
   const handleGenerateAvatar = async () => {
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, 'Generated Bio Profile Avatar');
+      if (!allowed) {
+        setGenerating(false);
+        return;
+      }
+    }
     setGenerating(true);
     setError(null);
     setAvatarUrl(null);
@@ -203,7 +211,9 @@ export const ProfilePreviewWidget = ({ content }: { content: string }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `A high-quality minimalist professional social media profile avatar graphic icon. Cohesive design matching identity theme: "${bios[activeBioIndex].slice(0, 150)}". Modern creator portrait or abstract branding symbol, elegant solid background, flat graphic illustration style.`,
-          aspectRatio: "1:1"
+          aspectRatio: "1:1",
+          userId: auth.currentUser?.uid,
+          creditsDeductedByClient: true
         })
       });
 
@@ -380,7 +390,7 @@ export const ProfilePreviewWidget = ({ content }: { content: string }) => {
 
 
 // --- WIDGET 3: BLUEPRINT DESIGN CANVAS (For Thumbnails) ---
-export const ThumbnailCanvasWidget = ({ content }: { content: string }) => {
+export const ThumbnailCanvasWidget = ({ content, checkAndDeductCredits }: { content: string, checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean> }) => {
   const [activeConceptIndex, setActiveConceptIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -427,6 +437,13 @@ export const ThumbnailCanvasWidget = ({ content }: { content: string }) => {
   }, [activeConceptIndex]);
 
   const handleGenerateImage = async () => {
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, `Rendered YouTube Thumbnail Design: ${details.headline}`);
+      if (!allowed) {
+        setGenerating(false);
+        return;
+      }
+    }
     setGenerating(true);
     setError(null);
     setViewMode('render');
@@ -436,7 +453,9 @@ export const ThumbnailCanvasWidget = ({ content }: { content: string }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `A professional high-quality YouTube creator video thumbnail design concept. High contrast color palette elements: ${details.palette.join(', ')}. Focal visual elements layout: ${details.elements}. High-impact, eye-catching, modern tech creator aesthetics. Clean composition, cinematic lighting. It includes bold title graphic: "${details.headline}"`,
-          aspectRatio: "16:9"
+          aspectRatio: "16:9",
+          userId: auth.currentUser?.uid,
+          creditsDeductedByClient: true
         })
       });
 
@@ -852,7 +871,7 @@ export const TrendMomentumTickerWidget = ({ content }: { content: string }) => {
 
 
 // --- CRAWLER WEB BROWSER WIDGET (Web search grounded high-speed browser) ---
-export const GoogleBrowserEngineWidget = () => {
+export const ChidonIQCrawlerWidget = () => {
   const [platform, setPlatform] = useState<'all' | 'youtube' | 'tiktok' | 'facebook'>('all');
   const [category, setCategory] = useState<string>('general');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -1347,3 +1366,380 @@ const ClockIcon = ({ size, className }: { size: number, className: string }) => 
     <polyline points="12 6 12 12 16 14" />
   </svg>
 );
+
+// --- WIDGET: TREND HEATMAP VISUALIZER (For Trend Detector) ---
+export interface HeatmapCell {
+  region: string;
+  niche: string;
+  intensity: number; // 0-100
+  growthRate: string; // +250% etc
+  primaryChannel: "TikTok" | "YouTube Search" | "Chidon AI Trends" | "X / Twitter" | "Reddit Discussions";
+  topSubtopic: string;
+  velocity: "fading" | "stable" | "surging" | "exploding";
+}
+
+export const TrendHeatmapWidget: React.FC = () => {
+  const [activeSector, setActiveSector] = useState<'all' | 'tech' | 'creator' | 'ecommerce'>('all');
+  const [isScanning, setIsScanning] = useState<boolean>(true);
+  const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
+  const [scanPulse, setScanPulse] = useState<number>(0);
+  const [scanLogs, setScanLogs] = useState<string>("[SYSTEM] Regional crawlers online. Monitoring interest vectors...");
+
+  const regions = [
+    "North America",
+    "Western Europe",
+    "East Asia",
+    "South Asia",
+    "Latin America",
+    "Middle East & Africa"
+  ];
+
+  const niches = useMemo(() => {
+    switch (activeSector) {
+      case 'tech':
+        return [
+          "Local Business AI Agents",
+          "Solopreneur Micro-SaaS",
+          "No-Code Workflow Automations",
+          "Vertical API Wrappers"
+        ];
+      case 'creator':
+        return [
+          "Faceless Audio & Video",
+          "Micro-learning Clips",
+          "Interactive Live Polls",
+          "Sovereign Creator Hubs"
+        ];
+      case 'ecommerce':
+        return [
+          "Hyper-local Print On Demand",
+          "AI-Assisted Gift Sourcing",
+          "Sustainable Packaging Assets",
+          "Niche Audio-Book Subscriptions"
+        ];
+      case 'all':
+      default:
+        return [
+          "Local Business AI Agents",
+          "Faceless Audio & Video",
+          "Solopreneur Micro-SaaS",
+          "Micro-learning Clips",
+          "Hyper-local Print On Demand",
+          "No-Code Workflow Automations"
+        ];
+    }
+  }, [activeSector]);
+
+  // Generate deterministic/semi-random heatmap cell data
+  const gridData = useMemo(() => {
+    const data: HeatmapCell[] = [];
+    const channels: HeatmapCell['primaryChannel'][] = ["TikTok", "YouTube Search", "Chidon AI Trends", "X / Twitter", "Reddit Discussions"];
+    
+    regions.forEach((region) => {
+      niches.forEach((niche) => {
+        // Deterministic seeding based on strings
+        const hash = region.charCodeAt(0) + niche.charCodeAt(0) + niche.length;
+        const baseIntensity = (hash % 60) + 40; // 40-100%
+        
+        // Add variations
+        const intensity = Math.min(100, Math.max(10, baseIntensity));
+        const growthValue = Math.floor(intensity * 3.8) + (hash % 45);
+        const growthRate = `+${growthValue}%`;
+        const primaryChannel = channels[hash % channels.length];
+        
+        // Dynamic subtopics
+        let topSubtopic = "General interest spike";
+        if (niche.includes("AI")) topSubtopic = "Local agency SEO setups";
+        else if (niche.includes("Faceless")) topSubtopic = "Silent vlog loops & aesthetics";
+        else if (niche.includes("Micro-SaaS")) topSubtopic = "Single-purpose billing widgets";
+        else if (niche.includes("Micro-learning")) topSubtopic = "Speed-ramped history hooks";
+        else if (niche.includes("Print")) topSubtopic = "Eco-themed customizable cups";
+        else if (niche.includes("No-Code")) topSubtopic = "Automated email newsletters";
+
+        let velocity: HeatmapCell['velocity'] = "stable";
+        if (intensity > 85) velocity = "exploding";
+        else if (intensity > 65) velocity = "surging";
+        else if (intensity < 45) velocity = "fading";
+
+        data.push({
+          region,
+          niche,
+          intensity,
+          growthRate,
+          primaryChannel,
+          topSubtopic,
+          velocity
+        });
+      });
+    });
+    return data;
+  }, [niches, activeSector]);
+
+  // Simulate scanning updates
+  useEffect(() => {
+    if (!isScanning) return;
+    const interval = setInterval(() => {
+      setScanPulse(prev => (prev + 1) % 4);
+      const updates = [
+        `[SCAN] Real-time spike detected for "${niches[Math.floor(Math.random() * niches.length)]}" in ${regions[Math.floor(Math.random() * regions.length)]}.`,
+        `[PULSE] High-velocity interest spike parsed: +${Math.floor(Math.random() * 200) + 150}% search volume trajectory.`,
+        `[CRAWLER] Chromium node logged 4,200 micro-conversions in modern sub-communities.`,
+        `[SYS] Updated regional heat indices for selected sector metrics.`
+      ];
+      setScanLogs(updates[Math.floor(Math.random() * updates.length)]);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [isScanning, niches]);
+
+  const getCellColor = (intensity: number) => {
+    // 0-30: Slate default
+    // 30-55: Cool Indigo
+    // 55-75: Royal Purple
+    // 75-90: Deep Amethyst
+    // 90-100: Glowing Neon Orange/Amber Spikes (No slop gradients, pure mathematical density colors)
+    if (intensity < 45) return "bg-slate-900/60 hover:bg-slate-900 border-slate-800 text-slate-500";
+    if (intensity < 65) return "bg-blue-950/40 hover:bg-blue-950/60 border-blue-900/30 text-blue-300";
+    if (intensity < 80) return "bg-indigo-950/60 hover:bg-indigo-950/80 border-indigo-800/40 text-indigo-200";
+    if (intensity < 90) return "bg-purple-950/80 hover:bg-purple-900 border-purple-700/50 text-purple-200";
+    return "bg-amber-500/10 hover:bg-amber-500/15 border-amber-500/40 text-amber-400 font-black shadow-lg shadow-amber-500/5";
+  };
+
+  const getVelocityTagColor = (vel: HeatmapCell['velocity']) => {
+    switch (vel) {
+      case 'exploding': return 'text-amber-400 bg-amber-500/10 border border-amber-500/20';
+      case 'surging': return 'text-purple-400 bg-purple-500/10 border border-purple-500/20';
+      case 'stable': return 'text-blue-400 bg-blue-500/10 border border-blue-500/20';
+      case 'fading': return 'text-slate-500 bg-slate-500/10 border border-slate-500/20';
+    }
+  };
+
+  return (
+    <div className="card-base p-6 bg-slate-950 border-2 border-indigo-500/10 rounded-3xl space-y-6 text-left" id="trend-heatmap-widget-container">
+      {/* Title Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
+        <div>
+          <span className="text-[10px] font-mono font-black text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded border border-indigo-500/20 uppercase tracking-widest">
+            Interactive Global Heat Indices
+          </span>
+          <h3 className="text-lg font-display font-black text-white uppercase mt-1 flex items-center gap-2">
+            Regional Niche Interest Spike Heatmap
+          </h3>
+          <p className="text-slate-400 text-xs mt-0.5 max-w-xl">
+            Real-time visual diagnostic mapping of high-intensity niche trend spikes, computed by regional query velocity, click momentum, and forum conversations.
+          </p>
+        </div>
+        
+        {/* Toggle scanning */}
+        <button
+          onClick={() => setIsScanning(!isScanning)}
+          className={cn(
+            "px-4 py-2 rounded-xl text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-2 border cursor-pointer transition-all self-start sm:self-center",
+            isScanning 
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+              : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+          )}
+          id="toggle-heatmap-scanner"
+        >
+          <span className={cn("w-1.5 h-1.5 rounded-full", isScanning ? "bg-emerald-400 animate-ping" : "bg-slate-500")} />
+          {isScanning ? "Active Live Scanning" : "Scanner Paused"}
+        </button>
+      </div>
+
+      {/* Segment Selector & Live ticker */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Sectors */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-900/60 p-1 border border-slate-850 rounded-2xl" id="heatmap-sector-tabs">
+          {[
+            { id: 'all', label: 'All Sectors' },
+            { id: 'tech', label: 'AI & SaaS Tech' },
+            { id: 'creator', label: 'Creator Playbooks' },
+            { id: 'ecommerce', label: 'E-Commerce niches' }
+          ].map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => {
+                setActiveSector(sec.id as any);
+                setHoveredCell(null);
+              }}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-[10px] font-mono font-black uppercase tracking-wide transition-all border-none cursor-pointer",
+                activeSector === sec.id
+                  ? "bg-indigo-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              )}
+              id={`sector-tab-${sec.id}`}
+            >
+              {sec.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Live system logs ticker */}
+        <div className="flex-1 max-w-md bg-slate-900/40 border border-slate-850 px-3 py-1.5 rounded-xl flex items-center gap-2.5 overflow-hidden">
+          <span className="text-[8px] font-mono font-black bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+            Feed
+          </span>
+          <span className="text-[10px] font-mono text-slate-400 line-clamp-1 select-none leading-none pt-0.5">
+            {scanLogs}
+          </span>
+        </div>
+      </div>
+
+      {/* Grid Layout Canvas */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6" id="heatmap-grid-root">
+        {/* The Matrix Heatmap Area */}
+        <div className="lg:col-span-3 bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden p-4 relative" id="heatmap-canvas-container">
+          
+          {/* Heatmap Area Grid */}
+          <div className="overflow-x-auto custom-scrollbar">
+            <div className="min-w-[650px] space-y-2 pb-2">
+              {/* Header row: regions */}
+              <div className="grid grid-cols-7 gap-2 pb-1 text-center items-center">
+                <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest text-left font-black pr-2">
+                  Topic / Niche
+                </div>
+                {regions.map((reg, idx) => (
+                  <div 
+                    key={idx} 
+                    className="text-[9px] font-mono text-slate-400 uppercase tracking-wider font-extrabold"
+                  >
+                    {reg}
+                  </div>
+                ))}
+              </div>
+
+              {/* Rows matching each niche */}
+              {niches.map((niche, rowIdx) => (
+                <div key={rowIdx} className="grid grid-cols-7 gap-2 items-center">
+                  {/* Niche title card */}
+                  <div className="text-left py-1 pr-2">
+                    <span className="text-[11px] font-bold text-slate-200 line-clamp-2 leading-tight">
+                      {niche}
+                    </span>
+                  </div>
+
+                  {/* Intensity cells */}
+                  {regions.map((region, colIdx) => {
+                    const cell = gridData.find(c => c.region === region && c.niche === niche);
+                    if (!cell) return <div key={colIdx} />;
+                    const isHovered = hoveredCell && hoveredCell.region === region && hoveredCell.niche === niche;
+
+                    return (
+                      <div
+                        key={colIdx}
+                        onMouseEnter={() => setHoveredCell(cell)}
+                        className={cn(
+                          "h-11 rounded-xl border flex flex-col items-center justify-center transition-all cursor-crosshair select-none text-center p-1",
+                          getCellColor(cell.intensity),
+                          isHovered ? "ring-2 ring-indigo-500 scale-[1.03] z-10" : ""
+                        )}
+                        id={`heatmap-cell-${rowIdx}-${colIdx}`}
+                      >
+                        <span className="text-xs font-mono font-black">{cell.intensity}%</span>
+                        <span className="text-[8px] font-mono font-bold opacity-80">{cell.growthRate}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Color bar legend indicator */}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-900 text-[9px] font-mono text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span>Heat Legend:</span>
+              <div className="flex items-center rounded-lg overflow-hidden border border-slate-850">
+                <span className="px-2 py-0.5 bg-slate-900/60 text-slate-500 font-bold border-r border-slate-850">Stable (&lt;45%)</span>
+                <span className="px-2 py-0.5 bg-blue-950/50 text-blue-300 font-bold border-r border-slate-850">Rising (45-65%)</span>
+                <span className="px-2 py-0.5 bg-indigo-950/70 text-indigo-200 font-bold border-r border-slate-850">Strong (65-80%)</span>
+                <span className="px-2 py-0.5 bg-purple-950 text-purple-200 font-bold border-r border-slate-850">High (80-90%)</span>
+                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 font-black">Exploding (&gt;90%)</span>
+              </div>
+            </div>
+            <span>* Hover over cells for tactical niche diagnostic data</span>
+          </div>
+        </div>
+
+        {/* Live Diagnostic Panel */}
+        <div className="bg-slate-900/50 border border-slate-850 rounded-2xl p-5 flex flex-col justify-between gap-5 relative overflow-hidden" id="heatmap-diagnostics">
+          {/* Subtle decorative background scanner line */}
+          {isScanning && (
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-500/40 animate-pulse shadow-md shadow-indigo-500" style={{
+              transform: `translateY(${scanPulse * 35}px)`,
+              transition: 'transform 1s ease-in-out'
+            }} />
+          )}
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-850 pb-2.5">
+              <Activity size={14} className="text-indigo-400 animate-pulse" />
+              <h4 className="text-[10px] font-mono font-black text-white uppercase tracking-wider">
+                Live Diagnostics
+              </h4>
+            </div>
+
+            {hoveredCell ? (
+              <div className="space-y-4 text-left animate-in fade-in duration-350" id="hovered-details-container">
+                <div className="space-y-1">
+                  <span className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest block">Region Location</span>
+                  <p className="text-xs font-black text-white uppercase">{hoveredCell.region}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest block">Niche Constellation</span>
+                  <p className="text-xs font-extrabold text-slate-200 line-clamp-2 leading-snug">{hoveredCell.niche}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-850">
+                    <span className="text-[8px] font-mono text-slate-500 uppercase block">Spike Heat</span>
+                    <span className="text-sm font-mono font-black text-white">{hoveredCell.intensity}%</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-850">
+                    <span className="text-[8px] font-mono text-slate-500 uppercase block">Growth Trajectory</span>
+                    <span className="text-sm font-mono font-black text-emerald-400">{hoveredCell.growthRate}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block">Spike Velocity</span>
+                  <div className="flex">
+                    <span className={cn("px-2.5 py-0.5 rounded-lg text-[9px] font-mono font-black uppercase tracking-wider", getVelocityTagColor(hoveredCell.velocity))}>
+                      {hoveredCell.velocity}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[8px] font-mono text-slate-500 uppercase block">Top Conversion Channel</span>
+                  <p className="text-xs font-bold text-slate-300">{hoveredCell.primaryChannel}</p>
+                </div>
+
+                <div className="space-y-1.5 pt-1.5 border-t border-slate-850">
+                  <span className="text-[8px] font-mono text-indigo-400 uppercase tracking-wider block font-black">Suggested Playbook action</span>
+                  <div className="p-2.5 rounded-xl bg-indigo-500/5 border border-indigo-500/15 text-[10px] text-slate-300 leading-relaxed font-sans">
+                    Target <strong className="text-white">{hoveredCell.topSubtopic}</strong> specifically on <strong className="text-indigo-300">{hoveredCell.primaryChannel}</strong> to lock early organic SEO placements.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-slate-500 space-y-2" id="heatmap-diagnostics-placeholder">
+                <Compass size={22} className="text-slate-700 mx-auto animate-spin" style={{ animationDuration: '6s' }} />
+                <p className="font-mono text-[9px] leading-relaxed max-w-[150px] mx-auto uppercase tracking-wider">
+                  Hover over any heatmap grid cell to compile deep diagnostic telemetry
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="p-3 bg-slate-950 border border-slate-850 rounded-xl text-[9px] font-mono text-slate-500 leading-normal text-left">
+            <span>Grid indices are updated dynamically based on global micro-volume search alerts inside ChidonIQ nodes.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+

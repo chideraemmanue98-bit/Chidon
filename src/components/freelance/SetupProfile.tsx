@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth } from '../../firebase';
 import { 
   User, Shield, Briefcase, FileText, Check, Plus, Trash2, 
-  Sparkles, Loader2, ArrowRight, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon 
+  Cpu, Loader2, ArrowRight, RefreshCw, Layers, Image as ImageIcon, Link as LinkIcon 
 } from 'lucide-react';
 
 interface SetupProfileProps {
@@ -10,6 +11,7 @@ interface SetupProfileProps {
   onCompleteProfile: (profileData: any, portfolioData?: any) => Promise<void>;
   onSkip: () => void;
   onBack: () => void;
+  checkAndDeductCredits?: (cost: number, description: string) => Promise<boolean>;
 }
 
 const PLATFORM_OPTIONS = ['Instagram', 'TikTok', 'YouTube', 'Twitter'];
@@ -26,7 +28,7 @@ const BUYER_QUICK_PROMPTS = [
   "Fitness influencer looking for an experienced copywriter to maintain a daily engaging Twitter flow."
 ];
 
-export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProfile, onSkip, onBack }) => {
+export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProfile, onSkip, onBack, checkAndDeductCredits }) => {
   const [setupMode, setSetupMode] = useState<'ai' | 'manual'>('ai');
   const [aiPrompt, setAiPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -53,10 +55,15 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
     setAiPrompt(prompt);
   };
 
-  const handleRunGoogleAI = async () => {
+  const handleRunChidonAI = async () => {
     if (!aiPrompt.trim()) {
       setErrorText("Please write or select a concept/prompt first.");
       return;
+    }
+
+    if (checkAndDeductCredits) {
+      const allowed = await checkAndDeductCredits(2, `Freelance Onboarding AI Profile Setup`);
+      if (!allowed) return;
     }
 
     setGenerating(true);
@@ -75,7 +82,13 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
       const response = await fetch("/api/gemini/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: systemContext, model: "gemini-3.6-flash" }),
+        body: JSON.stringify({ 
+          prompt: systemContext, 
+          model: "gemini-3.8-flash",
+          userId: auth.currentUser?.uid,
+          feature: "Setup Profile",
+          creditsDeductedByClient: true
+        }),
       });
 
       if (!response.ok) {
@@ -121,7 +134,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
       setSetupMode('manual'); // Transition to review & save manually
     } catch (err: any) {
       console.error(err);
-      setErrorText("Google AI was unable to parse structured JSON. Please retry or enter manual parameters.");
+      setErrorText("Chidon AI was unable to parse structured JSON. Please retry or enter manual parameters.");
     } finally {
       setGenerating(false);
     }
@@ -162,7 +175,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
         role: role,
         avatarURL: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fullName)}`,
         rating: 5.0,
-        credits: role === 'seller' ? 100 : 250, // Sellers get some seed capital, Buyers get hire capital
+        credits: 5, // Capped at exactly 5 credits starting balance
         skills: role === 'seller' ? skills : [],
         experienceYears: role === 'seller' ? experienceYears : undefined,
         platforms: role === 'buyer' ? selectedPlatforms : undefined,
@@ -218,7 +231,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
             <span className={`text-[10px] font-mono font-black border px-2.5 py-1 rounded-full uppercase tracking-widest ${
               role === 'buyer' ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400' : 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400'
             }`}>
-              Google AI Setup Portal
+              Chidon AI Setup Portal
             </span>
             <h2 className="text-xl font-display font-black text-gray-900 dark:text-white uppercase">
               Configure Your sovereign Profile
@@ -298,19 +311,19 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
               </div>
 
               <button
-                onClick={handleRunGoogleAI}
+                onClick={handleRunChidonAI}
                 disabled={generating}
                 className="w-full py-4 bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 text-white font-mono font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 shadow-xl shadow-indigo-500/10"
               >
                 {generating ? (
                   <>
                     <Loader2 size={14} className="animate-spin text-white" />
-                    <span>Gemini AI Generating Node...</span>
+                    <span>Chidon AI Generating Node...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles size={14} className="text-white animate-pulse" />
-                    <span>⚡ Generate Profile & Portfolio with Google AI</span>
+                    <Cpu size={14} className="text-white animate-pulse" />
+                    <span>⚡ Generate Profile & Portfolio with Chidon AI</span>
                   </>
                 )}
               </button>
@@ -325,7 +338,7 @@ export const SetupProfile: React.FC<SetupProfileProps> = ({ role, onCompleteProf
               <form onSubmit={handleSubmit} className="space-y-5">
                 {aiSuccess && (
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs text-emerald-800 dark:text-emerald-300">
-                    🎉 Profile drafted successfully with Google AI! Review and tweak the values below before completing.
+                    🎉 Profile drafted successfully with Chidon AI! Review and tweak the values below before completing.
                   </div>
                 )}
 
