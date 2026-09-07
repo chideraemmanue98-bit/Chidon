@@ -3101,8 +3101,8 @@ You MUST use the Google Search engine tool to find real-time trends, breaking to
     }, 10000);
   }
 
-  // Only listen to port if not in Vercel serverless function context
-  if (!process.env.VERCEL) {
+  // Only listen to port if not in serverless context (Vercel or Netlify)
+  if (!process.env.VERCEL && !process.env.NETLIFY) {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`CHIDON IQ Neural Backend listening on http://0.0.0.0:${PORT}`);
       startDailyCreditEngine();
