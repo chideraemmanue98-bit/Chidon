@@ -10,9 +10,16 @@ import {
   memoryLocalCache
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import firebaseConfig from '../firebase-applet-config.json';
+import firebaseAppletConfig from '../firebase-applet-config.json';
 
 setLogLevel('silent');
+
+// The Firebase web API key is supplied via the VITE_FIREBASE_API_KEY environment variable
+// instead of being committed to the repository.
+const firebaseConfig = {
+  ...firebaseAppletConfig,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseAppletConfig.apiKey,
+};
 
 export const app = initializeApp(firebaseConfig);
 

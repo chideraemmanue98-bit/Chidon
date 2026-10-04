@@ -5430,9 +5430,16 @@ export default function App() {
     }
   };
   const [navigationHistory, setNavigationHistory] = useState<{view: 'dashboard' | 'tools' | 'hub' | 'matrix' | 'earn' | 'blog' | 'auth' | 'pricing' | 'notifications', feature: FeatureId}[]>([]);
-  const [apiKey] = useState<string>(process.env.GEMINI_API_KEY || '');
-  const [hfKey] = useState<string>(process.env.HUGGINGFACE_API_KEY || '');
-  const activeGeminiKey = customGeminiApiKey || apiKey;
+  // Server-side keys are never shipped to the browser; ask the server whether Gemini is configured.
+  const [serverGeminiConfigured, setServerGeminiConfigured] = useState<boolean>(false);
+  useEffect(() => {
+    fetch('/api/credits/status')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => setServerGeminiConfigured(!!data?.gemini?.configured))
+      .catch(() => setServerGeminiConfigured(false));
+  }, []);
+  const hfKey = '';
+  const activeGeminiKey = customGeminiApiKey;
   const activeHfKey = customHfApiKey || hfKey;
   const [featureResults, setFeatureResults] = useState<Record<string, ChatMessage[]>>({});
   const [isTranslatingResults, setIsTranslatingResults] = useState(false);
@@ -5958,7 +5965,7 @@ export default function App() {
           <Dashboard 
             onSelectFeature={(id) => navigateTo('tools', id)} 
             onNavigate={navigateTo}
-            geminiActive={!!apiKey}
+            geminiActive={serverGeminiConfigured || !!customGeminiApiKey}
             systemLanguage={systemLanguage}
             generationTone={generationTone}
             experienceLevel={experienceLevel}
