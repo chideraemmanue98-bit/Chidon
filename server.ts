@@ -284,6 +284,8 @@ function getFirestoreAdminDb(): any {
     if (fs.existsSync(configPath)) {
       try {
         firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+        // The API key is not committed; it is provided via environment variable.
+        firebaseConfig.apiKey = process.env.VITE_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || firebaseConfig.apiKey;
       } catch (e) {
         console.error("[Firebase Config] Error parsing config file:", e);
       }
